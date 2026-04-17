@@ -44,13 +44,13 @@ export default withAuth(function MemberDashboard() {
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6 md:p-8">
       {/* Logout top-right */}
-      <div className="flex justify-end mb-6">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
+          My Dashboard
+        </h1>
+
         <LogoutButton />
       </div>
-
-      <h1 className="text-2xl md:text-3xl font-bold mb-6 text-gray-800">
-        My Dashboard
-      </h1>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
