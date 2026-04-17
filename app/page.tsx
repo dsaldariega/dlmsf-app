@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import { supabase } from "@/lib/supabase";
 import { withAuth } from "@/lib/withAuth";
-import LogoutButton from "@/components/LogoutButton";
-import Header from "@/components/Header";
 
 function AdminDashboard() {
   const RATE = 50;
