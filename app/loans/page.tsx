@@ -6,7 +6,8 @@ import { supabase } from "@/lib/supabase";
 
 type Loan = {
   id: number;
-  borrower: string;
+  borrower_id: number;
+  borrower?: { name: string };
   amount: number;
   interest: number;
   total: number;
@@ -16,35 +17,56 @@ type Loan = {
 
 export default function LoansPage() {
   const [loans, setLoans] = useState<Loan[]>([]);
-  const [name, setName] = useState("");
+  const [members, setMembers] = useState<any[]>([]);
+  const [borrowerId, setBorrowerId] = useState<number | null>(null);
   const [amount, setAmount] = useState<number>(0);
 
   const INTEREST_RATE = 0.1;
 
   useEffect(() => {
     fetchLoans();
+    fetchMembers();
   }, []);
 
+  // ✅ Fetch Members
+  const fetchMembers = async () => {
+    const { data, error } = await supabase.from("members").select("*");
+
+    if (error) return alert(error.message);
+
+    const sorted = (data || []).sort((a, b) => a.id - b.id); // ✅ FORCE SORT
+
+    setMembers(sorted);
+  };
+
+  // ✅ Fetch Loans with relation
   const fetchLoans = async () => {
     const { data, error } = await supabase
       .from("loans")
-      .select("*")
+      .select("*, borrower:borrower_id(name)")
       .order("id", { ascending: false });
-    if (error) return alert(error.message);
+
+    if (error) {
+      console.error(error);
+      alert("Error fetching loans");
+      return;
+    }
+
     setLoans(data || []);
   };
 
+  // ✅ Add Loan
   const addLoan = async () => {
-    if (!name.trim()) return alert("Missing borrower name");
+    if (!borrowerId) return alert("Select a member");
     if (!amount || amount <= 0) return alert("Invalid amount");
 
     const interest = amount * INTEREST_RATE;
     const total = amount + interest;
-    const monthly = total / 2;
+    const monthly = parseFloat((total / 2).toFixed(2));
 
     const { error } = await supabase.from("loans").insert([
       {
-        borrower: name,
+        borrower_id: borrowerId,
         amount,
         interest,
         total,
@@ -54,17 +76,26 @@ export default function LoansPage() {
     ]);
 
     if (error) return alert(error.message);
-    setName("");
+
+    setBorrowerId(null);
     setAmount(0);
     fetchLoans();
   };
 
+  // ✅ Mark as Paid
   const markPaid = async (id: number) => {
+    const confirmAction = confirm("Mark this loan as paid?");
+    if (!confirmAction) return;
+
     await supabase.from("loans").update({ status: "Paid" }).eq("id", id);
     fetchLoans();
   };
 
+  // ✅ Delete Loan
   const deleteLoan = async (id: number) => {
+    const confirmAction = confirm("Delete this loan?");
+    if (!confirmAction) return;
+
     await supabase.from("loans").delete().eq("id", id);
     fetchLoans();
   };
@@ -80,21 +111,28 @@ export default function LoansPage() {
         </p>
 
         {/* FORM */}
-        <div className="bg-white rounded-xl shadow p-5 mb-6 hover:shadow-lg transition-transform transform hover:-translate-y-1">
+        <div className="bg-white rounded-xl shadow p-5 mb-6 hover:shadow-lg transition">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Borrower name"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500 transition"
-            />
+            {/* ✅ Member Dropdown */}
+            <select
+              value={borrowerId || ""}
+              onChange={(e) => setBorrowerId(Number(e.target.value))}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select Member</option>
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
 
             <input
               type="number"
               value={amount === 0 ? "" : amount}
               onChange={(e) => setAmount(Number(e.target.value))}
               placeholder="Loan amount"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500 transition"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"
             />
 
             <button
@@ -106,59 +144,23 @@ export default function LoansPage() {
           </div>
 
           <p className="text-xs text-gray-400 mt-3">
-            Interest rate: 10% • Repayment: 2 months (auto split)
+            Interest: 10% • Repayment: 2 months
           </p>
         </div>
 
-        {/* SUMMARY CARDS */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <Stat title="Total Loans" value={loans.length} />
-          <Stat
-            title="Ongoing"
-            value={loans.filter((l) => l.status !== "Paid").length}
-          />
-          <Stat
-            title="Paid"
-            value={loans.filter((l) => l.status === "Paid").length}
-          />
-          <Stat
-            title="Active Amount"
-            value={
-              "₱" +
-              loans
-                .filter((l) => l.status !== "Paid")
-                .reduce((s, l) => s + l.total, 0)
-            }
-          />
-        </div>
-
         {/* TABLE */}
-        <div className="bg-white rounded-xl shadow overflow-hidden hover:shadow-lg transition">
+        <div className="bg-white rounded-xl shadow overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm border-collapse">
+            <table className="w-full text-sm">
               <thead className="bg-gray-100 text-gray-700 font-semibold">
                 <tr>
-                  <th className="p-4 text-left border-b border-gray-200">
-                    Borrower
-                  </th>
-                  <th className="p-4 text-left border-b border-gray-200">
-                    Loan
-                  </th>
-                  <th className="p-4 text-left border-b border-gray-200">
-                    Interest
-                  </th>
-                  <th className="p-4 text-left border-b border-gray-200">
-                    Total
-                  </th>
-                  <th className="p-4 text-left border-b border-gray-200">
-                    Monthly
-                  </th>
-                  <th className="p-4 text-left border-b border-gray-200">
-                    Status
-                  </th>
-                  <th className="p-4 text-left border-b border-gray-200">
-                    Actions
-                  </th>
+                  <th className="p-4 text-left">Borrower</th>
+                  <th className="p-4 text-left">Loan</th>
+                  <th className="p-4 text-left">Interest</th>
+                  <th className="p-4 text-left">Total</th>
+                  <th className="p-4 text-left">Monthly</th>
+                  <th className="p-4 text-left">Status</th>
+                  <th className="p-4 text-left">Actions</th>
                 </tr>
               </thead>
 
@@ -171,17 +173,15 @@ export default function LoansPage() {
                   </tr>
                 ) : (
                   loans.map((l) => (
-                    <tr
-                      key={l.id}
-                      className="hover:bg-gray-50 transition-colors duration-150"
-                    >
-                      <td className="p-4 font-medium text-gray-800">
-                        {l.borrower}
+                    <tr key={l.id} className="hover:bg-gray-50">
+                      <td className="p-4 font-medium">
+                        {l.borrower?.name || "N/A"}
                       </td>
-                      <td className="p-4">₱{l.amount}</td>
-                      <td className="p-4">₱{l.interest}</td>
-                      <td className="p-4">₱{l.total}</td>
-                      <td className="p-4">₱{l.monthly}</td>
+                      <td className="p-4">₱{l.amount.toLocaleString()}</td>
+                      <td className="p-4">₱{l.interest.toLocaleString()}</td>
+                      <td className="p-4">₱{l.total.toLocaleString()}</td>
+                      <td className="p-4">₱{l.monthly.toLocaleString()}</td>
+
                       <td className="p-4">
                         <span
                           className={`px-2 py-1 rounded-full text-xs ${
@@ -193,6 +193,7 @@ export default function LoansPage() {
                           {l.status}
                         </span>
                       </td>
+
                       <td className="p-4 flex gap-3">
                         {l.status !== "Paid" && (
                           <button
@@ -217,16 +218,6 @@ export default function LoansPage() {
           </div>
         </div>
       </main>
-    </div>
-  );
-}
-
-// SMALL CARD COMPONENT
-function Stat({ title, value }: { title: string; value: string | number }) {
-  return (
-    <div className="bg-white rounded-xl shadow p-4 border border-gray-100 hover:shadow-lg transition">
-      <p className="text-sm text-gray-500">{title}</p>
-      <p className="text-xl font-semibold">{value}</p>
     </div>
   );
 }

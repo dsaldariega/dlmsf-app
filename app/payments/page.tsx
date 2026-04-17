@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import { supabase } from "@/lib/supabase";
+import Header from "@/components/Header";
 
 type Member = { id: number; heads: number };
 type Payment = { id: number; amount: number; week_start: string };
@@ -39,15 +40,12 @@ export default function PaymentsPage() {
     setLoanPayments(lp.data || []);
   };
 
-  // Helper: get Sunday of a given date
   const getSunday = (d: Date) => {
     const copy = new Date(d);
-    const day = copy.getDay(); // 0=Sunday, 6=Saturday
-    copy.setDate(copy.getDate() - day);
+    copy.setDate(copy.getDate() - copy.getDay());
     return copy;
   };
 
-  // Generate weekly payments for date range
   const generateRange = async () => {
     if (!startDate || !endDate) return alert("Select start and end dates");
 
@@ -58,11 +56,10 @@ export default function PaymentsPage() {
     const weeks: string[] = [];
     let current = new Date(start);
     while (current <= end) {
-      weeks.push(current.toISOString().split("T")[0]); // yyyy-mm-dd
+      weeks.push(current.toISOString().split("T")[0]);
       current.setDate(current.getDate() + 7);
     }
 
-    // Check existing weeks to avoid duplicates
     const { data: existing } = await supabase
       .from("payments")
       .select("week_start")
@@ -81,7 +78,6 @@ export default function PaymentsPage() {
     alert(`${rows.length} weekly payments generated`);
   };
 
-  // Edit & Delete same as before
   const deletePayment = async (id: number) => {
     if (!confirm("Delete this weekly payment?")) return;
     await supabase.from("payments").delete().eq("id", id);
@@ -102,9 +98,9 @@ export default function PaymentsPage() {
   const total = payments.reduce((s, p) => s + p.amount, 0);
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-gray-100">
+    <div className="h-screen flex flex-col md:flex-row bg-gray-100">
       <Sidebar />
-      <main className="flex-1 p-4 sm:p-6 lg:p-8">
+      <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto">
         <h1 className="text-3xl font-bold text-gray-800 mb-1">
           Weekly Payments
         </h1>
@@ -112,17 +108,17 @@ export default function PaymentsPage() {
           Generate weekly total collection
         </p>
 
-        {/* Date Range Inputs */}
-        <div className="bg-white rounded-xl shadow p-5 mb-6 flex flex-col sm:flex-row gap-3 items-center hover:shadow-lg transition-transform transform hover:-translate-y-1">
+        {/* Date Range Card */}
+        <div className="bg-white rounded-lg shadow-xs p-5 mb-6 flex flex-col sm:flex-row gap-3 items-center hover:shadow-md transition-transform transform hover:-translate-y-1">
           <input
             type="date"
-            className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-green-500 transition"
+            className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-green-500 outline-none transition"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
           />
           <input
             type="date"
-            className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-green-500 transition"
+            className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-green-500 outline-none transition"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
           />
@@ -138,24 +134,18 @@ export default function PaymentsPage() {
           </div>
         </div>
 
-        {/* WEEKLY PAYMENTS TABLE */}
-        <div className="bg-white rounded-xl shadow overflow-hidden hover:shadow-lg transition mb-8">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm border-collapse">
-              <thead className="bg-gray-100 text-gray-700 font-semibold">
-                <tr>
-                  <th className="p-4 text-left border-b border-gray-200">
-                    Week
-                  </th>
-                  <th className="p-4 text-left border-b border-gray-200">
-                    Amount
-                  </th>
-                  <th className="p-4 text-left border-b border-gray-200">
-                    Actions
-                  </th>
+        {/* Weekly Payments Table */}
+        <div className="w-full overflow-hidden rounded-lg shadow-xs bg-white mb-8">
+          <div className="w-full overflow-x-auto">
+            <table className="w-full whitespace-no-wrap text-sm">
+              <thead>
+                <tr className="text-xs font-semibold tracking-wide text-left text-gray-500 uppercase border-b border-gray-200 bg-gray-50">
+                  <th className="px-4 py-3">Week</th>
+                  <th className="px-4 py-3">Amount</th>
+                  <th className="px-4 py-3">Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="bg-white">
                 {payments.length === 0 ? (
                   <tr>
                     <td colSpan={3} className="p-6 text-center text-gray-400">
@@ -164,14 +154,9 @@ export default function PaymentsPage() {
                   </tr>
                 ) : (
                   payments.map((p) => (
-                    <tr
-                      key={p.id}
-                      className="hover:bg-gray-50 transition-colors duration-150"
-                    >
-                      <td className="p-4 font-medium text-gray-800">
-                        {p.week_start}
-                      </td>
-                      <td className="p-4 font-semibold text-green-600">
+                    <tr key={p.id} className="text-gray-700 hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium">{p.week_start}</td>
+                      <td className="px-4 py-3 font-semibold text-green-700">
                         {editingId === p.id ? (
                           <input
                             type="number"
@@ -186,7 +171,7 @@ export default function PaymentsPage() {
                           `₱${p.amount}`
                         )}
                       </td>
-                      <td className="p-4 flex gap-2">
+                      <td className="px-4 py-3 flex gap-2">
                         {editingId === p.id ? (
                           <>
                             <button
@@ -227,25 +212,19 @@ export default function PaymentsPage() {
           </div>
         </div>
 
-        {/* LOAN PAYMENTS TABLE */}
+        {/* Loan Payments Table */}
         <div className="text-xl font-bold mb-4">Loan Payments</div>
-        <div className="bg-white rounded-xl shadow overflow-hidden hover:shadow-lg transition">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm border-collapse">
-              <thead className="bg-gray-100 text-gray-700 font-semibold">
-                <tr>
-                  <th className="p-4 text-left border-b border-gray-200">
-                    Borrower
-                  </th>
-                  <th className="p-4 text-left border-b border-gray-200">
-                    Amount
-                  </th>
-                  <th className="p-4 text-left border-b border-gray-200">
-                    Paid At
-                  </th>
+        <div className="w-full overflow-hidden rounded-lg shadow-xs bg-white">
+          <div className="w-full overflow-x-auto">
+            <table className="w-full whitespace-no-wrap text-sm">
+              <thead>
+                <tr className="text-xs font-semibold tracking-wide text-left text-gray-500 uppercase border-b bg-gray-50">
+                  <th className="px-4 py-3">Borrower</th>
+                  <th className="px-4 py-3">Amount</th>
+                  <th className="px-4 py-3">Paid At</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="bg-white divide-y">
                 {loanPayments.length === 0 ? (
                   <tr>
                     <td colSpan={3} className="p-6 text-center text-gray-400">
@@ -256,15 +235,13 @@ export default function PaymentsPage() {
                   loanPayments.map((lp) => (
                     <tr
                       key={lp.id}
-                      className="hover:bg-gray-50 transition-colors duration-150"
+                      className="text-gray-700 hover:bg-gray-50 transition-colors duration-150"
                     >
-                      <td className="p-4 font-medium text-gray-800">
-                        {lp.borrower}
-                      </td>
-                      <td className="p-4 font-semibold text-purple-600">
+                      <td className="px-4 py-3 font-medium">{lp.borrower}</td>
+                      <td className="px-4 py-3 font-semibold text-purple-600">
                         ₱{lp.amount}
                       </td>
-                      <td className="p-4">{lp.paid_at}</td>
+                      <td className="px-4 py-3">{lp.paid_at}</td>
                     </tr>
                   ))
                 )}

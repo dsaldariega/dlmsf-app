@@ -3,8 +3,11 @@
 import { useEffect, useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import { supabase } from "@/lib/supabase";
+import { withAuth } from "@/lib/withAuth";
+import LogoutButton from "@/components/LogoutButton";
+import Header from "@/components/Header";
 
-export default function Dashboard() {
+function AdminDashboard() {
   const RATE = 50;
 
   const [members, setMembers] = useState<any[]>([]);
@@ -13,10 +16,10 @@ export default function Dashboard() {
   const [loanPayments, setLoanPayments] = useState<any[]>([]);
 
   useEffect(() => {
-    load();
+    loadData();
   }, []);
 
-  const load = async () => {
+  const loadData = async () => {
     const [m, p, l, lp] = await Promise.all([
       supabase.from("members").select("*"),
       supabase.from("payments").select("*"),
@@ -29,8 +32,7 @@ export default function Dashboard() {
     setLoanPayments(lp.data || []);
   };
 
-  // --- Calculations ---
-  const heads = members.reduce((s, m) => s + m.heads, 0);
+  const heads = members.reduce((sum, m) => sum + m.heads, 0);
   const totalSinkingCollected = payments.reduce((sum, p) => sum + p.amount, 0);
   const totalLoanInterestCollected = loanPayments.reduce(
     (sum, lp) => sum + lp.amount,
@@ -42,7 +44,6 @@ export default function Dashboard() {
   );
   const availableFunds = totalSinkingCollected - totalLoanPrincipalDisbursed;
 
-  // --- Months Dec 2025 → Dec 2026 ---
   const months = [
     "December 2025",
     "January 2026",
@@ -59,28 +60,23 @@ export default function Dashboard() {
     "December 2026",
   ];
 
-  // --- Sinking Fund Monthly Table ---
   const getMonthlySinkingTarget = (month: string) => {
-    const cutoffMonths = ["October 2026", "November 2026", "December 2026"];
-    if (cutoffMonths.includes(month)) return "Cutoff";
-    return heads * RATE * 4; // 4 weeks per month
+    const cutoff = ["October 2026", "November 2026", "December 2026"];
+    if (cutoff.includes(month)) return "Cutoff";
+    return heads * RATE * 4;
   };
 
   const getMonthlySinkingCollected = (month: string) =>
     payments
-      .filter((p) => {
-        const d = new Date(p.week_start);
-        const mName = d.toLocaleString("default", { month: "long" });
-        return `${mName} ${d.getFullYear()}` === month;
-      })
+      .filter(
+        (p) =>
+          new Date(p.week_start).toLocaleString("default", {
+            month: "long",
+            year: "numeric",
+          }) === month,
+      )
       .reduce((sum, p) => sum + p.amount, 0);
 
-  const totalSinkingTarget = months.reduce((sum, m) => {
-    const target = getMonthlySinkingTarget(m);
-    return typeof target === "number" ? sum + target : sum;
-  }, 0);
-
-  // --- Loan Interest Monthly Table ---
   const getMonthlyLoanTarget = (month: string) => {
     if (["October 2026", "November 2026", "December 2026"].includes(month))
       return "Cutoff";
@@ -103,165 +99,192 @@ export default function Dashboard() {
 
   const getMonthlyLoanCollected = (month: string) =>
     loanPayments
-      .filter((lp) => {
-        const d = new Date(lp.paid_at);
-        const mName = d.toLocaleString("default", { month: "long" });
-        return `${mName} ${d.getFullYear()}` === month;
-      })
+      .filter(
+        (lp) =>
+          new Date(lp.paid_at).toLocaleString("default", {
+            month: "long",
+            year: "numeric",
+          }) === month,
+      )
       .reduce((sum, lp) => sum + lp.amount, 0);
 
-  const totalLoanTarget = months.reduce((sum, m) => {
-    const t = getMonthlyLoanTarget(m);
-    return typeof t === "number" ? sum + t : sum;
-  }, 0);
-
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-gray-100">
+    <div className="h-screen flex flex-col md:flex-row bg-gray-100">
       <Sidebar />
+      {/* Header spans top */}
+      <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto">
+        <div className="flex justify-end mb-4"></div>
 
-      <main className="flex-1 p-4 sm:p-6 lg:p-8">
         <h1 className="text-3xl font-bold text-gray-800 mb-6">Dashboard</h1>
 
-        {/* --- Updated Cards (Members + Heads + New) --- */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-          {/* Members */}
-          <div className="bg-white rounded-xl shadow p-4 hover:shadow-lg transition transform hover:-translate-y-1">
-            <p className="text-sm text-gray-500 uppercase tracking-wide">
-              Members
-            </p>
-            <p className="text-2xl font-bold mt-1 text-gray-800">
-              {members.length}
-            </p>
+        {/* Cards */}
+        <div className="grid gap-6 mb-8 md:grid-cols-2 xl:grid-cols-4">
+          <div className="flex items-center p-4 bg-white rounded-lg shadow-xs">
+            <div className="p-3 mr-4 text-orange-500 bg-orange-100 rounded-full">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"></path>
+              </svg>
+            </div>
+            <div>
+              <p className="mb-2 text-sm font-medium text-gray-600">Members</p>
+              <p className="text-lg font-semibold text-gray-700">
+                {members.length}
+              </p>
+            </div>
           </div>
 
-          {/* Heads */}
-          <div className="bg-white rounded-xl shadow p-4 hover:shadow-lg transition transform hover:-translate-y-1">
-            <p className="text-sm text-gray-500 uppercase tracking-wide">
-              Heads
-            </p>
-            <p className="text-2xl font-bold mt-1 text-gray-800">{heads}</p>
+          <div className="flex items-center p-4 bg-white rounded-lg shadow-xs">
+            <div className="p-3 mr-4 text-green-500 bg-green-100 rounded-full">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  fillRule="evenodd"
+                  d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z"
+                  clipRule="evenodd"
+                ></path>
+              </svg>
+            </div>
+            <div>
+              <p className="mb-2 text-sm font-medium text-gray-600">Heads</p>
+              <p className="text-lg font-semibold text-gray-700">{heads}</p>
+            </div>
           </div>
 
-          {/* Sinking Fund Total Collection */}
-          <div className="bg-white rounded-xl shadow p-4 hover:shadow-lg transition transform hover:-translate-y-1">
-            <p className="text-sm text-gray-500 uppercase tracking-wide">
-              Sinking Fund Total Collection
-            </p>
-            <p className="text-2xl font-bold mt-1 text-green-600">
-              ₱{totalSinkingCollected.toLocaleString()}
-            </p>
+          <div className="flex items-center p-4 bg-white rounded-lg shadow-xs">
+            <div className="p-3 mr-4 text-blue-500 bg-blue-100 rounded-full">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"></path>
+              </svg>
+            </div>
+            <div>
+              <p className="mb-2 text-sm font-medium text-gray-600">
+                Sinking Fund Collected
+              </p>
+              <p className="text-lg font-semibold text-gray-700">
+                ₱{totalSinkingCollected.toLocaleString()}
+              </p>
+            </div>
           </div>
 
-          {/* Loan Interest Total Collection */}
-          <div className="bg-white rounded-xl shadow p-4 hover:shadow-lg transition transform hover:-translate-y-1">
-            <p className="text-sm text-gray-500 uppercase tracking-wide">
-              Loan Interest Total Collection
-            </p>
-            <p className="text-2xl font-bold mt-1 text-blue-600">
-              ₱{totalLoanInterestCollected.toLocaleString()}
-            </p>
+          <div className="flex items-center p-4 bg-white rounded-lg shadow-xs">
+            <div className="p-3 mr-4 text-teal-500 bg-teal-100 rounded-full">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  fillRule="evenodd"
+                  d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2zM7 8H5v2h2V8zm2 0h2v2H9V8zm6 0h-2v2h2V8z"
+                  clipRule="evenodd"
+                ></path>
+              </svg>
+            </div>
+            <div>
+              <p className="mb-2 text-sm font-medium text-gray-600">
+                Available Funds
+              </p>
+              <p className="text-lg font-semibold text-gray-700">
+                ₱{availableFunds.toLocaleString()}
+              </p>
+            </div>
           </div>
-
-          {/* Available Funds for Loan */}
-          <div className="bg-white rounded-xl shadow p-4 hover:shadow-lg transition transform hover:-translate-y-1">
-            <p className="text-sm text-gray-500 uppercase tracking-wide">
-              Available Funds for Loan
-            </p>
-            <p className="text-2xl font-bold mt-1 text-indigo-600">
-              ₱{availableFunds.toLocaleString()}
-            </p>
+          <div className="flex items-center p-4 bg-white rounded-lg shadow-xs">
+            <div className="p-3 mr-4 text-purple-500 bg-purple-100 rounded-full">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10 2a8 8 0 100 16 8 8 0 000-16zM10 5a1 1 0 11-2 0 1 1 0 012 0zm0 3a1 1 0 100 2 1 1 0 000-2zm0 3a1 1 0 100 2 1 1 0 000-2z" />
+              </svg>
+            </div>
+            <div>
+              <p className="mb-2 text-sm font-medium text-gray-600">
+                Total Loan Collected
+              </p>
+              <p className="text-lg font-semibold text-gray-700">
+                ₱{totalLoanInterestCollected.toLocaleString()}
+              </p>
+            </div>
           </div>
         </div>
 
-        {/* --- Sinking Fund Table --- */}
-        <h2 className="text-xl font-semibold mb-2">
+        {/* Sinking Fund Table */}
+        <h2 className="my-6 text-2xl font-semibold text-gray-700">
           Sinking Fund Collection (Monthly)
         </h2>
-        <div className="bg-white rounded-xl shadow overflow-hidden hover:shadow-lg transition mb-6">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm border-collapse">
-              <thead className="bg-gray-100 text-gray-700 font-semibold">
-                <tr>
-                  <th className="p-4 text-left border-b border-gray-200">
-                    Month
-                  </th>
-                  <th className="p-4 text-left border-b border-gray-200">
-                    Target
-                  </th>
-                  <th className="p-4 text-left border-b border-gray-200">
-                    Collected
-                  </th>
+        <div className="w-full overflow-hidden rounded-lg shadow-xs mb-6">
+          <div className="w-full overflow-x-auto">
+            <table className="w-full whitespace-no-wrap">
+              <thead>
+                <tr className="text-xs font-semibold tracking-wide text-left text-gray-500 uppercase border-b border-gray-200 bg-gray-50">
+                  <th className="px-4 py-3">Month</th>
+                  <th className="px-4 py-3">Target</th>
+                  <th className="px-4 py-3">Collected</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="bg-white">
                 {months.map((m) => (
                   <tr
                     key={m}
-                    className="hover:bg-gray-50 transition-colors duration-150"
+                    className="text-gray-700 border-b border-gray-200"
                   >
-                    <td className="p-4 font-medium text-gray-800">{m}</td>
-                    <td className="p-4 font-semibold text-blue-600">
-                      {getMonthlySinkingTarget(m)}
+                    <td className="px-4 py-3">{m}</td>
+                    <td className="px-4 py-3">
+                      {getMonthlySinkingTarget(m) !== "Cutoff"
+                        ? `₱${getMonthlySinkingTarget(m)}`
+                        : "Cutoff"}
                     </td>
-                    <td className="p-4 font-semibold text-green-600">
+                    <td className="px-4 py-3">
                       ₱{getMonthlySinkingCollected(m)}
                     </td>
                   </tr>
                 ))}
-                <tr className="bg-gray-50 font-semibold">
-                  <td className="p-4 text-gray-800">Total</td>
-                  <td className="p-4 text-blue-600">₱{totalSinkingTarget}</td>
-                  <td className="p-4 text-green-600">
-                    ₱{totalSinkingCollected}
-                  </td>
-                </tr>
               </tbody>
             </table>
           </div>
         </div>
 
-        {/* --- Loan Interest Table --- */}
-        <h2 className="text-xl font-semibold mb-2">
+        {/* Loan Table */}
+        <h2 className="my-6 text-2xl font-semibold text-gray-700">
           Loan Interest Collection (Monthly)
         </h2>
-        <div className="bg-white rounded-xl shadow overflow-hidden hover:shadow-lg transition">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm border-collapse">
-              <thead className="bg-gray-100 text-gray-700 font-semibold">
-                <tr>
-                  <th className="p-4 text-left border-b border-gray-200">
-                    Month
-                  </th>
-                  <th className="p-4 text-left border-b border-gray-200">
-                    Target
-                  </th>
-                  <th className="p-4 text-left border-b border-gray-200">
-                    Collected
-                  </th>
+        <div className="w-full overflow-hidden rounded-lg shadow-xs">
+          <div className="w-full overflow-x-auto">
+            <table className="w-full whitespace-no-wrap">
+              <thead>
+                <tr className="text-xs font-semibold tracking-wide text-left text-gray-500 uppercase border-b border-gray-200 bg-gray-50">
+                  <th className="px-4 py-3">Month</th>
+                  <th className="px-4 py-3">Target</th>
+                  <th className="px-4 py-3">Collected</th>
+                  <th className="px-4 py-3">Status</th>
                 </tr>
               </thead>
-              <tbody>
-                {months.map((m) => (
-                  <tr
-                    key={m}
-                    className="hover:bg-gray-50 transition-colors duration-150"
-                  >
-                    <td className="p-4 font-medium text-gray-800">{m}</td>
-                    <td className="p-4 font-semibold text-blue-600">
-                      {getMonthlyLoanTarget(m)}
-                    </td>
-                    <td className="p-4 font-semibold text-green-600">
-                      ₱{getMonthlyLoanCollected(m)}
-                    </td>
-                  </tr>
-                ))}
-                <tr className="bg-gray-50 font-semibold">
-                  <td className="p-4 text-gray-800">Total</td>
-                  <td className="p-4 text-blue-600">{totalLoanTarget}</td>
-                  <td className="p-4 text-green-600">
-                    ₱{totalLoanInterestCollected}
-                  </td>
-                </tr>
+              <tbody className="bg-white">
+                {months.map((m) => {
+                  const collected = getMonthlyLoanCollected(m);
+                  const target = getMonthlyLoanTarget(m);
+                  let status = "Pending";
+                  if (target === "Cutoff") status = "Cutoff";
+                  else if (collected >= Number(target)) status = "Approved";
+                  return (
+                    <tr
+                      key={m}
+                      className="text-gray-700 border-b border-gray-200"
+                    >
+                      <td className="px-4 py-3">{m}</td>
+                      <td className="px-4 py-3">
+                        {target !== "Cutoff" ? `₱${target}` : "Cutoff"}
+                      </td>
+                      <td className="px-4 py-3">₱{collected}</td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`px-2 py-1 font-semibold leading-tight rounded-full ${
+                            status === "Approved"
+                              ? "text-green-700 bg-green-100"
+                              : status === "Pending"
+                                ? "text-orange-700 bg-orange-100"
+                                : "text-gray-700 bg-gray-100"
+                          }`}
+                        >
+                          {status}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -270,3 +293,5 @@ export default function Dashboard() {
     </div>
   );
 }
+
+export default withAuth(AdminDashboard, "admin");

@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import { supabase } from "@/lib/supabase";
+import { withAuth } from "@/lib/withAuth";
+import Header from "@/components/Header";
 
 type Member = {
   id: number;
@@ -10,7 +12,7 @@ type Member = {
   heads: number;
 };
 
-export default function MembersPage() {
+function MembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [name, setName] = useState("");
   const [heads, setHeads] = useState<number>(1);
@@ -61,27 +63,26 @@ export default function MembersPage() {
   const weeklyDue = (h: number) => h * RATE;
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-gray-100">
+    <div className="h-screen flex flex-col md:flex-row bg-gray-100">
       <Sidebar />
-
-      <main className="flex-1 p-4 sm:p-6 lg:p-8">
+      <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto">
         <h1 className="text-3xl font-bold text-gray-800 mb-1">Members</h1>
         <p className="text-sm text-gray-500 mb-6">
           Weekly contribution: ₱{RATE} per head
         </p>
 
         {/* FORM */}
-        <div className="bg-white rounded-xl shadow p-5 mb-6 hover:shadow-lg transition-transform transform hover:-translate-y-1">
+        <div className="bg-white rounded-lg shadow p-5 mb-6 hover:shadow-md transition-transform transform hover:-translate-y-1">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <input
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500 transition"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none transition"
               placeholder="Member name"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
 
             <input
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500 transition"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none transition"
               type="number"
               value={heads}
               min={1}
@@ -99,31 +100,18 @@ export default function MembersPage() {
         </div>
 
         {/* TABLE */}
-        <div className="bg-white rounded-xl shadow overflow-hidden hover:shadow-lg transition">
-          <div className="p-4 bg-gray-50 rounded-t-xl">
-            <h2 className="font-semibold text-gray-800">Member List</h2>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm border-collapse">
-              <thead className="bg-gray-100 text-gray-700 font-semibold">
-                <tr>
-                  <th className="p-4 text-left border-b border-gray-200">
-                    Name
-                  </th>
-                  <th className="p-4 text-left border-b border-gray-200">
-                    Heads
-                  </th>
-                  <th className="p-4 text-left border-b border-gray-200">
-                    Weekly Due
-                  </th>
-                  <th className="p-4 text-left border-b border-gray-200">
-                    Actions
-                  </th>
+        <div className="w-full overflow-hidden rounded-lg shadow-xs bg-white">
+          <div className="w-full overflow-x-auto">
+            <table className="w-full whitespace-no-wrap">
+              <thead>
+                <tr className="text-xs font-semibold tracking-wide text-left text-gray-500 uppercase border-b border-gray-200 bg-gray-50">
+                  <th className="px-4 py-3">Name</th>
+                  <th className="px-4 py-3">Heads</th>
+                  <th className="px-4 py-3">Weekly Due</th>
+                  <th className="px-4 py-3">Actions</th>
                 </tr>
               </thead>
-
-              <tbody>
+              <tbody className="bg-white">
                 {members.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="p-6 text-center text-gray-400">
@@ -134,13 +122,10 @@ export default function MembersPage() {
                   members.map((m) => (
                     <tr
                       key={m.id}
-                      className="hover:bg-gray-50 transition-colors duration-150"
+                      className="text-gray-700 border-b border-gray-200"
                     >
-                      <td className="p-4 font-medium text-gray-800">
-                        {m.name}
-                      </td>
-
-                      <td className="p-4">
+                      <td className="px-4 py-3 font-medium">{m.name}</td>
+                      <td className="px-4 py-3">
                         {editingId === m.id ? (
                           <input
                             type="number"
@@ -155,12 +140,10 @@ export default function MembersPage() {
                           m.heads
                         )}
                       </td>
-
-                      <td className="p-4 font-semibold text-green-600">
+                      <td className="px-4 py-3 font-semibold text-green-700">
                         ₱{weeklyDue(editingId === m.id ? editHeads : m.heads)}
                       </td>
-
-                      <td className="p-4 flex gap-2">
+                      <td className="px-4 py-3 flex gap-2">
                         {editingId === m.id ? (
                           <>
                             <button
@@ -204,3 +187,5 @@ export default function MembersPage() {
     </div>
   );
 }
+
+export default withAuth(MembersPage, "admin");
