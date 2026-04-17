@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import { supabase } from "@/lib/supabase";
 import { withAuth } from "@/lib/withAuth";
-import Header from "@/components/Header";
 
 type Member = {
   id: number;
