@@ -8,6 +8,7 @@ import LogoutButton from "@/components/LogoutButton";
 export default withAuth(function MemberDashboard() {
   const [payments, setPayments] = useState<any[]>([]);
   const [loanPayments, setLoanPayments] = useState<any[]>([]);
+  const [loans, setLoans] = useState<any[]>([]); // ✅ NEW
 
   useEffect(() => {
     const loadData = async () => {
@@ -24,14 +25,17 @@ export default withAuth(function MemberDashboard() {
 
       if (!member) return;
 
-      const [{ data: p }, { data: lp }] = await Promise.all([
+      const [{ data: p }, { data: lp }, { data: l }] = await Promise.all([
         supabase.from("payments").select("*").eq("member_id", member.id),
         supabase.from("loan_payments").select("*").eq("member_id", member.id),
+        supabase.from("loans").select("*").eq("borrower_id", member.id), // ✅ FETCH LOANS
       ]);
 
       setPayments(p || []);
       setLoanPayments(lp || []);
+      setLoans(l || []);
     };
+
     loadData();
   }, []);
 
@@ -58,6 +62,7 @@ export default withAuth(function MemberDashboard() {
             ₱{payments.reduce((sum, p) => sum + p.amount, 0).toLocaleString()}
           </p>
         </div>
+
         <div className="bg-white shadow rounded-xl p-4">
           <p className="text-sm text-gray-500 uppercase">Loan Payments</p>
           <p className="text-xl font-bold text-blue-600">
@@ -67,13 +72,69 @@ export default withAuth(function MemberDashboard() {
               .toLocaleString()}
           </p>
         </div>
+
+        {/* ✅ OPTIONAL: Total Loan Balance */}
+        <div className="bg-white shadow rounded-xl p-4">
+          <p className="text-sm text-gray-500 uppercase">My Loans</p>
+          <p className="text-xl font-bold text-yellow-600">
+            ₱{loans.reduce((sum, l) => sum + l.total, 0).toLocaleString()}
+          </p>
+        </div>
       </div>
+
+      {/* ✅ NEW: Loans Table */}
+      <section className="mb-8">
+        <h2 className="font-semibold mb-3 text-gray-700 text-lg">My Loans</h2>
+
+        <div className="overflow-x-auto bg-white shadow rounded-xl">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="p-3 text-left text-sm font-medium">Amount</th>
+                <th className="p-3 text-left text-sm font-medium">Interest</th>
+                <th className="p-3 text-left text-sm font-medium">Total</th>
+                <th className="p-3 text-left text-sm font-medium">Status</th>
+              </tr>
+            </thead>
+
+            <tbody className="divide-y divide-gray-200">
+              {loans.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="p-3 text-center text-gray-400">
+                    No loans yet
+                  </td>
+                </tr>
+              ) : (
+                loans.map((l) => (
+                  <tr key={l.id}>
+                    <td className="p-3">{formatCurrency(l.amount)}</td>
+                    <td className="p-3">{formatCurrency(l.interest)}</td>
+                    <td className="p-3">{formatCurrency(l.total)}</td>
+                    <td className="p-3">
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs ${
+                          l.status === "Paid"
+                            ? "bg-green-100 text-green-600"
+                            : "bg-yellow-100 text-yellow-600"
+                        }`}
+                      >
+                        {l.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       {/* Sinking Fund Table */}
       <section className="mb-8">
         <h2 className="font-semibold mb-3 text-gray-700 text-lg">
           Sinking Fund Contributions
         </h2>
+
         <div className="overflow-x-auto bg-white shadow rounded-xl">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-100">
@@ -86,6 +147,7 @@ export default withAuth(function MemberDashboard() {
                 </th>
               </tr>
             </thead>
+
             <tbody className="divide-y divide-gray-200">
               {payments.length === 0 ? (
                 <tr>
@@ -115,6 +177,7 @@ export default withAuth(function MemberDashboard() {
         <h2 className="font-semibold mb-3 text-gray-700 text-lg">
           Loan Payments
         </h2>
+
         <div className="overflow-x-auto bg-white shadow rounded-xl">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-100">
@@ -126,6 +189,7 @@ export default withAuth(function MemberDashboard() {
                 <th className="p-3 text-left text-sm font-medium">Date Paid</th>
               </tr>
             </thead>
+
             <tbody className="divide-y divide-gray-200">
               {loanPayments.length === 0 ? (
                 <tr>

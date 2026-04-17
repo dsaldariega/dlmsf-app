@@ -34,8 +34,7 @@ export default function LoansPage() {
 
     if (error) return alert(error.message);
 
-    const sorted = (data || []).sort((a, b) => a.id - b.id); // ✅ FORCE SORT
-
+    const sorted = (data || []).sort((a, b) => a.id - b.id);
     setMembers(sorted);
   };
 
@@ -55,10 +54,14 @@ export default function LoansPage() {
     setLoans(data || []);
   };
 
-  // ✅ Add Loan
+  // ✅ Add Loan (FIXED + SAFE)
   const addLoan = async () => {
     if (!borrowerId) return alert("Select a member");
     if (!amount || amount <= 0) return alert("Invalid amount");
+
+    // 🔥 VALIDATE MEMBER EXISTS
+    const memberExists = members.find((m) => m.id === borrowerId);
+    if (!memberExists) return alert("Invalid member selected");
 
     const interest = amount * INTEREST_RATE;
     const total = amount + interest;
@@ -66,7 +69,7 @@ export default function LoansPage() {
 
     const { error } = await supabase.from("loans").insert([
       {
-        borrower_id: borrowerId,
+        borrower_id: memberExists.id, // ✅ GUARANTEED correct ID
         amount,
         interest,
         total,
@@ -82,12 +85,18 @@ export default function LoansPage() {
     fetchLoans();
   };
 
-  // ✅ Mark as Paid
+  // ✅ Mark as Paid (SAFER)
   const markPaid = async (id: number) => {
     const confirmAction = confirm("Mark this loan as paid?");
     if (!confirmAction) return;
 
-    await supabase.from("loans").update({ status: "Paid" }).eq("id", id);
+    const { error } = await supabase
+      .from("loans")
+      .update({ status: "Paid" })
+      .eq("id", id);
+
+    if (error) return alert(error.message);
+
     fetchLoans();
   };
 
@@ -96,7 +105,10 @@ export default function LoansPage() {
     const confirmAction = confirm("Delete this loan?");
     if (!confirmAction) return;
 
-    await supabase.from("loans").delete().eq("id", id);
+    const { error } = await supabase.from("loans").delete().eq("id", id);
+
+    if (error) return alert(error.message);
+
     fetchLoans();
   };
 
@@ -113,7 +125,7 @@ export default function LoansPage() {
         {/* FORM */}
         <div className="bg-white rounded-xl shadow p-5 mb-6 hover:shadow-lg transition">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {/* ✅ Member Dropdown */}
+            {/* Member Dropdown */}
             <select
               value={borrowerId || ""}
               onChange={(e) => setBorrowerId(Number(e.target.value))}
@@ -122,7 +134,7 @@ export default function LoansPage() {
               <option value="">Select Member</option>
               {members.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.name}
+                  {m.name} (ID: {m.id})
                 </option>
               ))}
             </select>
