@@ -109,7 +109,6 @@ function AdminDashboard() {
   return (
     <div className="h-screen flex flex-col md:flex-row bg-gray-100">
       <Sidebar />
-      {/* Header spans top */}
       <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto">
         <div className="flex justify-end mb-4"></div>
 

@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import { supabase } from "@/lib/supabase";
-import Header from "@/components/Header";
 
 type Member = { id: number; heads: number };
 type Payment = { id: number; amount: number; week_start: string };
