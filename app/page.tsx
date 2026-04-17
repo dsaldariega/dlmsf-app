@@ -38,10 +38,10 @@ function AdminDashboard() {
     (sum, lp) => sum + lp.amount,
     0,
   );
-  const totalLoanPrincipalDisbursed = loans.reduce(
-    (sum, l) => sum + l.amount,
-    0,
-  );
+  const totalLoanPrincipalDisbursed = loans
+    .filter((l) => l.status !== "Paid")
+    .reduce((sum, l) => sum + l.amount, 0);
+
   const availableFunds = totalSinkingCollected - totalLoanPrincipalDisbursed;
 
   const months = [
