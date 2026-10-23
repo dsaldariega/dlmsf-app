@@ -41,6 +41,9 @@ export default function Sidebar() {
           <Link href="/loans" className={linkClass("/loans")}>
             🏦 Loans
           </Link>
+          <Link href="/audit" className={linkClass("/audit")}>
+            📋 Audit
+          </Link>
         </nav>
       </div>
 
