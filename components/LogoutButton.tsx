@@ -19,7 +19,7 @@ export default function LogoutButton() {
       onClick={handleLogout}
       className="text-sm text-gray-500 hover:text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-50 transition"
     >
-      🚪 Logout
+      Logout
     </button>
   );
 }

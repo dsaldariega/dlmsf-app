@@ -399,14 +399,14 @@ export default function AuditPage() {
                         )}
                       </td>
 
-                      <td className="px-4 py-3 min-w-[180px]">
+                      <td className="px-4 py-3 min-w-45">
                         {editingLoanId === audit.id ? (
                           <input
                             type="text"
                             value={editLoanRemarks}
                             onChange={(e) => setEditLoanRemarks(e.target.value)}
                             placeholder="Enter remarks"
-                            className="w-full min-w-[160px] px-2 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                            className="w-full min-w-40 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
                           />
                         ) : (
                           <span className="text-gray-500">
@@ -520,7 +520,7 @@ export default function AuditPage() {
                         )}
                       </td>
 
-                      <td className="px-4 py-3 min-w-[180px]">
+                      <td className="px-4 py-3 min-w-45">
                         {editingPaymentId === payment.id ? (
                           <input
                             type="text"
@@ -529,7 +529,7 @@ export default function AuditPage() {
                               setEditPaymentRemarks(e.target.value)
                             }
                             placeholder="Enter remarks"
-                            className="w-full min-w-[160px] px-2 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                            className="w-full min-w-40 px-2 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
                           />
                         ) : (
                           <span className="text-gray-500">

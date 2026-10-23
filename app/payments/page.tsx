@@ -256,6 +256,13 @@ export default function PaymentsPage() {
             </span>
           </div>
         </div>
+        {/* =========================================
+            NOTE
+        ========================================= */}
+        <p className="text-sm text-gray-600 mb-3">
+          <span className="font-semibold">Note:</span> Generate the weekly
+          payments starting from Monday to Sunday.
+        </p>
 
         {/* =========================================
             WEEKLY PAYMENTS TABLE
@@ -365,73 +372,6 @@ export default function PaymentsPage() {
                           )}
                         </div>
                       </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* =========================================
-            LOAN PAYMENTS
-        ========================================= */}
-
-        <div className="text-xl font-bold mb-4">Loan Payments</div>
-
-        <div className="w-full overflow-hidden rounded-lg shadow-xs bg-white">
-          <div className="w-full overflow-x-auto">
-            <table className="w-full whitespace-no-wrap text-sm">
-              <thead>
-                <tr className="text-xs font-semibold tracking-wide text-left text-gray-500 uppercase border-b bg-gray-50">
-                  <th className="px-4 py-3">Borrower</th>
-
-                  <th className="px-4 py-3">Amount</th>
-
-                  <th className="px-4 py-3">Paid At</th>
-                </tr>
-              </thead>
-
-              <tbody className="bg-white divide-y">
-                {/* =========================================
-                    LOADING SPINNER
-                ========================================= */}
-
-                {loading ? (
-                  <tr>
-                    <td colSpan={3} className="p-8">
-                      <div className="flex justify-center items-center">
-                        <div className="w-7 h-7 border-4 border-gray-200 border-t-purple-600 rounded-full animate-spin"></div>
-                      </div>
-                    </td>
-                  </tr>
-                ) : loanPayments.length === 0 ? (
-                  /* =========================================
-                      EMPTY STATE
-                  ========================================= */
-
-                  <tr>
-                    <td colSpan={3} className="p-6 text-center text-gray-400">
-                      No loan payments yet
-                    </td>
-                  </tr>
-                ) : (
-                  /* =========================================
-                      LOAN PAYMENT ROWS
-                  ========================================= */
-
-                  loanPayments.map((lp) => (
-                    <tr
-                      key={lp.id}
-                      className="text-gray-700 hover:bg-gray-50 transition-colors duration-150"
-                    >
-                      <td className="px-4 py-3 font-medium">{lp.borrower}</td>
-
-                      <td className="px-4 py-3 font-semibold text-purple-600">
-                        ₱{Number(lp.amount).toLocaleString()}
-                      </td>
-
-                      <td className="px-4 py-3">{lp.paid_at}</td>
                     </tr>
                   ))
                 )}
