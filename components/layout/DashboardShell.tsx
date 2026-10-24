@@ -281,7 +281,8 @@ export default function DashboardShell({
         }`}
       >
         {/* Navbar */}
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 sm:px-6 lg:px-8">
+
+        <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between gap-3 border-b border-slate-200 bg-white px-2 sm:px-3">
           {/* Navbar left */}
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             {/* Mobile menu */}

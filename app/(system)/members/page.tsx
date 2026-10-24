@@ -362,7 +362,7 @@ function MembersPage() {
                 <th className="whitespace-nowrap px-5 py-3 font-semibold">
                   Weekly Due
                 </th>
-                <th className="whitespace-nowrap px-5 py-3 text-right font-semibold">
+                <th className="whitespace-nowrap px-5 py-3 font-semibold">
                   Actions
                 </th>
               </tr>
