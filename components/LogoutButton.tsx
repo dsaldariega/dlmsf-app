@@ -11,7 +11,7 @@ export default function LogoutButton() {
     if (error) return alert(error.message);
 
     // Redirect to login page after logout
-    router.push("/auth/login");
+    router.push("/login");
   };
 
   return (

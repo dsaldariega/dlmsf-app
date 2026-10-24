@@ -16,7 +16,7 @@ export function withAuth(Component: React.FC, requiredRole: Role) {
           data: { user },
         } = await supabase.auth.getUser();
         if (!user) {
-          router.push("/auth/login");
+          router.push("/login");
           return;
         }
 
@@ -27,7 +27,7 @@ export function withAuth(Component: React.FC, requiredRole: Role) {
           .single();
 
         if (!member) {
-          router.push("/auth/login");
+          router.push("/login");
           return;
         }
 
@@ -42,7 +42,7 @@ export function withAuth(Component: React.FC, requiredRole: Role) {
         }
 
         if (!roles.includes(requiredRole)) {
-          router.push("/auth/login");
+          router.push("/login");
           return;
         }
       };
