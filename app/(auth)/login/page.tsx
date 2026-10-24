@@ -1,9 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Eye, EyeOff, LogIn, LoaderCircle } from "lucide-react";
+
+function parseRoles(value: unknown): string[] {
+  let parsed: unknown = value;
+
+  if (typeof value === "string") {
+    try {
+      const result: unknown = JSON.parse(value);
+      parsed = Array.isArray(result) ? result : value;
+    } catch {
+      parsed = value;
+    }
+  }
+
+  const values = Array.isArray(parsed) ? parsed : [parsed];
+
+  return values
+    .filter((role): role is string => typeof role === "string")
+    .map((role) => role.trim().toLowerCase());
+}
+
+function getDashboard(roles: string[]): string | null {
+  if (roles.includes("admin")) return "/dashboard";
+  if (roles.includes("member")) return "/member-dashboard";
+  return null;
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,7 +37,76 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+
+  // Redirect authenticated users away from the login page.
+  useEffect(() => {
+    let active = true;
+
+    async function checkSession() {
+      try {
+        const {
+          data: { user },
+          error,
+        } = await supabase.auth.getUser();
+
+        if (error || !user) return;
+
+        const { data: member, error: memberError } = await supabase
+          .from("members")
+          .select("roles")
+          .eq("auth_id", user.id)
+          .maybeSingle();
+
+        if (!active) return;
+
+        if (memberError) {
+          console.error("Member lookup failed:", memberError);
+          setErrorMessage("Unable to verify your account. Please try again.");
+          return;
+        }
+
+        if (!member) {
+          // Do not leave an authenticated session without a valid member.
+          await supabase.auth.signOut();
+          return;
+        }
+
+        const roles = parseRoles(member.roles);
+        const destination = getDashboard(roles);
+
+        if (destination) {
+          router.replace(destination);
+        } else {
+          await supabase.auth.signOut();
+          if (active) {
+            setErrorMessage(
+              "No valid role is assigned to your account. Please contact your administrator.",
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Session check failed:", error);
+
+        if (active) {
+          setErrorMessage(
+            "Unable to verify your session. Please refresh and try again.",
+          );
+        }
+      } finally {
+        if (active) {
+          setCheckingSession(false);
+        }
+      }
+    }
+
+    checkSession();
+
+    return () => {
+      active = false;
+    };
+  }, [router]);
 
   const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -29,7 +123,7 @@ export default function LoginPage() {
       });
 
       if (error) {
-        setErrorMessage(error.message);
+        setErrorMessage("Invalid email or password. Please try again.");
         return;
       }
 
@@ -42,55 +136,40 @@ export default function LoginPage() {
 
       const { data: member, error: memberError } = await supabase
         .from("members")
-        .select("id, roles")
+        .select("roles")
         .eq("auth_id", user.id)
         .maybeSingle();
 
       if (memberError) {
         console.error("Member lookup failed:", memberError);
-        setErrorMessage("Unable to load your account role. Please try again.");
         await supabase.auth.signOut();
+        setErrorMessage(
+          "Unable to verify your account role. Please try again.",
+        );
         return;
       }
 
       if (!member) {
-        setErrorMessage("Member record not found for this account.");
         await supabase.auth.signOut();
+        setErrorMessage(
+          "Member record not found for this account. Please contact your administrator.",
+        );
         return;
       }
 
-      let roles: string[] = [];
+      const roles = parseRoles(member.roles);
+      const destination = getDashboard(roles);
 
-      if (Array.isArray(member.roles)) {
-        roles = member.roles.filter(
-          (role): role is string => typeof role === "string",
-        );
-      } else if (typeof member.roles === "string") {
-        try {
-          const parsed: unknown = JSON.parse(member.roles);
-
-          roles = Array.isArray(parsed)
-            ? parsed.filter((role): role is string => typeof role === "string")
-            : [member.roles];
-        } catch {
-          roles = [member.roles];
-        }
-      }
-
-      roles = roles.map((role) => role.trim().toLowerCase());
-
-      if (roles.includes("admin")) {
-        router.replace("/dashboard");
-        router.refresh();
-      } else if (roles.includes("member")) {
-        router.replace("/member-dashboard");
-        router.refresh();
-      } else {
+      if (!destination) {
         await supabase.auth.signOut();
         setErrorMessage(
           "No valid role is assigned to your account. Please contact your administrator.",
         );
+        return;
       }
+
+      router.replace(destination);
+      router.refresh();
     } catch (error) {
       console.error("Login failed:", error);
       setErrorMessage("Something went wrong. Please try again.");
@@ -98,6 +177,29 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  if (checkingSession) {
+    return (
+      <div className="fixed inset-0 z-50 flex min-h-screen items-center justify-center bg-slate-100">
+        <div className="flex flex-col items-center gap-4">
+          <div className="flex size-16 items-center justify-center rounded-2xl bg-blue-600 text-xl font-bold text-white shadow-lg">
+            DL
+          </div>
+
+          <LoaderCircle className="animate-spin text-blue-600" size={26} />
+
+          <div className="text-center">
+            <h1 className="text-lg font-semibold text-slate-800">
+              DLMSF Monitoring
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Checking your session...
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4 sm:p-6">
@@ -116,6 +218,7 @@ export default function LoginPage() {
           {errorMessage && (
             <div
               role="alert"
+              aria-live="polite"
               className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
             >
               {errorMessage}
@@ -133,7 +236,7 @@ export default function LoginPage() {
             <input
               id="email"
               type="email"
-              autoComplete="email"
+              autoComplete="username"
               placeholder="you@example.com"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
