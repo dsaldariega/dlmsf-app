@@ -1,176 +1,280 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Sidebar from "@/components/Sidebar";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 type LoanAudit = {
   id: number;
-  borrower: string;
-  loan: number;
+  borrower_name: string;
+  amount: number;
   interest: number;
   total: number;
   monthly: number;
   status: string;
-  remarks: string;
+  remarks: string | null;
+  created_date: string;
 };
 
 type PaymentAudit = {
   id: number;
   week: string;
   amount: number;
-  remarks: string;
+  remarks: string | null;
 };
+
+const formatCurrency = (value: number) =>
+  `₱${Number(value || 0).toLocaleString("en-PH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+
+const getStatusStyle = (status: string) => {
+  switch (status?.toLowerCase()) {
+    case "paid":
+      return "bg-emerald-100 text-emerald-700";
+    case "active":
+      return "bg-blue-100 text-blue-700";
+    case "pending":
+      return "bg-amber-100 text-amber-700";
+    case "overdue":
+      return "bg-red-100 text-red-700";
+    default:
+      return "bg-slate-100 text-slate-600";
+  }
+};
+
+const inputClass =
+  "h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10";
+
+const actionClass =
+  "inline-flex h-9 items-center justify-center rounded-lg border px-3 text-xs font-semibold shadow-sm transition focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-50";
 
 export default function AuditPage() {
   const [loanAudits, setLoanAudits] = useState<LoanAudit[]>([]);
   const [paymentAudits, setPaymentAudits] = useState<PaymentAudit[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
 
   // Loan editing
   const [editingLoanId, setEditingLoanId] = useState<number | null>(null);
-  const [editLoanStatus, setEditLoanStatus] = useState("");
+  const [editLoanStatus, setEditLoanStatus] = useState("Pending");
   const [editLoanRemarks, setEditLoanRemarks] = useState("");
 
   // Payment editing
   const [editingPaymentId, setEditingPaymentId] = useState<number | null>(null);
-  const [editPaymentAmount, setEditPaymentAmount] = useState<number>(0);
+  const [editPaymentAmount, setEditPaymentAmount] = useState<number | "">("");
   const [editPaymentRemarks, setEditPaymentRemarks] = useState("");
 
-  useEffect(() => {
-    load();
+  // Action states
+  const [savingLoanId, setSavingLoanId] = useState<number | null>(null);
+  const [savingPaymentId, setSavingPaymentId] = useState<number | null>(null);
+  const [deletingLoanId, setDeletingLoanId] = useState<number | null>(null);
+  const [deletingPaymentId, setDeletingPaymentId] = useState<number | null>(
+    null,
+  );
+
+  // Load audit records
+  const load = useCallback(async () => {
+    setLoading(true);
+    setErrorMessage("");
+
+    try {
+      const [loans, payments] = await Promise.all([
+        supabase
+          .from("loans_audit_log")
+          .select("*")
+          .order("created_date", { ascending: false }),
+
+        supabase
+          .from("payments_audit_log")
+          .select("*")
+          .order("id", { ascending: false }),
+      ]);
+
+      if (loans.error) throw loans.error;
+      if (payments.error) throw payments.error;
+
+      setLoanAudits((loans.data || []) as LoanAudit[]);
+      setPaymentAudits((payments.data || []) as PaymentAudit[]);
+    } catch (error) {
+      console.error("Error loading audit records:", error);
+
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to load audit records. Please try again.",
+      );
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  // =========================================
-  // LOAD AUDIT RECORDS
-  // =========================================
+  useEffect(() => {
+    void load();
+  }, [load]);
 
-  const load = async () => {
-    setLoading(true);
-
-    const [loans, payments] = await Promise.all([
-      supabase.from("audit").select("*").order("id", { ascending: false }),
-
-      supabase
-        .from("payment_audit")
-        .select("*")
-        .order("id", { ascending: false }),
-    ]);
-
-    if (loans.error) {
-      console.error("Error loading loan audit records:", loans.error);
-    }
-
-    if (payments.error) {
-      console.error("Error loading payment audit records:", payments.error);
-    }
-
-    setLoanAudits(loans.data || []);
-    setPaymentAudits(payments.data || []);
-
-    setLoading(false);
-  };
-
-  // =========================================
-  // LOAN AUDIT
-  // =========================================
-
+  // Loan audit editing
   const startLoanEdit = (audit: LoanAudit) => {
     setEditingLoanId(audit.id);
-    setEditLoanStatus(audit.status);
+    setEditLoanStatus(audit.status || "Pending");
     setEditLoanRemarks(audit.remarks || "");
   };
 
-  const saveLoanEdit = async (id: number) => {
-    const { error } = await supabase
-      .from("audit")
-      .update({
-        status: editLoanStatus,
-        remarks: editLoanRemarks,
-      })
-      .eq("id", id);
-
-    if (error) {
-      console.error(error);
-      alert("Failed to update loan audit record");
-      return;
-    }
-
+  const cancelLoanEdit = () => {
     setEditingLoanId(null);
-    load();
+    setEditLoanStatus("Pending");
+    setEditLoanRemarks("");
+  };
+
+  const saveLoanEdit = async (id: number) => {
+    if (savingLoanId !== null) return;
+
+    setSavingLoanId(id);
+
+    try {
+      const { error } = await supabase
+        .from("loans_audit_log")
+        .update({
+          status: editLoanStatus,
+          remarks: editLoanRemarks.trim() || null,
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setEditingLoanId(null);
+      await load();
+    } catch (error) {
+      console.error("Error updating loan audit:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to update loan audit record.",
+      );
+    } finally {
+      setSavingLoanId(null);
+    }
   };
 
   const deleteLoanAudit = async (id: number) => {
-    if (!confirm("Delete this loan audit record?")) return;
+    if (deletingLoanId !== null) return;
 
-    const { error } = await supabase.from("audit").delete().eq("id", id);
-
-    if (error) {
-      console.error(error);
-      alert("Failed to delete loan audit record");
+    if (!confirm("Delete this loan audit record? This cannot be undone.")) {
       return;
     }
 
-    load();
+    setDeletingLoanId(id);
+
+    try {
+      const { error } = await supabase
+        .from("loans_audit_log")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      if (editingLoanId === id) cancelLoanEdit();
+
+      await load();
+    } catch (error) {
+      console.error("Error deleting loan audit:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to delete loan audit record.",
+      );
+    } finally {
+      setDeletingLoanId(null);
+    }
   };
 
-  // =========================================
-  // PAYMENT AUDIT
-  // =========================================
-
+  // Payment audit editing
   const startPaymentEdit = (payment: PaymentAudit) => {
     setEditingPaymentId(payment.id);
-    setEditPaymentAmount(payment.amount);
+    setEditPaymentAmount(Number(payment.amount) || 0);
     setEditPaymentRemarks(payment.remarks || "");
   };
 
-  const savePaymentEdit = async (id: number) => {
-    if (editPaymentAmount <= 0) {
-      alert("Amount must be greater than 0");
-      return;
-    }
-
-    const { error } = await supabase
-      .from("payment_audit")
-      .update({
-        amount: editPaymentAmount,
-        remarks: editPaymentRemarks,
-      })
-      .eq("id", id);
-
-    if (error) {
-      console.error(error);
-      alert("Failed to update payment audit record");
-      return;
-    }
-
+  const cancelPaymentEdit = () => {
     setEditingPaymentId(null);
-    load();
+    setEditPaymentAmount("");
+    setEditPaymentRemarks("");
+  };
+
+  const savePaymentEdit = async (id: number) => {
+    if (savingPaymentId !== null) return;
+
+    if (
+      editPaymentAmount === "" ||
+      !Number.isFinite(editPaymentAmount) ||
+      editPaymentAmount <= 0
+    ) {
+      alert("Amount must be greater than 0.");
+      return;
+    }
+
+    setSavingPaymentId(id);
+
+    try {
+      const { error } = await supabase
+        .from("payment_audit")
+        .update({
+          amount: Number(editPaymentAmount.toFixed(2)),
+          remarks: editPaymentRemarks.trim() || null,
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setEditingPaymentId(null);
+      await load();
+    } catch (error) {
+      console.error("Error updating payment audit:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to update payment audit record.",
+      );
+    } finally {
+      setSavingPaymentId(null);
+    }
   };
 
   const deletePaymentAudit = async (id: number) => {
-    if (!confirm("Delete this payment audit record?")) return;
+    if (deletingPaymentId !== null) return;
 
-    const { error } = await supabase
-      .from("payment_audit")
-      .delete()
-      .eq("id", id);
-
-    if (error) {
-      console.error(error);
-      alert("Failed to delete payment audit record");
+    if (!confirm("Delete this payment audit record? This cannot be undone.")) {
       return;
     }
 
-    load();
+    setDeletingPaymentId(id);
+
+    try {
+      const { error } = await supabase
+        .from("payment_audit")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      if (editingPaymentId === id) cancelPaymentEdit();
+
+      await load();
+    } catch (error) {
+      console.error("Error deleting payment audit:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to delete payment audit record.",
+      );
+    } finally {
+      setDeletingPaymentId(null);
+    }
   };
 
-  // =========================================
-  // TOTALS
-  // =========================================
-
+  // Summary calculations
   const totalLoans = loanAudits.reduce(
-    (sum, audit) => sum + Number(audit.loan || 0),
+    (sum, audit) => sum + Number(audit.amount || 0),
     0,
   );
 
@@ -189,362 +293,363 @@ export default function AuditPage() {
     0,
   );
 
-  // =========================================
-  // STATUS STYLE
-  // =========================================
+  const pendingLoans = loanAudits.filter(
+    (audit) => audit.status?.toLowerCase() === "pending",
+  ).length;
 
-  const getStatusClass = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case "paid":
-        return "bg-green-100 text-green-700";
-
-      case "active":
-        return "bg-blue-100 text-blue-700";
-
-      case "pending":
-        return "bg-yellow-100 text-yellow-700";
-
-      case "overdue":
-        return "bg-red-100 text-red-700";
-
-      default:
-        return "bg-gray-100 text-gray-600";
-    }
-  };
+  const paidLoans = loanAudits.filter(
+    (audit) => audit.status?.toLowerCase() === "paid",
+  ).length;
 
   return (
-    <div className="h-screen flex flex-col md:flex-row bg-gray-100">
-      <Sidebar />
-
-      <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto">
-        {/* =========================================
-            PAGE HEADER
-        ========================================= */}
-
-        <h1 className="text-3xl font-bold text-gray-800 mb-1">Audit</h1>
-
-        <p className="text-sm text-gray-500 mb-6">
-          Review and manage loan and payment audit records
-        </p>
-
-        {/* =========================================
-            SUMMARY CARDS
-        ========================================= */}
-
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white rounded-lg shadow-xs p-5 hover:shadow-md transition-transform transform hover:-translate-y-1">
-            <p className="text-sm text-gray-500">Total Loans</p>
-
-            <p className="text-2xl font-bold text-blue-600 mt-1">
-              ₱{totalLoans.toLocaleString()}
-            </p>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-xs p-5 hover:shadow-md transition-transform transform hover:-translate-y-1">
-            <p className="text-sm text-gray-500">Total Interest</p>
-
-            <p className="text-2xl font-bold text-purple-600 mt-1">
-              ₱{totalInterest.toLocaleString()}
-            </p>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-xs p-5 hover:shadow-md transition-transform transform hover:-translate-y-1">
-            <p className="text-sm text-gray-500">Loan Total</p>
-
-            <p className="text-2xl font-bold text-green-600 mt-1">
-              ₱{totalLoanAmount.toLocaleString()}
-            </p>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-xs p-5 hover:shadow-md transition-transform transform hover:-translate-y-1">
-            <p className="text-sm text-gray-500">Payments</p>
-
-            <p className="text-2xl font-bold text-orange-600 mt-1">
-              ₱{totalPayments.toLocaleString()}
-            </p>
-          </div>
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+            Audit
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Review and manage loan and payment audit records.
+          </p>
         </div>
 
-        {/* =========================================
-            LOANS AUDIT LOG
-        ========================================= */}
+        <button
+          type="button"
+          onClick={() => void load()}
+          disabled={loading}
+          className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50"
+        >
+          {loading ? "Refreshing..." : "Refresh records"}
+        </button>
+      </div>
 
-        <h2 className="text-xl font-bold text-gray-800 mb-4">
-          Loans Audit Log
-        </h2>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-sm font-medium text-slate-500">
+            Total Loan Principal
+          </p>
+          <p className="mt-2 text-2xl font-bold text-blue-700">
+            {formatCurrency(totalLoans)}
+          </p>
+          <p className="mt-1 text-xs text-slate-400">
+            {loanAudits.length} audit records
+          </p>
+        </div>
 
-        <div className="w-full overflow-hidden rounded-lg shadow-xs bg-white mb-8">
-          <div className="w-full overflow-x-auto">
-            <table className="w-full whitespace-no-wrap text-sm">
-              <thead>
-                <tr className="text-xs font-semibold tracking-wide text-left text-gray-500 uppercase border-b border-gray-200 bg-gray-50">
-                  <th className="px-4 py-3">Borrower</th>
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-sm font-medium text-slate-500">Total Interest</p>
+          <p className="mt-2 text-2xl font-bold text-violet-700">
+            {formatCurrency(totalInterest)}
+          </p>
+          <p className="mt-1 text-xs text-slate-400">
+            Interest across audited loans
+          </p>
+        </div>
 
-                  <th className="px-4 py-3">Loan</th>
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-sm font-medium text-slate-500">Total Repayment</p>
+          <p className="mt-2 text-2xl font-bold text-emerald-700">
+            {formatCurrency(totalLoanAmount)}
+          </p>
+          <p className="mt-1 text-xs text-slate-400">Principal plus interest</p>
+        </div>
 
-                  <th className="px-4 py-3">Interest</th>
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-sm font-medium text-slate-500">Total Payments</p>
+          <p className="mt-2 text-2xl font-bold text-orange-600">
+            {formatCurrency(totalPayments)}
+          </p>
+          <p className="mt-1 text-xs text-slate-400">
+            {paymentAudits.length} payment records
+          </p>
+        </div>
+      </div>
 
-                  <th className="px-4 py-3">Total</th>
+      {/* Loan Audit Log */}
+      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-200 px-5 py-4">
+          <h2 className="font-semibold text-slate-900">Loans Audit Log</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Review loan amounts, repayment status, and audit remarks.
+          </p>
+        </div>
 
-                  <th className="px-4 py-3">Monthly</th>
-
-                  <th className="px-4 py-3">Status</th>
-
-                  <th className="px-4 py-3">Action</th>
-
-                  <th className="px-4 py-3">Remarks</th>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="border-y border-slate-200 bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+              <tr>
+                <th className="whitespace-nowrap px-5 py-3">Borrower</th>
+                <th className="whitespace-nowrap px-5 py-3">Principal</th>
+                <th className="whitespace-nowrap px-5 py-3">Interest</th>
+                <th className="whitespace-nowrap px-5 py-3">Total</th>
+                <th className="whitespace-nowrap px-5 py-3">Monthly</th>
+                <th className="whitespace-nowrap px-5 py-3">Status</th>
+                <th className="min-w-56 px-5 py-3">Remarks</th>
+                <th className="whitespace-nowrap px-5 py-3">Created Date</th>
+                <th className="whitespace-nowrap px-5 py-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {loading ? (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="px-5 py-10 text-center text-slate-500"
+                  >
+                    Loading loan audit records...
+                  </td>
                 </tr>
-              </thead>
+              ) : loanAudits.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="px-5 py-10 text-center text-slate-400"
+                  >
+                    No loan audit records found.
+                  </td>
+                </tr>
+              ) : (
+                loanAudits.map((audit) => {
+                  const isEditing = editingLoanId === audit.id;
 
-              <tbody className="bg-white divide-y">
-                {loading ? (
-                  <tr>
-                    <td colSpan={8} className="p-8">
-                      <div className="flex justify-center items-center">
-                        <div className="w-6 h-6 border-4 border-gray-200 border-t-green-600 rounded-full animate-spin"></div>
-                      </div>
-                    </td>
-                  </tr>
-                ) : loanAudits.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="p-6 text-center text-gray-400">
-                      No loan audit records yet
-                    </td>
-                  </tr>
-                ) : (
-                  loanAudits.map((audit) => (
+                  return (
                     <tr
                       key={audit.id}
-                      className="text-gray-700 hover:bg-gray-50 transition-colors duration-150"
+                      className="transition-colors hover:bg-slate-50"
                     >
-                      <td className="px-4 py-3 font-medium">
-                        {audit.borrower}
+                      <td className="whitespace-nowrap px-5 py-4 font-semibold text-slate-800">
+                        {audit.borrower_name || "N/A"}
+                        <p className="mt-1 text-xs font-normal text-slate-400">
+                          Audit #{audit.id}
+                        </p>
                       </td>
 
-                      <td className="px-4 py-3 font-semibold text-blue-600">
-                        ₱{Number(audit.loan).toLocaleString()}
+                      <td className="whitespace-nowrap px-5 py-4 text-slate-600">
+                        {formatCurrency(audit.amount)}
                       </td>
 
-                      <td className="px-4 py-3 font-semibold text-purple-600">
-                        ₱{Number(audit.interest).toLocaleString()}
+                      <td className="whitespace-nowrap px-5 py-4 text-violet-700">
+                        {formatCurrency(audit.interest)}
                       </td>
 
-                      <td className="px-4 py-3 font-semibold text-green-700">
-                        ₱{Number(audit.total).toLocaleString()}
+                      <td className="whitespace-nowrap px-5 py-4 font-semibold text-emerald-700">
+                        {formatCurrency(audit.total)}
                       </td>
 
-                      <td className="px-4 py-3">
-                        ₱{Number(audit.monthly).toLocaleString()}
+                      <td className="whitespace-nowrap px-5 py-4 text-slate-600">
+                        {formatCurrency(audit.monthly)}
                       </td>
 
-                      <td className="px-4 py-3">
-                        {editingLoanId === audit.id ? (
-                          <select
-                            value={editLoanStatus}
-                            onChange={(e) => setEditLoanStatus(e.target.value)}
-                            className="px-2 py-1 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-green-500 outline-none"
+                      <td className="whitespace-nowrap px-5 py-4">
+                        <span
+                          className={`inline-flex rounded-md px-2.5 py-1 text-xs font-semibold ${getStatusStyle(audit.status)}`}
+                        >
+                          {audit.status || "Unknown"}
+                        </span>
+                      </td>
+
+                      <td className="min-w-56 px-5 py-4">
+                        <span className="wrap-break-word text-slate-500">
+                          {audit.remarks || "No remarks"}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-4 text-slate-500">
+                        {audit.created_date
+                          ? new Date(audit.created_date).toLocaleString(
+                              "en-PH",
+                              {
+                                dateStyle: "medium",
+                                timeStyle: "short",
+                              },
+                            )
+                          : "N/A"}
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => void deleteLoanAudit(audit.id)}
+                            className="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
                           >
-                            <option value="Pending">Pending</option>
-
-                            <option value="Active">Active</option>
-
-                            <option value="Paid">Paid</option>
-
-                            <option value="Overdue">Overdue</option>
-                          </select>
-                        ) : (
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusClass(
-                              audit.status,
-                            )}`}
-                          >
-                            {audit.status}
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="px-4 py-3">
-                        {editingLoanId === audit.id ? (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => saveLoanEdit(audit.id)}
-                              className="text-blue-600 hover:underline text-sm"
-                            >
-                              Save
-                            </button>
-
-                            <button
-                              onClick={() => setEditingLoanId(null)}
-                              className="text-gray-500 hover:underline text-sm"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => startLoanEdit(audit)}
-                              className="text-blue-600 hover:underline text-sm"
-                            >
-                              Edit
-                            </button>
-
-                            <button
-                              onClick={() => deleteLoanAudit(audit.id)}
-                              className="text-red-500 hover:underline text-sm"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        )}
-                      </td>
-
-                      <td className="px-4 py-3 min-w-[180px]">
-                        {editingLoanId === audit.id ? (
-                          <input
-                            type="text"
-                            value={editLoanRemarks}
-                            onChange={(e) => setEditLoanRemarks(e.target.value)}
-                            placeholder="Enter remarks"
-                            className="w-full min-w-[160px] px-2 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                          />
-                        ) : (
-                          <span className="text-gray-500">
-                            {audit.remarks || "—"}
-                          </span>
-                        )}
+                            Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
 
-        {/* =========================================
-            PAYMENT AUDIT LOG
-        ========================================= */}
+        {!loading && loanAudits.length > 0 && (
+          <div className="border-t border-slate-200 bg-slate-50 px-5 py-3">
+            <p className="text-xs text-slate-500">
+              Showing {loanAudits.length} loan audit record
+              {loanAudits.length === 1 ? "" : "s"}
+            </p>
+          </div>
+        )}
+      </section>
 
-        <h2 className="text-xl font-bold text-gray-800 mb-4">
-          Payment Audit Log
-        </h2>
+      {/* Payment Audit Log */}
+      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-200 px-5 py-4">
+          <h2 className="font-semibold text-slate-900">Payment Audit Log</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Review payment amounts and manage audit remarks.
+          </p>
+        </div>
 
-        <div className="w-full overflow-hidden rounded-lg shadow-xs bg-white">
-          <div className="w-full overflow-x-auto">
-            <table className="w-full whitespace-no-wrap text-sm">
-              <thead>
-                <tr className="text-xs font-semibold tracking-wide text-left text-gray-500 uppercase border-b border-gray-200 bg-gray-50">
-                  <th className="px-4 py-3">Week</th>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="border-y border-slate-200 bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+              <tr>
+                <th className="whitespace-nowrap px-5 py-3">Week</th>
+                <th className="whitespace-nowrap px-5 py-3">Amount</th>
+                <th className="min-w-56 px-5 py-3">Remarks</th>
+                <th className="whitespace-nowrap px-5 py-3">Actions</th>
+              </tr>
+            </thead>
 
-                  <th className="px-4 py-3">Amount</th>
-
-                  <th className="px-4 py-3">Action</th>
-
-                  <th className="px-4 py-3">Remarks</th>
+            <tbody className="divide-y divide-slate-100">
+              {loading ? (
+                <tr>
+                  <td
+                    colSpan={4}
+                    className="px-5 py-10 text-center text-slate-500"
+                  >
+                    Loading payment audit records...
+                  </td>
                 </tr>
-              </thead>
+              ) : paymentAudits.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={4}
+                    className="px-5 py-10 text-center text-slate-400"
+                  >
+                    No payment audit records found.
+                  </td>
+                </tr>
+              ) : (
+                paymentAudits.map((payment) => {
+                  const isEditing = editingPaymentId === payment.id;
 
-              <tbody className="bg-white divide-y">
-                {loading ? (
-                  <tr>
-                    <td colSpan={4} className="p-8">
-                      <div className="flex justify-center items-center">
-                        <div className="w-6 h-6 border-4 border-gray-200 border-t-green-600 rounded-full animate-spin"></div>
-                      </div>
-                    </td>
-                  </tr>
-                ) : paymentAudits.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="p-6 text-center text-gray-400">
-                      No payment audit records yet
-                    </td>
-                  </tr>
-                ) : (
-                  paymentAudits.map((payment) => (
+                  return (
                     <tr
                       key={payment.id}
-                      className="text-gray-700 hover:bg-gray-50 transition-colors duration-150"
+                      className="transition-colors hover:bg-slate-50"
                     >
-                      <td className="px-4 py-3 font-medium">{payment.week}</td>
+                      <td className="whitespace-nowrap px-5 py-4 font-semibold text-slate-800">
+                        {payment.week || "N/A"}
+                        <p className="mt-1 text-xs font-normal text-slate-400">
+                          Audit #{payment.id}
+                        </p>
+                      </td>
 
-                      <td className="px-4 py-3 font-semibold text-green-700">
-                        {editingPaymentId === payment.id ? (
+                      <td className="whitespace-nowrap px-5 py-4">
+                        {isEditing ? (
                           <input
                             type="number"
-                            min={0}
+                            min="0.01"
+                            step="0.01"
                             value={editPaymentAmount}
                             onChange={(e) =>
-                              setEditPaymentAmount(Number(e.target.value))
+                              setEditPaymentAmount(
+                                e.target.value === ""
+                                  ? ""
+                                  : Number(e.target.value),
+                              )
                             }
-                            className="w-28 px-2 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                            className="w-32 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+                            aria-label={`Payment amount for audit ${payment.id}`}
                           />
                         ) : (
-                          `₱${Number(payment.amount).toLocaleString()}`
+                          <span className="font-semibold text-emerald-700">
+                            {formatCurrency(payment.amount)}
+                          </span>
                         )}
                       </td>
 
-                      <td className="px-4 py-3">
-                        {editingPaymentId === payment.id ? (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => savePaymentEdit(payment.id)}
-                              className="text-blue-600 hover:underline text-sm"
-                            >
-                              Save
-                            </button>
-
-                            <button
-                              onClick={() => setEditingPaymentId(null)}
-                              className="text-gray-500 hover:underline text-sm"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => startPaymentEdit(payment)}
-                              className="text-blue-600 hover:underline text-sm"
-                            >
-                              Edit
-                            </button>
-
-                            <button
-                              onClick={() => deletePaymentAudit(payment.id)}
-                              className="text-red-500 hover:underline text-sm"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        )}
-                      </td>
-
-                      <td className="px-4 py-3 min-w-[180px]">
-                        {editingPaymentId === payment.id ? (
+                      <td className="min-w-56 px-5 py-4">
+                        {isEditing ? (
                           <input
-                            type="text"
                             value={editPaymentRemarks}
                             onChange={(e) =>
                               setEditPaymentRemarks(e.target.value)
                             }
-                            placeholder="Enter remarks"
-                            className="w-full min-w-[160px] px-2 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                            placeholder="Add remarks..."
+                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
                           />
                         ) : (
-                          <span className="text-gray-500">
-                            {payment.remarks || "—"}
+                          <span className="wrap-break-word text-slate-500">
+                            {payment.remarks || "No remarks"}
                           </span>
                         )}
                       </td>
+
+                      <td className="whitespace-nowrap px-5 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          {isEditing ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => void savePaymentEdit(payment.id)}
+                                className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"
+                              >
+                                Save
+                              </button>
+                              <button
+                                type="button"
+                                onClick={cancelPaymentEdit}
+                                className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => startPaymentEdit(payment)}
+                                className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  void deletePaymentAudit(payment.id)
+                                }
+                                className="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
+                              >
+                                Delete
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
-      </main>
+
+        {!loading && paymentAudits.length > 0 && (
+          <div className="border-t border-slate-200 bg-slate-50 px-5 py-3">
+            <p className="text-xs text-slate-500">
+              Showing {paymentAudits.length} payment audit record
+              {paymentAudits.length === 1 ? "" : "s"}
+              {" · "}Total payments: {formatCurrency(totalPayments)}
+            </p>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

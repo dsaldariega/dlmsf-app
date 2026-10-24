@@ -317,7 +317,7 @@ export default function PaymentsPage() {
               <tr>
                 <th className="px-5 py-3 font-semibold">Week Start</th>
                 <th className="px-5 py-3 font-semibold">Amount</th>
-                <th className="px-5 py-3 text-right font-semibold">Actions</th>
+                <th className="px-5 py-3 font-semibold">Actions</th>
               </tr>
             </thead>
 
@@ -354,7 +354,7 @@ export default function PaymentsPage() {
                     </td>
 
                     {/* Actions */}
-                    <td className="whitespace-nowrap px-5 py-4 text-right">
+                    <td className="whitespace-nowrap px-5 py-4">
                       <button
                         type="button"
                         onClick={() => deletePayment(payment.id)}

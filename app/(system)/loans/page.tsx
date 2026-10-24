@@ -16,7 +16,7 @@ type Loan = {
   interest: number;
   total: number;
   monthly: number;
-  loan_months: number;
+  months: number;
   status: string;
 };
 
@@ -96,7 +96,7 @@ export default function LoansPage() {
   const calculatePenalty = (principal: number) =>
     Number((principal * PENALTY_RATE).toFixed(2));
 
-  // Add loan
+  // Add loan and create audit log
   const addLoan = async () => {
     if (adding) return;
 
@@ -124,34 +124,89 @@ export default function LoansPage() {
 
     setAdding(true);
 
+    let loanCreated = false;
+
     try {
+      // Calculate loan amounts
       const principal = Number(amount.toFixed(2));
       const interest = calculateInterest(principal, loanMonths);
       const total = Number((principal + interest).toFixed(2));
       const monthly = calculateMonthly(principal, loanMonths);
+      const status = "Ongoing";
 
-      const { error } = await supabase.from("loans").insert({
-        borrower_id: memberExists.id,
-        amount: principal,
-        interest,
-        total,
-        monthly,
-        loan_months: loanMonths,
-        status: "Ongoing",
-      });
+      // 1. Insert loan and retrieve its generated ID
+      const { data: newLoan, error: loanError } = await supabase
+        .from("loans")
+        .insert({
+          borrower_id: memberExists.id,
+          amount: principal,
+          interest,
+          total,
+          monthly,
+          months: loanMonths,
+          status,
+        })
+        .select("id")
+        .single();
 
-      if (error) throw error;
+      if (loanError) throw loanError;
 
+      if (!newLoan) {
+        throw new Error("Loan was created, but its ID could not be retrieved.");
+      }
+
+      loanCreated = true;
+
+      // 2. Insert audit record linked to the new loan
+      const { error: auditError } = await supabase
+        .from("loans_audit_log")
+        .insert({
+          id: newLoan.id,
+          borrower_name: memberExists.id,
+          amount: principal,
+          interest,
+          total,
+          monthly,
+          status,
+          remarks: `New loan created (${loanMonths} ${
+            loanMonths === 1 ? "month" : "months"
+          })`,
+          created_date: new Date().toISOString(),
+        });
+
+      if (auditError) {
+        console.error("Loan audit logging failed:", auditError);
+
+        await fetchLoans();
+
+        alert(
+          "Loan was created, but the audit record failed. Check the loans_audit_log columns and foreign key relationships. Do not submit the loan again.",
+        );
+
+        return;
+      }
+
+      // 3. Reset the form
       setBorrowerId(null);
       setAmount("");
       setLoanMonths(2);
 
+      // 4. Refresh loan records
       await fetchLoans();
 
-      alert("Loan added successfully.");
+      alert("Loan added successfully and audit log recorded.");
     } catch (error) {
       console.error("Error adding loan:", error);
-      alert(error instanceof Error ? error.message : "Unable to add loan.");
+
+      if (loanCreated) {
+        await fetchLoans();
+
+        alert(
+          "The loan was created, but a later operation failed. Check your audit log before trying again.",
+        );
+      } else {
+        alert(error instanceof Error ? error.message : "Unable to add loan.");
+      }
     } finally {
       setAdding(false);
     }
@@ -284,7 +339,6 @@ export default function LoansPage() {
                   </option>
                 ))}
               </select>
-
               <svg
                 className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
                 xmlns="http://www.w3.org/2000/svg"
@@ -320,15 +374,15 @@ export default function LoansPage() {
               <input
                 id="loanAmount"
                 type="number"
-                min="0.01"
-                step="0.01"
+                min="500"
+                step="500"
                 value={amount}
                 onChange={(event) =>
                   setAmount(
                     event.target.value === "" ? "" : Number(event.target.value),
                   )
                 }
-                placeholder="0.00"
+                placeholder="500"
                 className="min-w-0 w-full px-3 text-sm text-slate-800 outline-none placeholder:text-slate-400"
               />
             </div>
@@ -523,7 +577,7 @@ export default function LoansPage() {
                 <th className="whitespace-nowrap px-5 py-3 font-semibold">
                   Status
                 </th>
-                <th className="whitespace-nowrap px-5 py-3 text-right font-semibold">
+                <th className="whitespace-nowrap px-5 py-3 font-semibold">
                   Actions
                 </th>
               </tr>
@@ -576,8 +630,8 @@ export default function LoansPage() {
                       </td>
 
                       <td className="whitespace-nowrap px-5 py-4 text-slate-600">
-                        {loan.loan_months || 2}{" "}
-                        {(loan.loan_months || 2) === 1 ? "Month" : "Months"}
+                        {loan.months || 2}{" "}
+                        {(loan.months || 2) === 1 ? "Month" : "Months"}
                       </td>
 
                       <td className="whitespace-nowrap px-5 py-4 text-slate-600">
@@ -602,7 +656,7 @@ export default function LoansPage() {
                         </span>
                       </td>
 
-                      <td className="whitespace-nowrap px-5 py-4 text-right">
+                      <td className="whitespace-nowrap px-5 py-4">
                         <div className="flex items-center justify-end gap-2">
                           {loan.status !== "Paid" && (
                             <button
