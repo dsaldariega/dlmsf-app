@@ -322,27 +322,6 @@ export default function DashboardShell({
 
           {/* Navbar right */}
           <div className="flex shrink-0 items-center gap-1 sm:gap-3">
-            <button
-              type="button"
-              aria-label="Search"
-              title="Search"
-              className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100"
-            >
-              <Search size={19} />
-            </button>
-
-            <button
-              type="button"
-              aria-label="Notifications"
-              title="Notifications"
-              className="relative rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100"
-            >
-              <Bell size={19} />
-              <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-red-500 ring-2 ring-white" />
-            </button>
-
-            <div className="mx-1 hidden h-8 w-px bg-slate-200 sm:block" />
-
             {/* Profile dropdown */}
             <div className="relative">
               <button
