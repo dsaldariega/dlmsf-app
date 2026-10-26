@@ -23,10 +23,10 @@ import { supabase } from "@/lib/supabase";
 
 const navigation = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Audit", href: "/audit", icon: Activity },
-  { label: "Loans", href: "/loans", icon: Banknote },
   { label: "Members", href: "/members", icon: Users },
+  { label: "Loans", href: "/loans", icon: Banknote },
   { label: "Payments", href: "/payments", icon: CreditCard },
+  { label: "Audit", href: "/audit", icon: Activity },
 ];
 
 type MemberProfile = {

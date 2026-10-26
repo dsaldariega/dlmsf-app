@@ -4,36 +4,18 @@ import { useEffect, useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { supabase } from "@/lib/supabase";
-
-type Member = {
-  id: number;
-  heads: number | null;
-};
-
-type Payment = {
-  id: number;
-  amount: number;
-  week_start: string;
-};
-
-type LoanPayment = {
-  id: number;
-  borrower: string;
-  amount: number;
-  paid_at: string;
-};
+import { MemberCount } from "@/lib/types/member";
+import { LoanPayment, Payment } from "@/lib/types/payment";
+import { RATE } from "@/lib/constants/payment";
 
 export default function PaymentsPage() {
-  const RATE = 50;
-
-  const [members, setMembers] = useState<Member[]>([]);
+  const [members, setMembers] = useState<MemberCount[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loanPayments, setLoanPayments] = useState<LoanPayment[]>([]);
 
   // Select only one date for the weekly collection.
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
-  const [editingId, setEditingId] = useState<number | null>(null);
   const [editAmount, setEditAmount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -166,31 +148,6 @@ export default function PaymentsPage() {
       return;
     }
 
-    await load();
-  };
-
-  const startEdit = (payment: Payment) => {
-    setEditingId(payment.id);
-    setEditAmount(Number(payment.amount));
-  };
-
-  const saveEdit = async (id: number) => {
-    if (!Number.isFinite(editAmount) || editAmount <= 0) {
-      alert("Amount must be greater than zero.");
-      return;
-    }
-
-    const { error } = await supabase
-      .from("payments")
-      .update({ amount: editAmount })
-      .eq("id", id);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    setEditingId(null);
     await load();
   };
 

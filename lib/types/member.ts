@@ -10,3 +10,7 @@ export type MemberOption = {
   name: string;
 };
 
+export type MemberCount = {
+  id: number;
+  heads: number;
+};
