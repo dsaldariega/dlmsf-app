@@ -2,32 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-
-type Member = {
-  id: number;
-  name: string;
-};
-
-type Loan = {
-  id: number;
-  borrower_id: number;
-  borrower?: { name: string } | null;
-  amount: number;
-  interest: number;
-  total: number;
-  monthly: number;
-  months: number;
-  status: string;
-};
-
-const INTEREST_RATE = 0.05;
-const PENALTY_RATE = 0.025;
-
-const LOAN_DURATIONS = [1, 2, 3, 4, 5, 6, 9, 12, 18, 24];
+import { Loan } from "@/lib/types/loan";
+import { Member, MemberOption } from "@/lib/types/member";
+import {
+  INTEREST_RATE,
+  LOAN_DURATIONS,
+  PENALTY_RATE,
+} from "@/lib/constants/loans";
 
 export default function LoansPage() {
   const [loans, setLoans] = useState<Loan[]>([]);
-  const [members, setMembers] = useState<Member[]>([]);
+  const [members, setMembers] = useState<MemberOption[]>([]);
   const [borrowerId, setBorrowerId] = useState<number | null>(null);
   const [amount, setAmount] = useState<number | "">("");
   const [loanMonths, setLoanMonths] = useState<number>(2);
