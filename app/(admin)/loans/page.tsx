@@ -574,7 +574,7 @@ export default function LoansPage() {
           <table className={`${tableClass} relative min-w-300`}>
             <thead className="sticky top-0 z-10">
               <tr>
-                <th className={`${thClass} w-72`}>Borrower</th>
+                <th className={thClass}>Borrower</th>
                 <th className={thClass}>Principal</th>
                 <th className={thClass}>Duration</th>
                 <th className={thClass}>Interest</th>
@@ -613,7 +613,11 @@ export default function LoansPage() {
                         initial={{ opacity: 0, y: -16 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, x: -20 }}
-                        transition={{ duration: 0.3, ease: "easeOut" }}
+                        transition={{
+                          duration: 0.3,
+                          ease: "easeOut",
+                          layout: { duration: 0.25 },
+                        }}
                         className="hover:bg-slate-50"
                       >
                         <td

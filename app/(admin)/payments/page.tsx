@@ -240,7 +240,7 @@ export default function PaymentsPage() {
 
         <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_auto] lg:max-w-2xl">
           {/* Collection date */}
-          <div className="min-w-0">
+          <div className="relative z-20 min-w-0">
             <label className="mb-2 block text-sm font-medium text-slate-700">
               Collection date
             </label>
@@ -252,6 +252,7 @@ export default function PaymentsPage() {
               placeholderText="Select a collection date"
               isClearable
               filterDate={(date) => date.getDay() === 0}
+              popperClassName="!z-[9999]"
               className="h-11.5 w-full rounded-lg border border-slate-300 bg-white px-4 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               wrapperClassName="w-full"
             />
