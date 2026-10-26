@@ -10,6 +10,13 @@ import {
   PENALTY_RATE,
 } from "@/lib/constants/loans";
 import { motion, AnimatePresence } from "motion/react";
+import {
+  calculateInterest,
+  calculateMonthly,
+  calculatePenalty,
+  calculateTotal,
+  formatCurrency,
+} from "@/lib/utils/loans";
 
 export default function LoansPage() {
   const [loans, setLoans] = useState<Loan[]>([]);
@@ -66,25 +73,29 @@ export default function LoansPage() {
     }
   };
 
-  // Currency formatter
-  const formatCurrency = (value: number) =>
-    `₱${Number(value || 0).toLocaleString("en-PH", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
+  function TableLoading({ message }: { message: string }) {
+    return (
+      <tr>
+        <td
+          colSpan={4}
+          className="h-75 px-5 py-10 text-center align-middle text-slate-500"
+        >
+          <span className="inline-flex items-center justify-center gap-3">
+            <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
+            {message}
+          </span>
+        </td>
+      </tr>
+    );
+  }
 
-  // Loan calculation helpers: simple interest on original principal
-  const calculateInterest = (principal: number, months: number) =>
-    Number((principal * INTEREST_RATE * months).toFixed(2));
+  const tableClass =
+    "w-full min-w-[600px] table-fixed border-collapse text-left text-sm";
 
-  const calculateTotal = (principal: number, months: number) =>
-    Number((principal + calculateInterest(principal, months)).toFixed(2));
+  const thClass =
+    "border-b border-slate-200 bg-slate-50 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500";
 
-  const calculateMonthly = (principal: number, months: number) =>
-    Number((calculateTotal(principal, months) / months).toFixed(2));
-
-  const calculatePenalty = (principal: number) =>
-    Number((principal * PENALTY_RATE).toFixed(2));
+  const tdClass = "border-b border-slate-100 px-5 py-4 text-slate-700";
 
   // Add loan and create audit log
   const addLoan = async () => {
@@ -216,7 +227,8 @@ export default function LoansPage() {
       return;
     }
 
-    await fetchLoans(false);
+    // Full refresh: show the loading state and then animate rows in again.
+    await fetchLoans();
   };
 
   // Delete loan
@@ -261,36 +273,51 @@ export default function LoansPage() {
       </div>
 
       {/* Summary cards */}
+      {/* Summary cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500">
-            Total Loan Principal
-          </p>
-          <p className="mt-2 text-2xl font-bold text-blue-700">
-            {formatCurrency(totalLoanAmount)}
-          </p>
-        </div>
+        {[
+          {
+            label: "Total Loan Principal",
+            value: formatCurrency(totalLoanAmount),
+            color: "text-blue-700",
+          },
+          {
+            label: "Outstanding Loan Balance",
+            value: formatCurrency(totalOutstanding),
+            color: "text-orange-600",
+          },
+          {
+            label: "Ongoing Loans",
+            value: ongoingLoans.toLocaleString("en-PH"),
+            color: "text-amber-600",
+          },
+          {
+            label: "Paid Loans",
+            value: paidLoans.toLocaleString("en-PH"),
+            color: "text-green-700",
+          },
+        ].map((card, index) => (
+          <div
+            key={card.label}
+            className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+          >
+            <p className="text-sm font-medium text-slate-500">{card.label}</p>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500">
-            Outstanding Loan Balance
-          </p>
-          <p className="mt-2 text-2xl font-bold text-orange-600">
-            {formatCurrency(totalOutstanding)}
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500">Ongoing Loans</p>
-          <p className="mt-2 text-2xl font-bold text-amber-600">
-            {ongoingLoans}
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500">Paid Loans</p>
-          <p className="mt-2 text-2xl font-bold text-green-700">{paidLoans}</p>
-        </div>
+            <motion.p
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                duration: 0.35,
+                ease: "easeOut",
+                delay: index * 0.07,
+              }}
+              key={`${loading}-${card.value}`}
+              className={`mt-2 text-2xl font-bold tabular-nums ${card.color}`}
+            >
+              {loading ? "—" : card.value}
+            </motion.p>
+          </div>
+        ))}
       </div>
 
       {/* Add loan form */}
@@ -459,16 +486,16 @@ export default function LoansPage() {
 
         {/* Loan terms */}
         <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-          <p className="font-medium">Loan terms</p>
+          <p className="font-medium">Loan terms:</p>
           <ul className="mt-1 space-y-1 text-xs leading-5 text-blue-700">
-            <li>Monthly interest: 5% of the original loan principal.</li>
+            <li>- Monthly interest: 5% of the original loan principal.</li>
             <li>
-              Repayment duration: {loanMonths}{" "}
+              - Repayment duration: {loanMonths}{" "}
               {loanMonths === 1 ? "month" : "months"}.
             </li>
-            <li>Payment due date: Every 15th of the month.</li>
+            <li>- Payment due date: Every 15th of the month.</li>
             <li>
-              Late-payment penalty: 2.5% of the original loan amount when
+              - Late-payment penalty: 2.5% of the original loan amount when
               payment is overdue.
             </li>
           </ul>
@@ -543,61 +570,32 @@ export default function LoansPage() {
           </p>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="border-y border-slate-200 bg-slate-50/80 text-xs uppercase tracking-wider text-slate-500">
+        <div className="h-105 overflow-y-scroll overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+          <table className={`${tableClass} relative min-w-300`}>
+            <thead className="sticky top-0 z-10">
               <tr>
-                <th className="whitespace-nowrap px-5 py-3 font-semibold">
-                  Borrower
-                </th>
-                <th className="whitespace-nowrap px-5 py-3 font-semibold">
-                  Principal
-                </th>
-                <th className="whitespace-nowrap px-5 py-3 font-semibold">
-                  Duration
-                </th>
-                <th className="whitespace-nowrap px-5 py-3 font-semibold">
-                  Interest
-                </th>
-                <th className="whitespace-nowrap px-5 py-3 font-semibold">
-                  Total
-                </th>
-                <th className="whitespace-nowrap px-5 py-3 font-semibold">
-                  Monthly
-                </th>
-                <th className="whitespace-nowrap px-5 py-3 font-semibold">
-                  Status
-                </th>
-                <th className="whitespace-nowrap px-5 py-3 font-semibold">
-                  Actions
-                </th>
+                <th className={`${thClass} w-72`}>Borrower</th>
+                <th className={thClass}>Principal</th>
+                <th className={thClass}>Duration</th>
+                <th className={thClass}>Interest</th>
+                <th className={thClass}>Total</th>
+                <th className={thClass}>Monthly</th>
+                <th className={thClass}>Status</th>
+                <th className={thClass}>Actions</th>
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-slate-100">
+            <tbody>
               {loading ? (
-                <tr>
-                  <td
-                    colSpan={8}
-                    className="px-5 py-10 text-center text-slate-500"
-                  >
-                    <span className="inline-flex items-center gap-3">
-                      <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
-                      Loading loans...
-                    </span>
-                  </td>
-                </tr>
+                <TableLoading message="Loading loans..." />
               ) : loans.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={8}
-                    className="px-5 py-10 text-center text-slate-400"
-                  >
+                  <td colSpan={8} className={`${tdClass} text-center`}>
                     No loan records yet.
                   </td>
                 </tr>
               ) : (
-                <AnimatePresence>
+                <AnimatePresence mode="sync">
                   {loans.map((loan) => {
                     const status = loan.status || "Unknown";
 
@@ -615,74 +613,59 @@ export default function LoansPage() {
                         initial={{ opacity: 0, y: -16 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, x: -20 }}
-                        transition={{
-                          duration: 0.3,
-                          ease: "easeOut",
-                          layout: { duration: 0.25 },
-                        }}
-                        className="transition-colors hover:bg-slate-50"
+                        transition={{ duration: 0.3, ease: "easeOut" }}
+                        className="hover:bg-slate-50"
                       >
-                        <td className="whitespace-nowrap px-5 py-4 font-medium text-slate-700">
-                          {loan.borrower?.name || "N/A"}
+                        <td
+                          className={`${tdClass} w-72 font-medium text-slate-700`}
+                        >
+                          <span
+                            className="block truncate"
+                            title={loan.borrower?.name || "N/A"}
+                          >
+                            {loan.borrower?.name || "N/A"}
+                          </span>
                         </td>
 
-                        <td className="whitespace-nowrap px-5 py-4 text-slate-600">
+                        <td className={tdClass}>
                           {formatCurrency(Number(loan.amount))}
                         </td>
 
-                        <td className="whitespace-nowrap px-5 py-4 text-slate-600">
+                        <td className={tdClass}>
                           {loan.months || 2}{" "}
                           {(loan.months || 2) === 1 ? "Month" : "Months"}
                         </td>
 
-                        <td className="whitespace-nowrap px-5 py-4 text-slate-600">
+                        <td className={tdClass}>
                           {formatCurrency(Number(loan.interest))}
                         </td>
 
-                        <td className="whitespace-nowrap px-5 py-4 font-semibold text-green-700">
+                        <td className={tdClass}>
                           {formatCurrency(Number(loan.total))}
                         </td>
 
-                        <td className="whitespace-nowrap px-5 py-4 text-slate-600">
+                        <td className={tdClass}>
                           {formatCurrency(Number(loan.monthly))}
                         </td>
 
-                        <td className="whitespace-nowrap px-5 py-4">
-                          <motion.span
-                            key={status}
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ duration: 0.2 }}
-                            className={`inline-flex items-center rounded px-2 py-1 text-xs font-medium leading-4 ${
+                        <td className={tdClass}>
+                          <span
+                            className={`inline-flex rounded px-2 py-1 text-xs font-medium ${
                               badgeStyle[status] || badgeStyle.Unknown
                             }`}
                           >
                             {status}
-                          </motion.span>
+                          </span>
                         </td>
 
-                        <td className="whitespace-nowrap px-5 py-4">
-                          <div className="flex items-center justify-end gap-2">
+                        <td className={tdClass}>
+                          <div className="flex items-center gap-2">
                             {loan.status !== "Paid" && (
                               <button
                                 type="button"
                                 onClick={() => markPaid(loan.id)}
-                                className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-white px-3 text-xs font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                                className="shrink-0 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50"
                               >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  width="15"
-                                  height="15"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  aria-hidden="true"
-                                >
-                                  <path d="m5 12 4 4L19 6" />
-                                </svg>
                                 Mark Paid
                               </button>
                             )}
@@ -690,26 +673,8 @@ export default function LoansPage() {
                             <button
                               type="button"
                               onClick={() => deleteLoan(loan.id)}
-                              className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3 text-xs font-semibold text-red-600 shadow-sm transition hover:border-red-300 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500/30"
+                              className="shrink-0 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
                             >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="15"
-                                height="15"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                aria-hidden="true"
-                              >
-                                <path d="M3 6h18" />
-                                <path d="M8 6V4h8v2" />
-                                <path d="m19 6-1 14H6L5 6" />
-                                <path d="M10 11v5" />
-                                <path d="M14 11v5" />
-                              </svg>
                               Delete
                             </button>
                           </div>

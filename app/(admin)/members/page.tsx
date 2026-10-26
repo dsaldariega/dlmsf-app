@@ -224,7 +224,7 @@ function MembersPage() {
 
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:col-span-2 xl:col-span-1">
           <p className="text-sm font-medium text-slate-500">
-            Total Weekly Contribution
+            Estimate Weekly Contribution
           </p>
           <motion.p
             initial={{ opacity: 0, y: 8 }}
