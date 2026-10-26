@@ -368,8 +368,8 @@ function MembersPage() {
 
         {/* Members table */}
         <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="h-[400px] overflow-y-scroll">
-            <table className="w-full min-w-[700px] table-fixed text-left text-sm">
+          <div className="h-100 overflow-y-scroll">
+            <table className="w-full min-w-175 table-fixed text-left text-sm">
               <thead className="sticky top-0 z-10 bg-slate-50">
                 <tr>
                   <th className="w-[40%] border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -392,7 +392,7 @@ function MembersPage() {
                   <tr>
                     <td
                       colSpan={4}
-                      className="h-[350px] px-5 text-center align-middle text-slate-500"
+                      className="h-87.5 px-5 text-center align-middle text-slate-500"
                     >
                       <span className="inline-flex items-center justify-center gap-3">
                         <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
@@ -404,7 +404,7 @@ function MembersPage() {
                   <tr>
                     <td
                       colSpan={4}
-                      className="h-[350px] px-5 text-center align-middle"
+                      className="h-87.5 px-5 text-center align-middle"
                     >
                       <p className="font-semibold text-slate-800">
                         No members yet
