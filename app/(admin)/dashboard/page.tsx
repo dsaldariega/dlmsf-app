@@ -210,113 +210,111 @@ function AdminDashboard() {
         </h3>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: "easeOut" }}
-            className={cardClass}
-          >
+          <div className={cardClass}>
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-sm text-slate-500">Total Members</p>
-                <p className="mt-3 text-3xl font-bold text-slate-900">
+                <motion.p
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, delay: 0, ease: "easeOut" }}
+                  className="mt-3 text-3xl font-bold text-slate-900"
+                >
                   {loading ? "—" : members.length.toLocaleString()}
-                </p>
+                </motion.p>
               </div>
               <Users className="text-orange-600" size={26} />
             </div>
-          </motion.div>
+          </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: "easeOut" }}
-            className={cardClass}
-          >
+          <div className={cardClass}>
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-sm text-slate-500">Total Heads</p>
-                <p className="mt-3 text-3xl font-bold text-slate-900">
+                <motion.p
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, delay: 0.05, ease: "easeOut" }}
+                  className="mt-3 text-3xl font-bold text-slate-900"
+                >
                   {loading ? "—" : heads.toLocaleString()}
-                </p>
+                </motion.p>
               </div>
               <Users className="text-green-600" size={26} />
             </div>
-          </motion.div>
+          </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: "easeOut" }}
-            className={cardClass}
-          >
+          <div className={cardClass}>
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-sm text-slate-500">Sinking Fund Collected</p>
-                <p className="mt-3 text-2xl font-bold text-blue-700">
+                <motion.p
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, delay: 0.1, ease: "easeOut" }}
+                  className="mt-3 text-2xl font-bold text-blue-700"
+                >
                   {loading ? "—" : currency(totalSinkingCollected)}
-                </p>
+                </motion.p>
               </div>
               <Wallet className="text-blue-600" size={26} />
             </div>
-          </motion.div>
+          </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: "easeOut" }}
-            className={cardClass}
-          >
+          <div className={cardClass}>
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-sm text-slate-500">Available Funds</p>
-                <p
+                <motion.p
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, delay: 0.15, ease: "easeOut" }}
                   className={`mt-3 text-2xl font-bold ${
                     availableFunds < 0 ? "text-red-600" : "text-teal-700"
                   }`}
                 >
                   {loading ? "—" : currency(availableFunds)}
-                </p>
+                </motion.p>
               </div>
               <Landmark className="text-teal-600" size={26} />
             </div>
-          </motion.div>
+          </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: "easeOut" }}
-            className={cardClass}
-          >
+          <div className={cardClass}>
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-sm text-slate-500">Total Loan Payments</p>
-                <p className="mt-3 text-2xl font-bold text-purple-700">
+                <motion.p
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, delay: 0.2, ease: "easeOut" }}
+                  className="mt-3 text-2xl font-bold text-purple-700"
+                >
                   {loading ? "—" : currency(totalLoanInterestCollected)}
-                </p>
+                </motion.p>
               </div>
               <HandCoins className="text-purple-600" size={26} />
             </div>
-          </motion.div>
+          </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: "easeOut" }}
-            className={cardClass}
-          >
+          <div className={cardClass}>
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-sm text-slate-500">
                   Outstanding Loan Principal
                 </p>
-                <p className="mt-3 text-2xl font-bold text-amber-700">
+                <motion.p
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, delay: 0.25, ease: "easeOut" }}
+                  className="mt-3 text-2xl font-bold text-amber-700"
+                >
                   {loading ? "—" : currency(totalLoanPrincipalDisbursed)}
-                </p>
+                </motion.p>
               </div>
               <TrendingUp className="text-amber-600" size={26} />
             </div>
-          </motion.div>
+          </div>
         </div>
       </section>
 
@@ -329,13 +327,13 @@ function AdminDashboard() {
         </p>
 
         <div className="h-105 overflow-y-scroll overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-          <table className="w-full min-w-150 table-fixed border-collapse text-left text-sm">
+          <table className="w-full min-w-[760px] table-fixed border-collapse text-left text-sm">
             <thead className="sticky top-0 z-10 bg-slate-50">
               <tr>
-                <th className={`${thClass} w-1/4`}>Month</th>
-                <th className={`${thClass} w-1/4`}>Target</th>
-                <th className={`${thClass} w-1/4`}>Collected</th>
-                <th className={`${thClass} w-1/4`}>Status</th>
+                <th className={`${thClass} w-1/4 text-left`}>Member</th>
+                <th className={`${thClass} w-1/4 text-left`}>Heads</th>
+                <th className={`${thClass} w-1/4 text-left`}>Weekly Due</th>
+                <th className={`${thClass} w-1/4 text-right`}>Actions</th>
               </tr>
             </thead>
             <tbody>
