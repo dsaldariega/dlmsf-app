@@ -327,7 +327,7 @@ function AdminDashboard() {
         </p>
 
         <div className="h-105 overflow-y-scroll overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-          <table className="w-full min-w-[760px] table-fixed border-collapse text-left text-sm">
+          <table className="w-full min-w-190 table-fixed border-collapse text-left text-sm">
             <thead className="sticky top-0 z-10 bg-slate-50">
               <tr>
                 <th className={`${thClass} w-1/4 text-left`}>Member</th>
@@ -406,7 +406,7 @@ function AdminDashboard() {
           Monthly loan repayment targets and actual collections.
         </p>
 
-        <div className="h-105 overflow-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="h-105 overflow-y-scroll overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
           <table className={`${tableClass} relative`}>
             <thead className="sticky top-0 z-10">
               <tr>
