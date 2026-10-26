@@ -4,33 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { LoanAudit, PaymentAudit } from "@/lib/types/audit";
 import { motion, AnimatePresence } from "motion/react";
-
-const formatCurrency = (value: number) =>
-  `₱${Number(value || 0).toLocaleString("en-PH", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-
-const getStatusStyle = (status: string) => {
-  switch (status?.toLowerCase()) {
-    case "paid":
-      return "bg-emerald-100 text-emerald-700";
-    case "active":
-      return "bg-blue-100 text-blue-700";
-    case "pending":
-      return "bg-amber-100 text-amber-700";
-    case "overdue":
-      return "bg-red-100 text-red-700";
-    default:
-      return "bg-slate-100 text-slate-600";
-  }
-};
-
-const inputClass =
-  "h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10";
-
-const actionClass =
-  "inline-flex h-9 items-center justify-center rounded-lg border px-3 text-xs font-semibold shadow-sm transition focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-50";
+import { formatCurrency } from "@/lib/utils/loans";
+import { getStatusStyle } from "@/lib/utils/audit";
 
 export default function AuditPage() {
   const [loanAudits, setLoanAudits] = useState<LoanAudit[]>([]);
@@ -38,18 +13,12 @@ export default function AuditPage() {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
-  // Loan editing
-  const [editingLoanId, setEditingLoanId] = useState<number | null>(null);
-  const [editLoanStatus, setEditLoanStatus] = useState("Pending");
-  const [editLoanRemarks, setEditLoanRemarks] = useState("");
-
   // Payment editing
   const [editingPaymentId, setEditingPaymentId] = useState<number | null>(null);
   const [editPaymentAmount, setEditPaymentAmount] = useState<number | "">("");
   const [editPaymentRemarks, setEditPaymentRemarks] = useState("");
 
   // Action states
-  const [savingLoanId, setSavingLoanId] = useState<number | null>(null);
   const [savingPaymentId, setSavingPaymentId] = useState<number | null>(null);
   const [deletingLoanId, setDeletingLoanId] = useState<number | null>(null);
   const [deletingPaymentId, setDeletingPaymentId] = useState<number | null>(
@@ -95,81 +64,6 @@ export default function AuditPage() {
   useEffect(() => {
     void load();
   }, [load]);
-
-  // Loan audit editing
-  const startLoanEdit = (audit: LoanAudit) => {
-    setEditingLoanId(audit.id);
-    setEditLoanStatus(audit.status || "Pending");
-    setEditLoanRemarks(audit.remarks || "");
-  };
-
-  const cancelLoanEdit = () => {
-    setEditingLoanId(null);
-    setEditLoanStatus("Pending");
-    setEditLoanRemarks("");
-  };
-
-  const saveLoanEdit = async (id: number) => {
-    if (savingLoanId !== null) return;
-
-    setSavingLoanId(id);
-
-    try {
-      const { error } = await supabase
-        .from("loans_audit_log")
-        .update({
-          status: editLoanStatus,
-          remarks: editLoanRemarks.trim() || null,
-        })
-        .eq("id", id);
-
-      if (error) throw error;
-
-      setEditingLoanId(null);
-      await load();
-    } catch (error) {
-      console.error("Error updating loan audit:", error);
-      alert(
-        error instanceof Error
-          ? error.message
-          : "Failed to update loan audit record.",
-      );
-    } finally {
-      setSavingLoanId(null);
-    }
-  };
-
-  const deleteLoanAudit = async (id: number) => {
-    if (deletingLoanId !== null) return;
-
-    if (!confirm("Delete this loan audit record? This cannot be undone.")) {
-      return;
-    }
-
-    setDeletingLoanId(id);
-
-    try {
-      const { error } = await supabase
-        .from("loans_audit_log")
-        .delete()
-        .eq("id", id);
-
-      if (error) throw error;
-
-      if (editingLoanId === id) cancelLoanEdit();
-
-      setLoanAudits((current) => current.filter((audit) => audit.id !== id));
-    } catch (error) {
-      console.error("Error deleting loan audit:", error);
-      alert(
-        error instanceof Error
-          ? error.message
-          : "Failed to delete loan audit record.",
-      );
-    } finally {
-      setDeletingLoanId(null);
-    }
-  };
 
   // Payment audit editing
   const startPaymentEdit = (payment: PaymentAudit) => {
@@ -221,9 +115,7 @@ export default function AuditPage() {
         ),
       );
 
-      setEditingPaymentId(null);
-      setEditPaymentAmount("");
-      setEditPaymentRemarks("");
+      cancelPaymentEdit();
     } catch (error) {
       console.error("Error updating payment audit:", error);
       alert(
@@ -233,6 +125,36 @@ export default function AuditPage() {
       );
     } finally {
       setSavingPaymentId(null);
+    }
+  };
+
+  const deleteLoanAudit = async (id: number) => {
+    if (deletingLoanId !== null) return;
+
+    if (!confirm("Delete this loan audit record? This cannot be undone.")) {
+      return;
+    }
+
+    setDeletingLoanId(id);
+
+    try {
+      const { error } = await supabase
+        .from("loans_audit_log")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setLoanAudits((current) => current.filter((audit) => audit.id !== id));
+    } catch (error) {
+      console.error("Error deleting loan audit:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to delete loan audit record.",
+      );
+    } finally {
+      setDeletingLoanId(null);
     }
   };
 
@@ -291,13 +213,11 @@ export default function AuditPage() {
     0,
   );
 
-  const pendingLoans = loanAudits.filter(
-    (audit) => audit.status?.toLowerCase() === "pending",
-  ).length;
+  const loadingCellClass =
+    "h-75 px-5 py-10 text-center align-middle text-slate-500";
 
-  const paidLoans = loanAudits.filter(
-    (audit) => audit.status?.toLowerCase() === "paid",
-  ).length;
+  const emptyCellClass =
+    "h-75 px-5 py-10 text-center align-middle text-slate-400";
 
   return (
     <div className="space-y-6">
@@ -322,25 +242,39 @@ export default function AuditPage() {
         </button>
       </div>
 
-      {/* Summary Cards */}
+      {/* Summary Cards - cards remain static; values animate */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-sm font-medium text-slate-500">
             Total Loan Principal
           </p>
-          <p className="mt-2 text-2xl font-bold text-blue-700">
-            {formatCurrency(totalLoans)}
-          </p>
+          <motion.p
+            key={`${loading}-${totalLoans}`}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
+            className="mt-2 text-2xl font-bold tabular-nums text-blue-700"
+          >
+            {loading ? "—" : formatCurrency(totalLoans)}
+          </motion.p>
           <p className="mt-1 text-xs text-slate-400">
-            {loanAudits.length} audit records
+            {loading
+              ? "Loading records..."
+              : `${loanAudits.length} audit records`}
           </p>
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-sm font-medium text-slate-500">Total Interest</p>
-          <p className="mt-2 text-2xl font-bold text-violet-700">
-            {formatCurrency(totalInterest)}
-          </p>
+          <motion.p
+            key={`${loading}-${totalInterest}`}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: "easeOut", delay: 0.05 }}
+            className="mt-2 text-2xl font-bold tabular-nums text-violet-700"
+          >
+            {loading ? "—" : formatCurrency(totalInterest)}
+          </motion.p>
           <p className="mt-1 text-xs text-slate-400">
             Interest across audited loans
           </p>
@@ -348,24 +282,47 @@ export default function AuditPage() {
 
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-sm font-medium text-slate-500">Total Repayment</p>
-          <p className="mt-2 text-2xl font-bold text-emerald-700">
-            {formatCurrency(totalLoanAmount)}
-          </p>
+          <motion.p
+            key={`${loading}-${totalLoanAmount}`}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: "easeOut", delay: 0.1 }}
+            className="mt-2 text-2xl font-bold tabular-nums text-emerald-700"
+          >
+            {loading ? "—" : formatCurrency(totalLoanAmount)}
+          </motion.p>
           <p className="mt-1 text-xs text-slate-400">Principal plus interest</p>
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-sm font-medium text-slate-500">Total Payments</p>
-          <p className="mt-2 text-2xl font-bold text-orange-600">
-            {formatCurrency(totalPayments)}
-          </p>
+          <motion.p
+            key={`${loading}-${totalPayments}`}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: "easeOut", delay: 0.15 }}
+            className="mt-2 text-2xl font-bold tabular-nums text-orange-600"
+          >
+            {loading ? "—" : formatCurrency(totalPayments)}
+          </motion.p>
           <p className="mt-1 text-xs text-slate-400">
-            {paymentAudits.length} payment records
+            {loading
+              ? "Loading records..."
+              : `${paymentAudits.length} payment records`}
           </p>
         </div>
       </div>
 
-      {/* Loan Audit Log */}
+      {errorMessage && (
+        <div
+          role="alert"
+          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+        >
+          {errorMessage}
+        </div>
+      )}
+
+      {/* Loan Audit Log - static card, independently scrollable table */}
       <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 px-5 py-4">
           <h2 className="font-semibold text-slate-900">Loans Audit Log</h2>
@@ -374,92 +331,116 @@ export default function AuditPage() {
           </p>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="border-y border-slate-200 bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+        <div className="h-105 overflow-y-scroll overflow-x-auto">
+          <table className="relative w-full min-w-350 table-fixed border-collapse text-left text-sm">
+            <thead className="sticky top-0 z-10 bg-slate-50">
               <tr>
-                <th className="whitespace-nowrap px-5 py-3">Borrower</th>
-                <th className="whitespace-nowrap px-5 py-3">Principal</th>
-                <th className="whitespace-nowrap px-5 py-3">Interest</th>
-                <th className="whitespace-nowrap px-5 py-3">Total</th>
-                <th className="whitespace-nowrap px-5 py-3">Monthly</th>
-                <th className="whitespace-nowrap px-5 py-3">Status</th>
-                <th className="min-w-56 px-5 py-3">Remarks</th>
-                <th className="whitespace-nowrap px-5 py-3">Created Date</th>
-                <th className="whitespace-nowrap px-5 py-3">Actions</th>
+                <th className="w-56 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Borrower
+                </th>
+                <th className="w-36 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Principal
+                </th>
+                <th className="w-36 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Interest
+                </th>
+                <th className="w-36 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Total
+                </th>
+                <th className="w-36 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Monthly
+                </th>
+                <th className="w-32 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Status
+                </th>
+                <th className="w-64 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Remarks
+                </th>
+                <th className="w-56 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Created Date
+                </th>
+                <th className="w-32 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Actions
+                </th>
               </tr>
             </thead>
+
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td
-                    colSpan={8}
-                    className="px-5 py-10 text-center text-slate-500"
-                  >
-                    Loading loan audit records...
+                  <td colSpan={9} className={loadingCellClass}>
+                    <span className="inline-flex items-center justify-center gap-3">
+                      <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
+                      Loading loan audit records...
+                    </span>
                   </td>
                 </tr>
               ) : loanAudits.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={8}
-                    className="px-5 py-10 text-center text-slate-400"
-                  >
+                  <td colSpan={9} className={emptyCellClass}>
                     No loan audit records found.
                   </td>
                 </tr>
               ) : (
-                <AnimatePresence>
-                  {loanAudits.map((audit) => {
-                    const isEditing = editingLoanId === audit.id;
-
-                    return (
-                      <motion.tr
-                        key={audit.id}
-                        layout
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, x: -12 }}
-                        transition={{ duration: 0.2, ease: "easeOut" }}
-                        className="transition-colors hover:bg-slate-50"
-                      >
-                        <td className="whitespace-nowrap px-5 py-4 font-semibold text-slate-800">
+                <AnimatePresence initial={false}>
+                  {loanAudits.map((audit) => (
+                    <motion.tr
+                      key={audit.id}
+                      layout
+                      initial={{ opacity: 0, y: -16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{
+                        duration: 0.3,
+                        ease: "easeOut",
+                        layout: { duration: 0.25 },
+                      }}
+                      className="transition-colors hover:bg-slate-50"
+                    >
+                      <td className="overflow-hidden px-5 py-4 font-semibold text-slate-800">
+                        <span
+                          className="block truncate"
+                          title={audit.borrower_name || "N/A"}
+                        >
                           {audit.borrower_name || "N/A"}
-                          <p className="mt-1 text-xs font-normal text-slate-400">
-                            Audit #{audit.id}
-                          </p>
-                        </td>
+                        </span>
+                        <p className="mt-1 text-xs font-normal text-slate-400">
+                          Audit #{audit.id}
+                        </p>
+                      </td>
 
-                        <td className="whitespace-nowrap px-5 py-4 text-slate-600">
-                          {formatCurrency(audit.amount)}
-                        </td>
+                      <td className="overflow-hidden px-5 py-4 tabular-nums text-slate-600">
+                        {formatCurrency(audit.amount)}
+                      </td>
 
-                        <td className="whitespace-nowrap px-5 py-4 text-violet-700">
-                          {formatCurrency(audit.interest)}
-                        </td>
+                      <td className="overflow-hidden px-5 py-4 tabular-nums text-violet-700">
+                        {formatCurrency(audit.interest)}
+                      </td>
 
-                        <td className="whitespace-nowrap px-5 py-4 font-semibold text-emerald-700">
-                          {formatCurrency(audit.total)}
-                        </td>
+                      <td className="overflow-hidden px-5 py-4 font-semibold tabular-nums text-emerald-700">
+                        {formatCurrency(audit.total)}
+                      </td>
 
-                        <td className="whitespace-nowrap px-5 py-4 text-slate-600">
-                          {formatCurrency(audit.monthly)}
-                        </td>
+                      <td className="overflow-hidden px-5 py-4 tabular-nums text-slate-600">
+                        {formatCurrency(audit.monthly)}
+                      </td>
 
-                        <td className="whitespace-nowrap px-5 py-4">
-                          <span
-                            className={`inline-flex rounded-md px-2.5 py-1 text-xs font-semibold ${getStatusStyle(audit.status)}`}
-                          >
-                            {audit.status || "Unknown"}
-                          </span>
-                        </td>
+                      <td className="overflow-hidden px-5 py-4">
+                        <span
+                          className={`inline-flex max-w-full truncate rounded-md px-2.5 py-1 text-xs font-semibold ${getStatusStyle(audit.status)}`}
+                        >
+                          {audit.status || "Unknown"}
+                        </span>
+                      </td>
 
-                        <td className="min-w-56 px-5 py-4">
-                          <span className="wrap-break-word text-slate-500">
-                            {audit.remarks || "No remarks"}
-                          </span>
-                        </td>
-                        <td className="whitespace-nowrap px-5 py-4 text-slate-500">
+                      <td className="overflow-hidden px-5 py-4 text-slate-500">
+                        <span className="block wrap-break-word">
+                          {audit.remarks || "No remarks"}
+                        </span>
+                      </td>
+
+                      <td className="overflow-hidden px-5 py-4 text-slate-500">
+                        <span className="block">
                           {audit.created_date
                             ? new Date(audit.created_date).toLocaleString(
                                 "en-PH",
@@ -469,21 +450,23 @@ export default function AuditPage() {
                                 },
                               )
                             : "N/A"}
-                        </td>
-                        <td className="whitespace-nowrap px-5 py-4">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              type="button"
-                              onClick={() => void deleteLoanAudit(audit.id)}
-                              className="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </td>
-                      </motion.tr>
-                    );
-                  })}
+                        </span>
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <button
+                          type="button"
+                          onClick={() => void deleteLoanAudit(audit.id)}
+                          disabled={deletingLoanId !== null}
+                          className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg border border-red-200 bg-white px-3 text-xs font-semibold text-red-600 shadow-sm transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {deletingLoanId === audit.id
+                            ? "Deleting..."
+                            : "Delete"}
+                        </button>
+                      </td>
+                    </motion.tr>
+                  ))}
                 </AnimatePresence>
               )}
             </tbody>
@@ -500,7 +483,7 @@ export default function AuditPage() {
         )}
       </section>
 
-      {/* Payment Audit Log */}
+      {/* Payment Audit Log - static card, independently scrollable table */}
       <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 px-5 py-4">
           <h2 className="font-semibold text-slate-900">Payment Audit Log</h2>
@@ -509,33 +492,38 @@ export default function AuditPage() {
           </p>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="border-y border-slate-200 bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+        <div className="h-105 overflow-y-scroll overflow-x-auto">
+          <table className="relative w-full min-w-200 table-fixed border-collapse text-left text-sm">
+            <thead className="sticky top-0 z-10 bg-slate-50">
               <tr>
-                <th className="whitespace-nowrap px-5 py-3">Week</th>
-                <th className="whitespace-nowrap px-5 py-3">Amount</th>
-                <th className="min-w-56 px-5 py-3">Remarks</th>
-                <th className="whitespace-nowrap px-5 py-3">Actions</th>
+                <th className="w-56 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Week
+                </th>
+                <th className="w-48 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Amount
+                </th>
+                <th className="border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Remarks
+                </th>
+                <th className="w-64 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Actions
+                </th>
               </tr>
             </thead>
 
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td
-                    colSpan={4}
-                    className="px-5 py-10 text-center text-slate-500"
-                  >
-                    Loading payment audit records...
+                  <td colSpan={4} className={loadingCellClass}>
+                    <span className="inline-flex items-center justify-center gap-3">
+                      <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
+                      Loading payment audit records...
+                    </span>
                   </td>
                 </tr>
               ) : paymentAudits.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={4}
-                    className="px-5 py-10 text-center text-slate-400"
-                  >
+                  <td colSpan={4} className={emptyCellClass}>
                     No payment audit records found.
                   </td>
                 </tr>
@@ -548,20 +536,26 @@ export default function AuditPage() {
                       <motion.tr
                         key={payment.id}
                         layout
-                        initial={{ opacity: 0, y: 8 }}
+                        initial={{ opacity: 0, y: -16 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, x: -12 }}
-                        transition={{ duration: 0.2, ease: "easeOut" }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{
+                          duration: 0.3,
+                          ease: "easeOut",
+                          layout: { duration: 0.25 },
+                        }}
                         className="transition-colors hover:bg-slate-50"
                       >
-                        <td className="whitespace-nowrap px-5 py-4 font-semibold text-slate-800">
-                          {payment.week || "N/A"}
+                        <td className="overflow-hidden px-5 py-4 font-semibold text-slate-800">
+                          <span className="block truncate">
+                            {payment.week || "N/A"}
+                          </span>
                           <p className="mt-1 text-xs font-normal text-slate-400">
                             Audit #{payment.id}
                           </p>
                         </td>
 
-                        <td className="whitespace-nowrap px-5 py-4">
+                        <td className="overflow-hidden px-5 py-4">
                           {isEditing ? (
                             <input
                               type="number"
@@ -575,17 +569,17 @@ export default function AuditPage() {
                                     : Number(e.target.value),
                                 )
                               }
-                              className="w-32 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+                              className="w-full min-w-0 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
                               aria-label={`Payment amount for audit ${payment.id}`}
                             />
                           ) : (
-                            <span className="font-semibold text-emerald-700">
+                            <span className="font-semibold tabular-nums text-emerald-700">
                               {formatCurrency(payment.amount)}
                             </span>
                           )}
                         </td>
 
-                        <td className="min-w-56 px-5 py-4">
+                        <td className="overflow-hidden px-5 py-4">
                           {isEditing ? (
                             <input
                               value={editPaymentRemarks}
@@ -593,17 +587,17 @@ export default function AuditPage() {
                                 setEditPaymentRemarks(e.target.value)
                               }
                               placeholder="Add remarks..."
-                              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+                              className="w-full min-w-0 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
                             />
                           ) : (
-                            <span className="wrap-break-word text-slate-500">
+                            <span className="block wrap-break-word text-slate-500">
                               {payment.remarks || "No remarks"}
                             </span>
                           )}
                         </td>
 
-                        <td className="whitespace-nowrap px-5 py-4">
-                          <div className="flex items-center justify-end gap-2">
+                        <td className="px-5 py-4">
+                          <div className="flex flex-wrap items-center gap-2">
                             {isEditing ? (
                               <>
                                 <button
@@ -611,14 +605,19 @@ export default function AuditPage() {
                                   onClick={() =>
                                     void savePaymentEdit(payment.id)
                                   }
-                                  className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"
+                                  disabled={savingPaymentId !== null}
+                                  className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
                                 >
-                                  Save
+                                  {savingPaymentId === payment.id
+                                    ? "Saving..."
+                                    : "Save"}
                                 </button>
+
                                 <button
                                   type="button"
                                   onClick={cancelPaymentEdit}
-                                  className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                                  disabled={savingPaymentId !== null}
+                                  className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
                                 >
                                   Cancel
                                 </button>
@@ -632,14 +631,18 @@ export default function AuditPage() {
                                 >
                                   Edit
                                 </button>
+
                                 <button
                                   type="button"
                                   onClick={() =>
                                     void deletePaymentAudit(payment.id)
                                   }
-                                  className="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
+                                  disabled={deletingPaymentId !== null}
+                                  className="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50"
                                 >
-                                  Delete
+                                  {deletingPaymentId === payment.id
+                                    ? "Deleting..."
+                                    : "Delete"}
                                 </button>
                               </>
                             )}

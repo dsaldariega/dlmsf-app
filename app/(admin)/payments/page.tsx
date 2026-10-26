@@ -194,22 +194,36 @@ export default function PaymentsPage() {
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
           <p className="text-sm font-medium text-slate-500">
             Total Sinking Fund Payments
           </p>
-          <p className="mt-2 text-2xl font-bold text-green-700">
-            {formatCurrency(total)}
-          </p>
+
+          <motion.p
+            key={`${loading}-${total}`}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
+            className="mt-2 text-2xl font-bold tabular-nums text-green-700"
+          >
+            {loading ? "—" : formatCurrency(total)}
+          </motion.p>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
           <p className="text-sm font-medium text-slate-500">
             Weekly Payment Records
           </p>
-          <p className="mt-2 text-2xl font-bold text-blue-700">
-            {payments.length}
-          </p>
+
+          <motion.p
+            key={`${loading}-${payments.length}`}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
+            className="mt-2 text-2xl font-bold tabular-nums text-blue-700"
+          >
+            {loading ? "—" : payments.length.toLocaleString("en-PH")}
+          </motion.p>
         </div>
       </div>
 
@@ -281,13 +295,19 @@ export default function PaymentsPage() {
           </p>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+        <div className="h-105 overflow-y-scroll overflow-x-auto">
+          <table className="relative w-full min-w-175 table-fixed border-collapse text-left text-sm">
+            <thead className="sticky top-0 z-10 bg-slate-50">
               <tr>
-                <th className="px-5 py-3 font-semibold">Week Start</th>
-                <th className="px-5 py-3 font-semibold">Amount</th>
-                <th className="px-5 py-3 font-semibold">Actions</th>
+                <th className="w-1/3 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Week Start
+                </th>
+                <th className="w-1/3 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Amount
+                </th>
+                <th className="w-1/3 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Actions
+                </th>
               </tr>
             </thead>
 
@@ -296,16 +316,19 @@ export default function PaymentsPage() {
                 <tr>
                   <td
                     colSpan={3}
-                    className="px-5 py-10 text-center text-slate-500"
+                    className="h-75 text-center align-middle text-slate-500"
                   >
-                    Loading payments...
+                    <span className="inline-flex items-center justify-center gap-3">
+                      <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
+                      Loading payments...
+                    </span>
                   </td>
                 </tr>
               ) : payments.length === 0 ? (
                 <tr>
                   <td
                     colSpan={3}
-                    className="px-5 py-10 text-center text-slate-400"
+                    className="h-75 text-center align-middle text-slate-400"
                   >
                     No weekly payments yet.
                   </td>
@@ -326,27 +349,31 @@ export default function PaymentsPage() {
                       }}
                       className="transition-colors hover:bg-slate-50"
                     >
-                      {/* Week Start */}
-                      <td className="whitespace-nowrap px-5 py-4 font-medium text-slate-700">
-                        {payment.week_start}
+                      <td className="overflow-hidden px-5 py-4 font-medium text-slate-700">
+                        <span
+                          className="block truncate"
+                          title={payment.week_start}
+                        >
+                          {payment.week_start}
+                        </span>
                       </td>
 
-                      {/* Payment Amount */}
-                      <td className="whitespace-nowrap px-5 py-4 font-semibold text-green-700">
-                        {formatCurrency(Number(payment.amount))}
+                      <td className="overflow-hidden px-5 py-4 font-semibold tabular-nums text-green-700">
+                        <span className="block truncate">
+                          {formatCurrency(Number(payment.amount))}
+                        </span>
                       </td>
 
-                      {/* Actions */}
-                      <td className="whitespace-nowrap px-5 py-4">
+                      <td className="px-5 py-4">
                         <button
                           type="button"
                           onClick={() => deletePayment(payment.id)}
-                          className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 shadow-sm transition hover:border-red-300 hover:bg-red-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                          className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3 text-xs font-semibold text-red-600 shadow-sm transition hover:border-red-300 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500/30"
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
+                            width="15"
+                            height="15"
                             viewBox="0 0 24 24"
                             fill="none"
                             stroke="currentColor"
@@ -369,22 +396,17 @@ export default function PaymentsPage() {
                 </AnimatePresence>
               )}
             </tbody>
-
-            {!loading && payments.length > 0 && (
-              <tfoot className="border-t border-slate-200 bg-slate-50">
-                <tr>
-                  <td className="px-5 py-4 font-semibold text-slate-700">
-                    Total
-                  </td>
-                  <td className="px-5 py-4 font-bold text-green-700">
-                    {formatCurrency(total)}
-                  </td>
-                  <td />
-                </tr>
-              </tfoot>
-            )}
           </table>
         </div>
+
+        {!loading && payments.length > 0 && (
+          <div className="border-t border-slate-200 bg-slate-50 px-5 py-3">
+            <p className="text-xs text-slate-500">
+              Showing {payments.length} payment record
+              {payments.length === 1 ? "" : "s"}
+            </p>
+          </div>
+        )}
       </section>
 
       {/* Loan payments table */}
@@ -396,13 +418,19 @@ export default function PaymentsPage() {
           </p>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+        <div className="h-105 overflow-y-scroll overflow-x-auto">
+          <table className="relative w-full min-w-175 table-fixed border-collapse text-left text-sm">
+            <thead className="sticky top-0 z-10 bg-slate-50">
               <tr>
-                <th className="px-5 py-3 font-semibold">Borrower</th>
-                <th className="px-5 py-3 font-semibold">Amount</th>
-                <th className="px-5 py-3 font-semibold">Date Paid</th>
+                <th className="w-1/3 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Borrower
+                </th>
+                <th className="w-1/3 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Amount
+                </th>
+                <th className="w-1/3 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Date Paid
+                </th>
               </tr>
             </thead>
 
@@ -411,39 +439,55 @@ export default function PaymentsPage() {
                 <tr>
                   <td
                     colSpan={3}
-                    className="px-5 py-10 text-center text-slate-500"
+                    className="h-75 px-5 py-10 text-center align-middle text-slate-500"
                   >
-                    Loading loan payments...
+                    <span className="inline-flex items-center justify-center gap-3">
+                      <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
+                      Loading loan payments...
+                    </span>
                   </td>
                 </tr>
               ) : loanPayments.length === 0 ? (
                 <tr>
                   <td
                     colSpan={3}
-                    className="px-5 py-10 text-center text-slate-400"
+                    className="h-75 px-5 py-10 text-center align-middle text-slate-400"
                   >
                     No loan payments yet.
                   </td>
                 </tr>
               ) : (
-                loanPayments.map((payment, index) => (
-                  <tr
-                    key={`${payment.paid_at}-${index}`}
-                    className="hover:bg-slate-50"
-                  >
-                    <td className="px-5 py-4 font-medium text-slate-700">
-                      {payment.borrower || "—"}
-                    </td>
-                    <td className="whitespace-nowrap px-5 py-4 font-semibold text-purple-700">
-                      {formatCurrency(Number(payment.amount || 0))}
-                    </td>
-                    <td className="whitespace-nowrap px-5 py-4 text-slate-600">
-                      {payment.paid_at
-                        ? new Date(payment.paid_at).toLocaleDateString()
-                        : "—"}
-                    </td>
-                  </tr>
-                ))
+                <AnimatePresence initial={false}>
+                  {loanPayments.map((payment, index) => (
+                    <motion.tr
+                      key={`${payment.paid_at}-${index}`}
+                      layout
+                      initial={{ opacity: 0, y: -16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{
+                        duration: 0.3,
+                        ease: "easeOut",
+                        layout: { duration: 0.25 },
+                      }}
+                      className="transition-colors hover:bg-slate-50"
+                    >
+                      <td className="px-5 py-4 font-medium text-slate-700">
+                        {payment.borrower || "—"}
+                      </td>
+
+                      <td className="whitespace-nowrap px-5 py-4 font-semibold text-purple-700">
+                        {formatCurrency(Number(payment.amount || 0))}
+                      </td>
+
+                      <td className="whitespace-nowrap px-5 py-4 text-slate-600">
+                        {payment.paid_at
+                          ? new Date(payment.paid_at).toLocaleDateString()
+                          : "—"}
+                      </td>
+                    </motion.tr>
+                  ))}
+                </AnimatePresence>
               )}
             </tbody>
           </table>
