@@ -3,12 +3,13 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Loan } from "@/lib/types/loan";
-import { Member, MemberOption } from "@/lib/types/member";
+import { MemberOption } from "@/lib/types/member";
 import {
   INTEREST_RATE,
   LOAN_DURATIONS,
   PENALTY_RATE,
 } from "@/lib/constants/loans";
+import { motion, AnimatePresence } from "motion/react";
 
 export default function LoansPage() {
   const [loans, setLoans] = useState<Loan[]>([]);
@@ -41,8 +42,10 @@ export default function LoansPage() {
   };
 
   // Fetch loans
-  const fetchLoans = async () => {
-    setLoading(true);
+  const fetchLoans = async (showLoading = true) => {
+    if (showLoading) {
+      setLoading(true);
+    }
 
     try {
       const { data, error } = await supabase
@@ -57,7 +60,9 @@ export default function LoansPage() {
       console.error("Error fetching loans:", error);
       alert("Unable to load loans.");
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
@@ -119,7 +124,7 @@ export default function LoansPage() {
       const monthly = calculateMonthly(principal, loanMonths);
       const status = "Ongoing";
 
-      // 1. Insert loan and retrieve its generated ID
+      // 1. Insert loan and retrieve the created record
       const { data: newLoan, error: loanError } = await supabase
         .from("loans")
         .insert({
@@ -131,13 +136,15 @@ export default function LoansPage() {
           months: loanMonths,
           status,
         })
-        .select("id")
+        .select("*, borrower:borrower_id(name)")
         .single();
 
       if (loanError) throw loanError;
 
       if (!newLoan) {
-        throw new Error("Loan was created, but its ID could not be retrieved.");
+        throw new Error(
+          "Loan was created, but its record could not be retrieved.",
+        );
       }
 
       loanCreated = true;
@@ -171,15 +178,13 @@ export default function LoansPage() {
         return;
       }
 
-      // 3. Reset the form
+      // 3. Insert the new loan into the table immediately
+      setLoans((currentLoans) => [newLoan as Loan, ...currentLoans]);
+
+      // 4. Reset the form
       setBorrowerId(null);
       setAmount("");
       setLoanMonths(2);
-
-      // 4. Refresh loan records
-      await fetchLoans();
-
-      alert("Loan added successfully and audit log recorded.");
     } catch (error) {
       console.error("Error adding loan:", error);
 
@@ -211,7 +216,7 @@ export default function LoansPage() {
       return;
     }
 
-    await fetchLoans();
+    await fetchLoans(false);
   };
 
   // Delete loan
@@ -227,7 +232,8 @@ export default function LoansPage() {
       return;
     }
 
-    await fetchLoans();
+    // Remove the loan from the table with an exit animation
+    setLoans((currentLoans) => currentLoans.filter((loan) => loan.id !== id));
   };
 
   // Summary calculations
@@ -320,7 +326,7 @@ export default function LoansPage() {
                 <option value="">Choose a borrower</option>
                 {members.map((member) => (
                   <option key={member.id} value={member.id}>
-                    {member.name} (ID: {member.id})
+                    {member.name}
                   </option>
                 ))}
               </select>
@@ -591,63 +597,100 @@ export default function LoansPage() {
                   </td>
                 </tr>
               ) : (
-                loans.map((loan) => {
-                  const status = loan.status || "Unknown";
+                <AnimatePresence>
+                  {loans.map((loan) => {
+                    const status = loan.status || "Unknown";
 
-                  const badgeStyle: Record<string, string> = {
-                    Paid: "bg-emerald-500 text-white",
-                    Ongoing: "bg-amber-400 text-slate-900",
-                    Cancelled: "bg-red-500 text-white",
-                    Unknown: "bg-slate-500 text-white",
-                  };
+                    const badgeStyle: Record<string, string> = {
+                      Paid: "bg-emerald-500 text-white",
+                      Ongoing: "bg-amber-400 text-slate-900",
+                      Cancelled: "bg-red-500 text-white",
+                      Unknown: "bg-slate-500 text-white",
+                    };
 
-                  return (
-                    <tr
-                      key={loan.id}
-                      className="transition-colors hover:bg-slate-50"
-                    >
-                      <td className="whitespace-nowrap px-5 py-4 font-medium text-slate-700">
-                        {loan.borrower?.name || "N/A"}
-                      </td>
+                    return (
+                      <motion.tr
+                        key={loan.id}
+                        layout
+                        initial={{ opacity: 0, y: -16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{
+                          duration: 0.3,
+                          ease: "easeOut",
+                          layout: { duration: 0.25 },
+                        }}
+                        className="transition-colors hover:bg-slate-50"
+                      >
+                        <td className="whitespace-nowrap px-5 py-4 font-medium text-slate-700">
+                          {loan.borrower?.name || "N/A"}
+                        </td>
 
-                      <td className="whitespace-nowrap px-5 py-4 text-slate-600">
-                        {formatCurrency(Number(loan.amount))}
-                      </td>
+                        <td className="whitespace-nowrap px-5 py-4 text-slate-600">
+                          {formatCurrency(Number(loan.amount))}
+                        </td>
 
-                      <td className="whitespace-nowrap px-5 py-4 text-slate-600">
-                        {loan.months || 2}{" "}
-                        {(loan.months || 2) === 1 ? "Month" : "Months"}
-                      </td>
+                        <td className="whitespace-nowrap px-5 py-4 text-slate-600">
+                          {loan.months || 2}{" "}
+                          {(loan.months || 2) === 1 ? "Month" : "Months"}
+                        </td>
 
-                      <td className="whitespace-nowrap px-5 py-4 text-slate-600">
-                        {formatCurrency(Number(loan.interest))}
-                      </td>
+                        <td className="whitespace-nowrap px-5 py-4 text-slate-600">
+                          {formatCurrency(Number(loan.interest))}
+                        </td>
 
-                      <td className="whitespace-nowrap px-5 py-4 font-semibold text-green-700">
-                        {formatCurrency(Number(loan.total))}
-                      </td>
+                        <td className="whitespace-nowrap px-5 py-4 font-semibold text-green-700">
+                          {formatCurrency(Number(loan.total))}
+                        </td>
 
-                      <td className="whitespace-nowrap px-5 py-4 text-slate-600">
-                        {formatCurrency(Number(loan.monthly))}
-                      </td>
+                        <td className="whitespace-nowrap px-5 py-4 text-slate-600">
+                          {formatCurrency(Number(loan.monthly))}
+                        </td>
 
-                      <td className="whitespace-nowrap px-5 py-4">
-                        <span
-                          className={`inline-flex items-center rounded px-2 py-1 text-xs font-medium leading-4 ${
-                            badgeStyle[status] || badgeStyle.Unknown
-                          }`}
-                        >
-                          {status}
-                        </span>
-                      </td>
+                        <td className="whitespace-nowrap px-5 py-4">
+                          <motion.span
+                            key={status}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.2 }}
+                            className={`inline-flex items-center rounded px-2 py-1 text-xs font-medium leading-4 ${
+                              badgeStyle[status] || badgeStyle.Unknown
+                            }`}
+                          >
+                            {status}
+                          </motion.span>
+                        </td>
 
-                      <td className="whitespace-nowrap px-5 py-4">
-                        <div className="flex items-center justify-end gap-2">
-                          {loan.status !== "Paid" && (
+                        <td className="whitespace-nowrap px-5 py-4">
+                          <div className="flex items-center justify-end gap-2">
+                            {loan.status !== "Paid" && (
+                              <button
+                                type="button"
+                                onClick={() => markPaid(loan.id)}
+                                className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-white px-3 text-xs font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="15"
+                                  height="15"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  aria-hidden="true"
+                                >
+                                  <path d="m5 12 4 4L19 6" />
+                                </svg>
+                                Mark Paid
+                              </button>
+                            )}
+
                             <button
                               type="button"
-                              onClick={() => markPaid(loan.id)}
-                              className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-white px-3 text-xs font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                              onClick={() => deleteLoan(loan.id)}
+                              className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3 text-xs font-semibold text-red-600 shadow-sm transition hover:border-red-300 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500/30"
                             >
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
@@ -661,42 +704,20 @@ export default function LoansPage() {
                                 strokeLinejoin="round"
                                 aria-hidden="true"
                               >
-                                <path d="m5 12 4 4L19 6" />
+                                <path d="M3 6h18" />
+                                <path d="M8 6V4h8v2" />
+                                <path d="m19 6-1 14H6L5 6" />
+                                <path d="M10 11v5" />
+                                <path d="M14 11v5" />
                               </svg>
-                              Mark Paid
+                              Delete
                             </button>
-                          )}
-
-                          <button
-                            type="button"
-                            onClick={() => deleteLoan(loan.id)}
-                            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3 text-xs font-semibold text-red-600 shadow-sm transition hover:border-red-300 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500/30"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="15"
-                              height="15"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              aria-hidden="true"
-                            >
-                              <path d="M3 6h18" />
-                              <path d="M8 6V4h8v2" />
-                              <path d="m19 6-1 14H6L5 6" />
-                              <path d="M10 11v5" />
-                              <path d="M14 11v5" />
-                            </svg>
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
+                          </div>
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                </AnimatePresence>
               )}
             </tbody>
           </table>

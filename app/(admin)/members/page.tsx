@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { withAuth } from "@/lib/withAuth";
+import { motion, AnimatePresence } from "motion/react";
 
 type Member = {
   id: number;
@@ -193,20 +194,31 @@ function MembersPage() {
       </div>
 
       {/* Summary cards */}
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-sm font-medium text-slate-500">Total Members</p>
-          <p className="mt-2 text-2xl font-bold tabular-nums text-blue-700">
-            {members.length}
-          </p>
+          <motion.p
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: loading ? 0.5 : 1, y: 0 }}
+            transition={{ duration: 0.35, delay: 0, ease: "easeOut" }}
+            className="mt-2 text-2xl font-bold tabular-nums text-blue-700"
+          >
+            {loading ? "—" : members.length.toLocaleString()}
+          </motion.p>
           <p className="mt-1 text-xs text-slate-500">Registered members</p>
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-sm font-medium text-slate-500">Total Heads</p>
-          <p className="mt-2 text-2xl font-bold tabular-nums text-indigo-700">
-            {totalHeads.toLocaleString("en-PH")}
-          </p>
+          <motion.p
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: loading ? 0.5 : 1, y: 0 }}
+            transition={{ duration: 0.35, delay: 0.05, ease: "easeOut" }}
+            className="mt-2 text-2xl font-bold tabular-nums text-indigo-700"
+          >
+            {loading ? "—" : totalHeads.toLocaleString("en-PH")}
+          </motion.p>
           <p className="mt-1 text-xs text-slate-500">Combined head count</p>
         </div>
 
@@ -214,9 +226,14 @@ function MembersPage() {
           <p className="text-sm font-medium text-slate-500">
             Total Weekly Contribution
           </p>
-          <p className="mt-2 text-2xl font-bold tabular-nums text-emerald-700">
-            {formatCurrency(totalWeeklyDue)}
-          </p>
+          <motion.p
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: loading ? 0.5 : 1, y: 0 }}
+            transition={{ duration: 0.35, delay: 0.1, ease: "easeOut" }}
+            className="mt-2 text-2xl font-bold tabular-nums text-emerald-700"
+          >
+            {loading ? "—" : formatCurrency(totalWeeklyDue)}
+          </motion.p>
           <p className="mt-1 text-xs text-slate-500">
             ₱50.00 per head each week
           </p>
@@ -349,165 +366,181 @@ function MembersPage() {
           </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="border-y border-slate-200 bg-slate-50/80 text-xs uppercase tracking-wider text-slate-500">
-              <tr>
-                <th className="whitespace-nowrap px-5 py-3 font-semibold">
-                  Member
-                </th>
-                <th className="whitespace-nowrap px-5 py-3 font-semibold">
-                  Heads
-                </th>
-                <th className="whitespace-nowrap px-5 py-3 font-semibold">
-                  Weekly Due
-                </th>
-                <th className="whitespace-nowrap px-5 py-3 font-semibold">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-
-            <tbody className="divide-y divide-slate-100">
-              {loading ? (
+        {/* Members table */}
+        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="h-100 overflow-y-scroll">
+            <table className="w-full min-w-175 table-fixed text-left text-sm">
+              <thead className="sticky top-0 z-10 bg-slate-50">
                 <tr>
-                  <td
-                    colSpan={4}
-                    className="px-5 py-10 text-center text-slate-500"
-                  >
-                    <span className="inline-flex items-center gap-3">
-                      <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
-                      Loading members...
-                    </span>
-                  </td>
+                  <th className="w-[40%] border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Member
+                  </th>
+                  <th className="w-[15%] border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Heads
+                  </th>
+                  <th className="w-[20%] border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Weekly Due
+                  </th>
+                  <th className="w-[25%] border-b border-slate-200 px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Actions
+                  </th>
                 </tr>
-              ) : members.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-5 py-12 text-center">
-                    <p className="font-semibold text-slate-800">
-                      No members yet
-                    </p>
-                    <p className="mt-1 text-sm text-slate-500">
-                      Add your first member using the form above.
-                    </p>
-                  </td>
-                </tr>
-              ) : (
-                members.map((member) => {
-                  const isEditing = editingId === member.id;
-                  const currentHeads = isEditing ? editHeads : member.heads;
+              </thead>
 
-                  return (
-                    <tr
-                      key={member.id}
-                      className="transition-colors hover:bg-slate-50"
+              <tbody className="divide-y divide-slate-100">
+                {loading ? (
+                  <tr>
+                    <td
+                      colSpan={4}
+                      className="h-87.5 px-5 text-center align-middle text-slate-500"
                     >
-                      {/* Member */}
-                      <td className="whitespace-nowrap px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-sm font-semibold text-blue-700">
-                            {member.name.trim().charAt(0).toUpperCase() || "M"}
-                          </span>
-                          <div>
-                            <p className="font-medium text-slate-800">
-                              {member.name}
+                      <span className="inline-flex items-center justify-center gap-3">
+                        <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
+                        Loading members...
+                      </span>
+                    </td>
+                  </tr>
+                ) : members.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={4}
+                      className="h-87.5 px-5 text-center align-middle"
+                    >
+                      <p className="font-semibold text-slate-800">
+                        No members yet
+                      </p>
+                      <p className="mt-1 text-sm text-slate-500">
+                        Add your first member using the form above.
+                      </p>
+                    </td>
+                  </tr>
+                ) : (
+                  <AnimatePresence initial={false}>
+                    {members.map((member) => {
+                      const isEditing = editingId === member.id;
+                      const currentHeads = isEditing ? editHeads : member.heads;
+
+                      return (
+                        <motion.tr
+                          key={member.id}
+                          layout
+                          initial={{ opacity: 0, y: -12 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, x: -20 }}
+                          transition={{
+                            duration: 0.3,
+                            ease: "easeOut",
+                            layout: { duration: 0.25 },
+                          }}
+                          className="transition-colors hover:bg-slate-50"
+                        >
+                          <td className="overflow-hidden px-5 py-4">
+                            <div className="flex items-center gap-3">
+                              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-sm font-semibold text-blue-700">
+                                {member.name.trim().charAt(0).toUpperCase() ||
+                                  "M"}
+                              </span>
+                              <div className="min-w-0">
+                                <p className="truncate font-medium text-slate-800">
+                                  {member.name}
+                                </p>
+                                <p className="mt-0.5 text-xs text-slate-400">
+                                  Member ID: {member.id}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="whitespace-nowrap px-5 py-4">
+                            {isEditing ? (
+                              <input
+                                type="number"
+                                min={1}
+                                step={1}
+                                value={editHeads}
+                                onChange={(event) =>
+                                  setEditHeads(
+                                    event.target.value === ""
+                                      ? 0
+                                      : Number(event.target.value),
+                                  )
+                                }
+                                aria-label={`Heads for ${member.name}`}
+                                className="h-10 w-20 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                              />
+                            ) : (
+                              <span className="inline-flex items-center rounded-lg bg-slate-100 px-3 py-1.5 font-medium tabular-nums text-slate-700">
+                                {member.heads}
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="whitespace-nowrap px-5 py-4">
+                            <p className="font-semibold tabular-nums text-emerald-700">
+                              {formatCurrency(
+                                weeklyDue(Number(currentHeads || 0)),
+                              )}
                             </p>
                             <p className="mt-0.5 text-xs text-slate-400">
-                              Member ID: {member.id}
+                              Per week
                             </p>
-                          </div>
-                        </div>
-                      </td>
+                          </td>
 
-                      {/* Heads */}
-                      <td className="whitespace-nowrap px-5 py-4">
-                        {isEditing ? (
-                          <input
-                            type="number"
-                            min={1}
-                            step={1}
-                            value={editHeads}
-                            onChange={(event) =>
-                              setEditHeads(
-                                event.target.value === ""
-                                  ? 0
-                                  : Number(event.target.value),
-                              )
-                            }
-                            aria-label={`Heads for ${member.name}`}
-                            className="h-10 w-24 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
-                          />
-                        ) : (
-                          <span className="inline-flex items-center rounded-lg bg-slate-100 px-3 py-1.5 font-medium tabular-nums text-slate-700">
-                            {member.heads}
-                          </span>
-                        )}
-                      </td>
+                          <td className="whitespace-nowrap px-5 py-4">
+                            <div className="flex items-center justify-end gap-2">
+                              {isEditing ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => void saveEdit(member.id)}
+                                    disabled={saving}
+                                    className="inline-flex h-9 items-center justify-center rounded-lg border border-emerald-200 bg-white px-3 text-xs font-semibold text-emerald-700 shadow-sm transition hover:bg-emerald-50 disabled:opacity-50"
+                                  >
+                                    {saving ? "Saving..." : "Save"}
+                                  </button>
 
-                      {/* Weekly due */}
-                      <td className="whitespace-nowrap px-5 py-4">
-                        <p className="font-semibold tabular-nums text-emerald-700">
-                          {formatCurrency(weeklyDue(Number(currentHeads || 0)))}
-                        </p>
-                        <p className="mt-0.5 text-xs text-slate-400">
-                          Per week
-                        </p>
-                      </td>
+                                  <button
+                                    type="button"
+                                    onClick={cancelEdit}
+                                    disabled={saving}
+                                    className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
+                                  >
+                                    Cancel
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => startEdit(member)}
+                                    disabled={saving || deletingId !== null}
+                                    className="inline-flex h-9 items-center justify-center rounded-lg border border-blue-200 bg-white px-3 text-xs font-semibold text-blue-700 shadow-sm transition hover:bg-blue-50 disabled:opacity-50"
+                                  >
+                                    Edit
+                                  </button>
 
-                      {/* Actions */}
-                      <td className="whitespace-nowrap px-5 py-4">
-                        <div className="flex items-center justify-end gap-2">
-                          {isEditing ? (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => void saveEdit(member.id)}
-                                disabled={saving}
-                                className="inline-flex h-9 items-center justify-center rounded-lg border border-emerald-200 bg-white px-3 text-xs font-semibold text-emerald-700 shadow-sm transition hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                {saving ? "Saving..." : "Save"}
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={cancelEdit}
-                                disabled={saving}
-                                className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400/30 disabled:opacity-50"
-                              >
-                                Cancel
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => startEdit(member)}
-                                disabled={saving || deletingId !== null}
-                                className="inline-flex h-9 items-center justify-center rounded-lg border border-blue-200 bg-white px-3 text-xs font-semibold text-blue-700 shadow-sm transition hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                Edit
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => void deleteMember(member.id)}
-                                disabled={deletingId !== null || saving}
-                                className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3 text-xs font-semibold text-red-600 shadow-sm transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500/30 disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                {deletingId === member.id
-                                  ? "Deleting..."
-                                  : "Delete"}
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                                  <button
+                                    type="button"
+                                    onClick={() => void deleteMember(member.id)}
+                                    disabled={deletingId !== null || saving}
+                                    className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3 text-xs font-semibold text-red-600 shadow-sm transition hover:bg-red-50 disabled:opacity-50"
+                                  >
+                                    {deletingId === member.id
+                                      ? "Deleting..."
+                                      : "Delete"}
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </motion.tr>
+                      );
+                    })}
+                  </AnimatePresence>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* Table footer */}

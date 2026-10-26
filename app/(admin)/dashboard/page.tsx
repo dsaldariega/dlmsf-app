@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Users,
   Wallet,
@@ -15,6 +15,7 @@ import { Member } from "@/lib/types/member";
 import { LoanPayment, Payment } from "@/lib/types/payment";
 import { Loan } from "@/lib/types/loan";
 import { CUTOFF_MONTHS, MONTHS } from "@/lib/constants/dashboard";
+import { motion, AnimatePresence } from "motion/react";
 
 function amount(value: number | string | null | undefined): number {
   return Number(value ?? 0) || 0;
@@ -41,6 +42,22 @@ function monthOf(date: string | null | undefined): string {
   });
 }
 
+function TableLoading({ message }: { message: string }) {
+  return (
+    <tr>
+      <td
+        colSpan={4}
+        className="h-75 px-5 py-10 text-center align-middle text-slate-500"
+      >
+        <span className="inline-flex items-center justify-center gap-3">
+          <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
+          {message}
+        </span>
+      </td>
+    </tr>
+  );
+}
+
 function AdminDashboard() {
   const RATE = 50;
 
@@ -51,50 +68,40 @@ function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setLoadError("");
 
-    async function loadData() {
-      setLoading(true);
-      setLoadError("");
+    try {
+      const results = await Promise.all([
+        supabase.from("members").select("*"),
+        supabase.from("payments").select("*"),
+        supabase.from("loans").select("*"),
+        supabase.from("loan_payments").select("*"),
+      ]);
 
-      try {
-        const results = await Promise.all([
-          supabase.from("members").select("*"),
-          supabase.from("payments").select("*"),
-          supabase.from("loans").select("*"),
-          supabase.from("loan_payments").select("*"),
-        ]);
+      const [m, p, l, lp] = results;
 
-        if (cancelled) return;
-
-        const [m, p, l, lp] = results;
-
-        if (m.error || p.error || l.error || lp.error) {
-          console.error("Dashboard query errors:", results);
-          setLoadError("Some dashboard data could not be loaded.");
-        }
-
-        setMembers((m.data ?? []) as Member[]);
-        setPayments((p.data ?? []) as Payment[]);
-        setLoans((l.data ?? []) as Loan[]);
-        setLoanPayments((lp.data ?? []) as LoanPayment[]);
-      } catch (error) {
-        console.error(error);
-        if (!cancelled) {
-          setLoadError("Unable to load dashboard data. Please try again.");
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
+      if (m.error || p.error || l.error || lp.error) {
+        console.error("Dashboard query errors:", results);
+        setLoadError("Some dashboard data could not be loaded.");
       }
+
+      setMembers((m.data ?? []) as Member[]);
+      setPayments((p.data ?? []) as Payment[]);
+      setLoans((l.data ?? []) as Loan[]);
+      setLoanPayments((lp.data ?? []) as LoanPayment[]);
+    } catch (error) {
+      console.error(error);
+      setLoadError("Unable to load dashboard data. Please try again.");
+    } finally {
+      setLoading(false);
     }
-
-    void loadData();
-
-    return () => {
-      cancelled = true;
-    };
   }, []);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   const heads = members.reduce((sum, member) => sum + amount(member.heads), 0);
 
@@ -157,7 +164,8 @@ function AdminDashboard() {
   const cardClass =
     "rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md";
 
-  const tableClass = "w-full min-w-[600px] border-collapse text-left text-sm";
+  const tableClass =
+    "w-full min-w-[600px] table-fixed border-collapse text-left text-sm";
 
   const thClass =
     "border-b border-slate-200 bg-slate-50 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500";
@@ -178,11 +186,12 @@ function AdminDashboard() {
 
         <button
           type="button"
-          onClick={() => window.location.reload()}
-          className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm hover:bg-slate-50"
+          onClick={() => void loadData()}
+          disabled={loading}
+          className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <RefreshCw size={16} />
-          Refresh
+          <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+          {loading ? "Refreshing..." : "Refresh"}
         </button>
       </div>
 
@@ -205,9 +214,14 @@ function AdminDashboard() {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-sm text-slate-500">Total Members</p>
-                <p className="mt-3 text-3xl font-bold text-slate-900">
+                <motion.p
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, delay: 0, ease: "easeOut" }}
+                  className="mt-3 text-3xl font-bold text-slate-900"
+                >
                   {loading ? "—" : members.length.toLocaleString()}
-                </p>
+                </motion.p>
               </div>
               <Users className="text-orange-600" size={26} />
             </div>
@@ -217,9 +231,14 @@ function AdminDashboard() {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-sm text-slate-500">Total Heads</p>
-                <p className="mt-3 text-3xl font-bold text-slate-900">
+                <motion.p
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, delay: 0.05, ease: "easeOut" }}
+                  className="mt-3 text-3xl font-bold text-slate-900"
+                >
                   {loading ? "—" : heads.toLocaleString()}
-                </p>
+                </motion.p>
               </div>
               <Users className="text-green-600" size={26} />
             </div>
@@ -229,9 +248,14 @@ function AdminDashboard() {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-sm text-slate-500">Sinking Fund Collected</p>
-                <p className="mt-3 text-2xl font-bold text-blue-700">
+                <motion.p
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, delay: 0.1, ease: "easeOut" }}
+                  className="mt-3 text-2xl font-bold text-blue-700"
+                >
                   {loading ? "—" : currency(totalSinkingCollected)}
-                </p>
+                </motion.p>
               </div>
               <Wallet className="text-blue-600" size={26} />
             </div>
@@ -241,13 +265,16 @@ function AdminDashboard() {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-sm text-slate-500">Available Funds</p>
-                <p
+                <motion.p
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, delay: 0.15, ease: "easeOut" }}
                   className={`mt-3 text-2xl font-bold ${
                     availableFunds < 0 ? "text-red-600" : "text-teal-700"
                   }`}
                 >
                   {loading ? "—" : currency(availableFunds)}
-                </p>
+                </motion.p>
               </div>
               <Landmark className="text-teal-600" size={26} />
             </div>
@@ -257,9 +284,14 @@ function AdminDashboard() {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-sm text-slate-500">Total Loan Payments</p>
-                <p className="mt-3 text-2xl font-bold text-purple-700">
+                <motion.p
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, delay: 0.2, ease: "easeOut" }}
+                  className="mt-3 text-2xl font-bold text-purple-700"
+                >
                   {loading ? "—" : currency(totalLoanInterestCollected)}
-                </p>
+                </motion.p>
               </div>
               <HandCoins className="text-purple-600" size={26} />
             </div>
@@ -271,9 +303,14 @@ function AdminDashboard() {
                 <p className="text-sm text-slate-500">
                   Outstanding Loan Principal
                 </p>
-                <p className="mt-3 text-2xl font-bold text-amber-700">
+                <motion.p
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, delay: 0.25, ease: "easeOut" }}
+                  className="mt-3 text-2xl font-bold text-amber-700"
+                >
                   {loading ? "—" : currency(totalLoanPrincipalDisbursed)}
-                </p>
+                </motion.p>
               </div>
               <TrendingUp className="text-amber-600" size={26} />
             </div>
@@ -289,58 +326,72 @@ function AdminDashboard() {
           Monthly contribution targets and actual collections.
         </p>
 
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-          <table className={tableClass}>
-            <thead>
+        <div className="h-105 overflow-y-scroll overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+          <table className="w-full min-w-190 table-fixed border-collapse text-left text-sm">
+            <thead className="sticky top-0 z-10 bg-slate-50">
               <tr>
-                <th className={thClass}>Month</th>
-                <th className={thClass}>Target</th>
-                <th className={thClass}>Collected</th>
-                <th className={thClass}>Status</th>
+                <th className={`${thClass} w-1/4 text-left`}>Member</th>
+                <th className={`${thClass} w-1/4 text-left`}>Heads</th>
+                <th className={`${thClass} w-1/4 text-left`}>Weekly Due</th>
+                <th className={`${thClass} w-1/4 text-right`}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan={4} className={tdClass}>
-                    Loading...
-                  </td>
-                </tr>
+                <TableLoading message="Loading sinking fund collections..." />
               ) : (
-                MONTHS.map((month) => {
-                  const target = getMonthlySinkingTarget(month);
-                  const collected = getMonthlySinkingCollected(month);
-                  const achieved = target !== null && collected >= target;
+                <AnimatePresence mode="sync">
+                  {MONTHS.map((month, index) => {
+                    const target = getMonthlySinkingTarget(month);
+                    const collected = getMonthlySinkingCollected(month);
+                    const achieved = target !== null && collected >= target;
 
-                  return (
-                    <tr key={month} className="hover:bg-slate-50">
-                      <td className={tdClass}>{month}</td>
-                      <td className={tdClass}>
-                        {target === null ? "Cutoff" : currency(target)}
-                      </td>
-                      <td className={`${tdClass} font-semibold text-green-700`}>
-                        {currency(collected)}
-                      </td>
-                      <td className={tdClass}>
-                        <span
-                          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                            target === null
-                              ? "bg-slate-100 text-slate-600"
-                              : achieved
-                                ? "bg-green-50 text-green-700"
-                                : "bg-amber-50 text-amber-700"
-                          }`}
+                    return (
+                      <motion.tr
+                        key={month}
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        transition={{
+                          duration: 0.3,
+                          delay: index * 0.035,
+                          ease: "easeOut",
+                        }}
+                        className="hover:bg-slate-50"
+                      >
+                        <td className={tdClass}>{month}</td>
+
+                        <td className={tdClass}>
+                          {target === null ? "Cutoff" : currency(target)}
+                        </td>
+
+                        <td
+                          className={`${tdClass} font-semibold text-green-700`}
                         >
-                          {target === null
-                            ? "Cutoff"
-                            : achieved
-                              ? "Target reached"
-                              : "In progress"}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })
+                          {currency(collected)}
+                        </td>
+
+                        <td className={tdClass}>
+                          <span
+                            className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                              target === null
+                                ? "bg-slate-100 text-slate-600"
+                                : achieved
+                                  ? "bg-green-50 text-green-700"
+                                  : "bg-amber-50 text-amber-700"
+                            }`}
+                          >
+                            {target === null
+                              ? "Cutoff"
+                              : achieved
+                                ? "Target reached"
+                                : "In progress"}
+                          </span>
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                </AnimatePresence>
               )}
             </tbody>
           </table>
@@ -355,9 +406,9 @@ function AdminDashboard() {
           Monthly loan repayment targets and actual collections.
         </p>
 
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-          <table className={tableClass}>
-            <thead>
+        <div className="h-105 overflow-y-scroll overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+          <table className={`${tableClass} relative`}>
+            <thead className="sticky top-0 z-10">
               <tr>
                 <th className={thClass}>Month</th>
                 <th className={thClass}>Target</th>
@@ -367,49 +418,63 @@ function AdminDashboard() {
             </thead>
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan={4} className={tdClass}>
-                    Loading...
-                  </td>
-                </tr>
+                <TableLoading message="Loading loan collections..." />
               ) : (
-                MONTHS.map((month) => {
-                  const target = getMonthlyLoanTarget(month);
-                  const collected = getMonthlyLoanCollected(month);
-                  const achieved = target !== null && collected >= target;
+                <AnimatePresence mode="sync">
+                  {MONTHS.map((month, index) => {
+                    const target = getMonthlyLoanTarget(month);
+                    const collected = getMonthlyLoanCollected(month);
+                    const achieved = target !== null && collected >= target;
 
-                  const status =
-                    target === null
-                      ? "Cutoff"
-                      : achieved
-                        ? "Target reached"
-                        : "Pending";
+                    const status =
+                      target === null
+                        ? "Cutoff"
+                        : achieved
+                          ? "Target reached"
+                          : "Pending";
 
-                  return (
-                    <tr key={month} className="hover:bg-slate-50">
-                      <td className={tdClass}>{month}</td>
-                      <td className={tdClass}>
-                        {target === null ? "Cutoff" : currency(target)}
-                      </td>
-                      <td className={`${tdClass} font-semibold text-blue-700`}>
-                        {currency(collected)}
-                      </td>
-                      <td className={tdClass}>
-                        <span
-                          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                            status === "Target reached"
-                              ? "bg-green-50 text-green-700"
-                              : status === "Cutoff"
-                                ? "bg-slate-100 text-slate-600"
-                                : "bg-amber-50 text-amber-700"
-                          }`}
+                    return (
+                      <motion.tr
+                        key={month}
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        transition={{
+                          duration: 0.3,
+                          delay: index * 0.035,
+                          ease: "easeOut",
+                        }}
+                        className="hover:bg-slate-50"
+                      >
+                        <td className={tdClass}>{month}</td>
+
+                        <td className={tdClass}>
+                          {target === null ? "Cutoff" : currency(target)}
+                        </td>
+
+                        <td
+                          className={`${tdClass} font-semibold text-blue-700`}
                         >
-                          {status}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })
+                          {currency(collected)}
+                        </td>
+
+                        <td className={tdClass}>
+                          <span
+                            className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                              status === "Target reached"
+                                ? "bg-green-50 text-green-700"
+                                : status === "Cutoff"
+                                  ? "bg-slate-100 text-slate-600"
+                                  : "bg-amber-50 text-amber-700"
+                            }`}
+                          >
+                            {status}
+                          </span>
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                </AnimatePresence>
               )}
             </tbody>
           </table>
