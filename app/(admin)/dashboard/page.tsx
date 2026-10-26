@@ -330,10 +330,10 @@ function AdminDashboard() {
           <table className="w-full min-w-190 table-fixed border-collapse text-left text-sm">
             <thead className="sticky top-0 z-10 bg-slate-50">
               <tr>
-                <th className={`${thClass} w-1/4 text-left`}>Member</th>
-                <th className={`${thClass} w-1/4 text-left`}>Heads</th>
-                <th className={`${thClass} w-1/4 text-left`}>Weekly Due</th>
-                <th className={`${thClass} w-1/4 text-right`}>Actions</th>
+                <th className={`${thClass} w-1/4`}>Member</th>
+                <th className={`${thClass} w-1/4`}>Heads</th>
+                <th className={`${thClass} w-1/4`}>Weekly Due</th>
+                <th className={`${thClass} w-1/4`}>Status</th>
               </tr>
             </thead>
             <tbody>

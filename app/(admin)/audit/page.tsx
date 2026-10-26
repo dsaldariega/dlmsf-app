@@ -219,6 +219,9 @@ export default function AuditPage() {
   const emptyCellClass =
     "h-75 px-5 py-10 text-center align-middle text-slate-400";
 
+  const thClass =
+    "w-1/3 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500";
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -335,33 +338,15 @@ export default function AuditPage() {
           <table className="relative w-full min-w-350 table-fixed border-collapse text-left text-sm">
             <thead className="sticky top-0 z-10 bg-slate-50">
               <tr>
-                <th className="w-56 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Borrower
-                </th>
-                <th className="w-36 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Principal
-                </th>
-                <th className="w-36 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Interest
-                </th>
-                <th className="w-36 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Total
-                </th>
-                <th className="w-36 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Monthly
-                </th>
-                <th className="w-32 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Status
-                </th>
-                <th className="w-64 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Remarks
-                </th>
-                <th className="w-56 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Created Date
-                </th>
-                <th className="w-32 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Actions
-                </th>
+                <th className={thClass}>Borrower</th>
+                <th className={thClass}>Principal</th>
+                <th className={thClass}>Interest</th>
+                <th className={thClass}>Total</th>
+                <th className={thClass}>Monthly</th>
+                <th className={thClass}>Status</th>
+                <th className={thClass}>Remarks</th>
+                <th className={thClass}>Created Date</th>
+                <th className={thClass}>Actions</th>
               </tr>
             </thead>
 
@@ -382,7 +367,7 @@ export default function AuditPage() {
                   </td>
                 </tr>
               ) : (
-                <AnimatePresence initial={false}>
+                <AnimatePresence>
                   {loanAudits.map((audit) => (
                     <motion.tr
                       key={audit.id}
@@ -496,18 +481,10 @@ export default function AuditPage() {
           <table className="relative w-full min-w-200 table-fixed border-collapse text-left text-sm">
             <thead className="sticky top-0 z-10 bg-slate-50">
               <tr>
-                <th className="w-56 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Week
-                </th>
-                <th className="w-48 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Amount
-                </th>
-                <th className="border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Remarks
-                </th>
-                <th className="w-64 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Actions
-                </th>
+                <th className={thClass}>Week</th>
+                <th className={thClass}>Amount</th>
+                <th className={thClass}>Remarks</th>
+                <th className={thClass}>Actions</th>
               </tr>
             </thead>
 
@@ -528,7 +505,7 @@ export default function AuditPage() {
                   </td>
                 </tr>
               ) : (
-                <AnimatePresence initial={false}>
+                <AnimatePresence>
                   {paymentAudits.map((payment) => {
                     const isEditing = editingPaymentId === payment.id;
 
