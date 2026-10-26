@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { MemberCount } from "@/lib/types/member";
 import { LoanPayment, Payment } from "@/lib/types/payment";
 import { RATE } from "@/lib/constants/payment";
+import { motion, AnimatePresence } from "motion/react";
 
 export default function PaymentsPage() {
   const [members, setMembers] = useState<MemberCount[]>([]);
@@ -15,8 +16,6 @@ export default function PaymentsPage() {
 
   // Select only one date for the weekly collection.
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-
-  const [editAmount, setEditAmount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
 
@@ -78,7 +77,7 @@ export default function PaymentsPage() {
     return sunday;
   };
 
-  // Generate exactly one weekly payment record.
+  // Generate exactly one weekly payment record
   const generateWeeklyPayment = async () => {
     if (!selectedDate) {
       alert("Please select a collection date.");
@@ -93,7 +92,7 @@ export default function PaymentsPage() {
       const sunday = getSunday(selectedDate);
       const weekStart = toDateString(sunday);
 
-      // Check whether this Sunday already has a payment.
+      // Check whether this Sunday already has a payment
       const { data: existing, error: existingError } = await supabase
         .from("payments")
         .select("id")
@@ -107,24 +106,40 @@ export default function PaymentsPage() {
         return;
       }
 
-      // Calculate total collection from all member heads.
+      // Calculate the collection from all member heads
       const totalAmount =
         members.reduce((sum, member) => sum + Number(member.heads || 0), 0) *
         RATE;
 
-      // Insert one payment for the selected week's Sunday.
-      const { error: insertError } = await supabase.from("payments").insert({
-        amount: totalAmount,
-        week_start: weekStart,
-      });
+      // Insert and retrieve the newly created payment
+      const { data: newPayment, error: insertError } = await supabase
+        .from("payments")
+        .insert({
+          amount: totalAmount,
+          week_start: weekStart,
+        })
+        .select("*")
+        .single();
 
       if (insertError) throw insertError;
 
-      await load();
+      if (!newPayment) {
+        throw new Error(
+          "Payment was created, but its record could not be retrieved.",
+        );
+      }
 
-      alert(`Weekly payment for Sunday, ${weekStart}, generated successfully.`);
+      // Update only the weekly payments table
+      setPayments((currentPayments) =>
+        [newPayment as Payment, ...currentPayments].sort(
+          (a, b) =>
+            new Date(b.week_start).getTime() - new Date(a.week_start).getTime(),
+        ),
+      );
 
       setSelectedDate(null);
+
+      // Avoid a blocking alert so the animation can play immediately
     } catch (error) {
       console.error("Error generating weekly payment:", error);
 
@@ -148,7 +163,10 @@ export default function PaymentsPage() {
       return;
     }
 
-    await load();
+    // Remove the deleted payment from local state
+    setPayments((currentPayments) =>
+      currentPayments.filter((payment) => payment.id !== id),
+    );
   };
 
   const total = payments.reduce(
@@ -219,6 +237,7 @@ export default function PaymentsPage() {
               dateFormat="MMMM d, yyyy"
               placeholderText="Select a collection date"
               isClearable
+              filterDate={(date) => date.getDay() === 0}
               className="h-11.5 w-full rounded-lg border border-slate-300 bg-white px-4 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               wrapperClassName="w-full"
             />
@@ -227,12 +246,6 @@ export default function PaymentsPage() {
               The payment will be recorded under the Sunday of the selected
               week.
             </p>
-
-            {selectedDate && (
-              <p className="mt-2 text-sm font-medium text-blue-700">
-                Week start: {toDateString(getSunday(selectedDate))}
-              </p>
-            )}
           </div>
 
           {/* Generate button */}
@@ -298,48 +311,62 @@ export default function PaymentsPage() {
                   </td>
                 </tr>
               ) : (
-                payments.map((payment) => (
-                  <tr key={payment.id} className="transition hover:bg-slate-50">
-                    {/* Week Start */}
-                    <td className="whitespace-nowrap px-5 py-4 font-medium text-slate-700">
-                      {payment.week_start}
-                    </td>
+                <AnimatePresence initial={false}>
+                  {payments.map((payment) => (
+                    <motion.tr
+                      key={payment.id}
+                      layout
+                      initial={{ opacity: 0, y: -16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{
+                        duration: 0.3,
+                        ease: "easeOut",
+                        layout: { duration: 0.25 },
+                      }}
+                      className="transition-colors hover:bg-slate-50"
+                    >
+                      {/* Week Start */}
+                      <td className="whitespace-nowrap px-5 py-4 font-medium text-slate-700">
+                        {payment.week_start}
+                      </td>
 
-                    {/* Payment Amount */}
-                    <td className="whitespace-nowrap px-5 py-4 font-semibold text-green-700">
-                      {formatCurrency(Number(payment.amount))}
-                    </td>
+                      {/* Payment Amount */}
+                      <td className="whitespace-nowrap px-5 py-4 font-semibold text-green-700">
+                        {formatCurrency(Number(payment.amount))}
+                      </td>
 
-                    {/* Actions */}
-                    <td className="whitespace-nowrap px-5 py-4">
-                      <button
-                        type="button"
-                        onClick={() => deletePayment(payment.id)}
-                        className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 shadow-sm transition hover:border-red-300 hover:bg-red-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden="true"
+                      {/* Actions */}
+                      <td className="whitespace-nowrap px-5 py-4">
+                        <button
+                          type="button"
+                          onClick={() => deletePayment(payment.id)}
+                          className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 shadow-sm transition hover:border-red-300 hover:bg-red-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
                         >
-                          <path d="M3 6h18" />
-                          <path d="M8 6V4h8v2" />
-                          <path d="m19 6-1 14H6L5 6" />
-                          <path d="M10 11v5" />
-                          <path d="M14 11v5" />
-                        </svg>
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <path d="M3 6h18" />
+                            <path d="M8 6V4h8v2" />
+                            <path d="m19 6-1 14H6L5 6" />
+                            <path d="M10 11v5" />
+                            <path d="M14 11v5" />
+                          </svg>
+                          Delete
+                        </button>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </AnimatePresence>
               )}
             </tbody>
 
