@@ -409,7 +409,7 @@ export default function AuditPage() {
                   </td>
                 </tr>
               ) : (
-                <AnimatePresence initial={false}>
+                <AnimatePresence>
                   {loanAudits.map((audit) => {
                     const isEditing = editingLoanId === audit.id;
 
