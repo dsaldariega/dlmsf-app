@@ -42,8 +42,10 @@ export default function LoansPage() {
   };
 
   // Fetch loans
-  const fetchLoans = async () => {
-    setLoading(true);
+  const fetchLoans = async (showLoading = true) => {
+    if (showLoading) {
+      setLoading(true);
+    }
 
     try {
       const { data, error } = await supabase
@@ -58,7 +60,9 @@ export default function LoansPage() {
       console.error("Error fetching loans:", error);
       alert("Unable to load loans.");
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
@@ -212,7 +216,7 @@ export default function LoansPage() {
       return;
     }
 
-    await fetchLoans();
+    await fetchLoans(false);
   };
 
   // Delete loan
@@ -593,7 +597,7 @@ export default function LoansPage() {
                   </td>
                 </tr>
               ) : (
-                <AnimatePresence initial={false}>
+                <AnimatePresence>
                   {loans.map((loan) => {
                     const status = loan.status || "Unknown";
 
@@ -644,13 +648,17 @@ export default function LoansPage() {
                         </td>
 
                         <td className="whitespace-nowrap px-5 py-4">
-                          <span
+                          <motion.span
+                            key={status}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.2 }}
                             className={`inline-flex items-center rounded px-2 py-1 text-xs font-medium leading-4 ${
                               badgeStyle[status] || badgeStyle.Unknown
                             }`}
                           >
                             {status}
-                          </span>
+                          </motion.span>
                         </td>
 
                         <td className="whitespace-nowrap px-5 py-4">

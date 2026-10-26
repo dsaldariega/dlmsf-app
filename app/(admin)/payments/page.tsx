@@ -311,7 +311,7 @@ export default function PaymentsPage() {
                   </td>
                 </tr>
               ) : (
-                <AnimatePresence initial={false}>
+                <AnimatePresence>
                   {payments.map((payment) => (
                     <motion.tr
                       key={payment.id}
