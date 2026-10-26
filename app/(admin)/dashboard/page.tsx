@@ -11,47 +11,10 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { withAuth } from "@/lib/withAuth";
-
-type Member = {
-  id: string | number;
-  heads: number | string | null;
-};
-
-type Payment = {
-  id: string | number;
-  amount: number | string | null;
-  week_start: string;
-};
-
-type Loan = {
-  id: string | number;
-  amount: number | string | null;
-  status: string | null;
-};
-
-type LoanPayment = {
-  id: string | number;
-  amount: number | string | null;
-  paid_at: string;
-};
-
-const MONTHS = [
-  "December 2025",
-  "January 2026",
-  "February 2026",
-  "March 2026",
-  "April 2026",
-  "May 2026",
-  "June 2026",
-  "July 2026",
-  "August 2026",
-  "September 2026",
-  "October 2026",
-  "November 2026",
-  "December 2026",
-];
-
-const CUTOFF_MONTHS = ["October 2026", "November 2026", "December 2026"];
+import { Member } from "@/lib/types/member";
+import { LoanPayment, Payment } from "@/lib/types/payment";
+import { Loan } from "@/lib/types/loan";
+import { CUTOFF_MONTHS, MONTHS } from "@/lib/constants/dashboard";
 
 function amount(value: number | string | null | undefined): number {
   return Number(value ?? 0) || 0;
