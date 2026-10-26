@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { LoanAudit, PaymentAudit } from "@/lib/types/audit";
+import { motion, AnimatePresence } from "motion/react";
 
 const formatCurrency = (value: number) =>
   `₱${Number(value || 0).toLocaleString("en-PH", {
@@ -56,8 +57,8 @@ export default function AuditPage() {
   );
 
   // Load audit records
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     setErrorMessage("");
 
     try {
@@ -87,7 +88,7 @@ export default function AuditPage() {
           : "Unable to load audit records. Please try again.",
       );
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   }, []);
 
@@ -157,7 +158,7 @@ export default function AuditPage() {
 
       if (editingLoanId === id) cancelLoanEdit();
 
-      await load();
+      setLoanAudits((current) => current.filter((audit) => audit.id !== id));
     } catch (error) {
       console.error("Error deleting loan audit:", error);
       alert(
@@ -208,8 +209,21 @@ export default function AuditPage() {
 
       if (error) throw error;
 
+      setPaymentAudits((current) =>
+        current.map((payment) =>
+          payment.id === id
+            ? {
+                ...payment,
+                amount: Number(editPaymentAmount.toFixed(2)),
+                remarks: editPaymentRemarks.trim() || null,
+              }
+            : payment,
+        ),
+      );
+
       setEditingPaymentId(null);
-      await load();
+      setEditPaymentAmount("");
+      setEditPaymentRemarks("");
     } catch (error) {
       console.error("Error updating payment audit:", error);
       alert(
@@ -233,7 +247,7 @@ export default function AuditPage() {
 
     try {
       const { error } = await supabase
-        .from("payment_audit")
+        .from("payment_audit_log")
         .delete()
         .eq("id", id);
 
@@ -241,7 +255,9 @@ export default function AuditPage() {
 
       if (editingPaymentId === id) cancelPaymentEdit();
 
-      await load();
+      setPaymentAudits((current) =>
+        current.filter((payment) => payment.id !== id),
+      );
     } catch (error) {
       console.error("Error deleting payment audit:", error);
       alert(
@@ -393,75 +409,82 @@ export default function AuditPage() {
                   </td>
                 </tr>
               ) : (
-                loanAudits.map((audit) => {
-                  const isEditing = editingLoanId === audit.id;
+                <AnimatePresence initial={false}>
+                  {loanAudits.map((audit) => {
+                    const isEditing = editingLoanId === audit.id;
 
-                  return (
-                    <tr
-                      key={audit.id}
-                      className="transition-colors hover:bg-slate-50"
-                    >
-                      <td className="whitespace-nowrap px-5 py-4 font-semibold text-slate-800">
-                        {audit.borrower_name || "N/A"}
-                        <p className="mt-1 text-xs font-normal text-slate-400">
-                          Audit #{audit.id}
-                        </p>
-                      </td>
+                    return (
+                      <motion.tr
+                        key={audit.id}
+                        layout
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, x: -12 }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                        className="transition-colors hover:bg-slate-50"
+                      >
+                        <td className="whitespace-nowrap px-5 py-4 font-semibold text-slate-800">
+                          {audit.borrower_name || "N/A"}
+                          <p className="mt-1 text-xs font-normal text-slate-400">
+                            Audit #{audit.id}
+                          </p>
+                        </td>
 
-                      <td className="whitespace-nowrap px-5 py-4 text-slate-600">
-                        {formatCurrency(audit.amount)}
-                      </td>
+                        <td className="whitespace-nowrap px-5 py-4 text-slate-600">
+                          {formatCurrency(audit.amount)}
+                        </td>
 
-                      <td className="whitespace-nowrap px-5 py-4 text-violet-700">
-                        {formatCurrency(audit.interest)}
-                      </td>
+                        <td className="whitespace-nowrap px-5 py-4 text-violet-700">
+                          {formatCurrency(audit.interest)}
+                        </td>
 
-                      <td className="whitespace-nowrap px-5 py-4 font-semibold text-emerald-700">
-                        {formatCurrency(audit.total)}
-                      </td>
+                        <td className="whitespace-nowrap px-5 py-4 font-semibold text-emerald-700">
+                          {formatCurrency(audit.total)}
+                        </td>
 
-                      <td className="whitespace-nowrap px-5 py-4 text-slate-600">
-                        {formatCurrency(audit.monthly)}
-                      </td>
+                        <td className="whitespace-nowrap px-5 py-4 text-slate-600">
+                          {formatCurrency(audit.monthly)}
+                        </td>
 
-                      <td className="whitespace-nowrap px-5 py-4">
-                        <span
-                          className={`inline-flex rounded-md px-2.5 py-1 text-xs font-semibold ${getStatusStyle(audit.status)}`}
-                        >
-                          {audit.status || "Unknown"}
-                        </span>
-                      </td>
-
-                      <td className="min-w-56 px-5 py-4">
-                        <span className="wrap-break-word text-slate-500">
-                          {audit.remarks || "No remarks"}
-                        </span>
-                      </td>
-                      <td className="whitespace-nowrap px-5 py-4 text-slate-500">
-                        {audit.created_date
-                          ? new Date(audit.created_date).toLocaleString(
-                              "en-PH",
-                              {
-                                dateStyle: "medium",
-                                timeStyle: "short",
-                              },
-                            )
-                          : "N/A"}
-                      </td>
-                      <td className="whitespace-nowrap px-5 py-4">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => void deleteLoanAudit(audit.id)}
-                            className="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
+                        <td className="whitespace-nowrap px-5 py-4">
+                          <span
+                            className={`inline-flex rounded-md px-2.5 py-1 text-xs font-semibold ${getStatusStyle(audit.status)}`}
                           >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
+                            {audit.status || "Unknown"}
+                          </span>
+                        </td>
+
+                        <td className="min-w-56 px-5 py-4">
+                          <span className="wrap-break-word text-slate-500">
+                            {audit.remarks || "No remarks"}
+                          </span>
+                        </td>
+                        <td className="whitespace-nowrap px-5 py-4 text-slate-500">
+                          {audit.created_date
+                            ? new Date(audit.created_date).toLocaleString(
+                                "en-PH",
+                                {
+                                  dateStyle: "medium",
+                                  timeStyle: "short",
+                                },
+                              )
+                            : "N/A"}
+                        </td>
+                        <td className="whitespace-nowrap px-5 py-4">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => void deleteLoanAudit(audit.id)}
+                              className="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                </AnimatePresence>
               )}
             </tbody>
           </table>
@@ -517,106 +540,115 @@ export default function AuditPage() {
                   </td>
                 </tr>
               ) : (
-                paymentAudits.map((payment) => {
-                  const isEditing = editingPaymentId === payment.id;
+                <AnimatePresence initial={false}>
+                  {paymentAudits.map((payment) => {
+                    const isEditing = editingPaymentId === payment.id;
 
-                  return (
-                    <tr
-                      key={payment.id}
-                      className="transition-colors hover:bg-slate-50"
-                    >
-                      <td className="whitespace-nowrap px-5 py-4 font-semibold text-slate-800">
-                        {payment.week || "N/A"}
-                        <p className="mt-1 text-xs font-normal text-slate-400">
-                          Audit #{payment.id}
-                        </p>
-                      </td>
+                    return (
+                      <motion.tr
+                        key={payment.id}
+                        layout
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, x: -12 }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                        className="transition-colors hover:bg-slate-50"
+                      >
+                        <td className="whitespace-nowrap px-5 py-4 font-semibold text-slate-800">
+                          {payment.week || "N/A"}
+                          <p className="mt-1 text-xs font-normal text-slate-400">
+                            Audit #{payment.id}
+                          </p>
+                        </td>
 
-                      <td className="whitespace-nowrap px-5 py-4">
-                        {isEditing ? (
-                          <input
-                            type="number"
-                            min="0.01"
-                            step="0.01"
-                            value={editPaymentAmount}
-                            onChange={(e) =>
-                              setEditPaymentAmount(
-                                e.target.value === ""
-                                  ? ""
-                                  : Number(e.target.value),
-                              )
-                            }
-                            className="w-32 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
-                            aria-label={`Payment amount for audit ${payment.id}`}
-                          />
-                        ) : (
-                          <span className="font-semibold text-emerald-700">
-                            {formatCurrency(payment.amount)}
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="min-w-56 px-5 py-4">
-                        {isEditing ? (
-                          <input
-                            value={editPaymentRemarks}
-                            onChange={(e) =>
-                              setEditPaymentRemarks(e.target.value)
-                            }
-                            placeholder="Add remarks..."
-                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
-                          />
-                        ) : (
-                          <span className="wrap-break-word text-slate-500">
-                            {payment.remarks || "No remarks"}
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="whitespace-nowrap px-5 py-4">
-                        <div className="flex items-center justify-end gap-2">
+                        <td className="whitespace-nowrap px-5 py-4">
                           {isEditing ? (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => void savePaymentEdit(payment.id)}
-                                className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"
-                              >
-                                Save
-                              </button>
-                              <button
-                                type="button"
-                                onClick={cancelPaymentEdit}
-                                className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
-                              >
-                                Cancel
-                              </button>
-                            </>
+                            <input
+                              type="number"
+                              min="0.01"
+                              step="0.01"
+                              value={editPaymentAmount}
+                              onChange={(e) =>
+                                setEditPaymentAmount(
+                                  e.target.value === ""
+                                    ? ""
+                                    : Number(e.target.value),
+                                )
+                              }
+                              className="w-32 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+                              aria-label={`Payment amount for audit ${payment.id}`}
+                            />
                           ) : (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => startPaymentEdit(payment)}
-                                className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  void deletePaymentAudit(payment.id)
-                                }
-                                className="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
-                              >
-                                Delete
-                              </button>
-                            </>
+                            <span className="font-semibold text-emerald-700">
+                              {formatCurrency(payment.amount)}
+                            </span>
                           )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
+                        </td>
+
+                        <td className="min-w-56 px-5 py-4">
+                          {isEditing ? (
+                            <input
+                              value={editPaymentRemarks}
+                              onChange={(e) =>
+                                setEditPaymentRemarks(e.target.value)
+                              }
+                              placeholder="Add remarks..."
+                              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+                            />
+                          ) : (
+                            <span className="wrap-break-word text-slate-500">
+                              {payment.remarks || "No remarks"}
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="whitespace-nowrap px-5 py-4">
+                          <div className="flex items-center justify-end gap-2">
+                            {isEditing ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    void savePaymentEdit(payment.id)
+                                  }
+                                  className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={cancelPaymentEdit}
+                                  className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                                >
+                                  Cancel
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => startPaymentEdit(payment)}
+                                  className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    void deletePaymentAudit(payment.id)
+                                  }
+                                  className="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
+                                >
+                                  Delete
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                </AnimatePresence>
               )}
             </tbody>
           </table>
