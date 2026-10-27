@@ -6,6 +6,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { supabase } from "@/lib/supabase";
 import { MemberCount } from "@/lib/types/member";
 import { LoanPayment, Payment } from "@/lib/types/payment";
+import { Toast } from "@/lib/types/loan";
 import { RATE } from "@/lib/constants/member";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -18,6 +19,12 @@ export default function PaymentsPage() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+
+  const [toast, setToast] = useState<Toast | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [paymentToDelete, setPaymentToDelete] = useState<Payment | null>(null);
+
+  const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
 
   useEffect(() => {
     void load();
@@ -44,11 +51,18 @@ export default function PaymentsPage() {
       if (lp.error) throw lp.error;
 
       setMembers(m.data || []);
-      setPayments(m.data ? p.data || [] : []);
+      setPayments(p.data || []);
       setLoanPayments(lp.data || []);
     } catch (error) {
       console.error("Error loading payment data:", error);
-      alert("Unable to load payment data.");
+
+      showToast(
+        "error",
+        "Unable to load payment data",
+        error instanceof Error
+          ? error.message
+          : "Please refresh the page and try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -79,20 +93,26 @@ export default function PaymentsPage() {
 
   // Generate exactly one weekly payment record
   const generateWeeklyPayment = async () => {
+    if (generating || loading) return;
+
     if (!selectedDate) {
-      alert("Please select a collection date.");
+      showToast(
+        "warning",
+        "Collection date required",
+        "Please select a Sunday for the weekly collection.",
+      );
       return;
     }
 
-    if (generating || loading) return;
-
     setGenerating(true);
+
+    let paymentCreated = false;
 
     try {
       const sunday = getSunday(selectedDate);
       const weekStart = toDateString(sunday);
 
-      // Check whether this Sunday already has a payment
+      // 1. Check whether this Sunday already has a payment.
       const { data: existing, error: existingError } = await supabase
         .from("payments")
         .select("id")
@@ -102,16 +122,23 @@ export default function PaymentsPage() {
       if (existingError) throw existingError;
 
       if (existing && existing.length > 0) {
-        alert(`A weekly payment for Sunday, ${weekStart}, already exists.`);
+        showToast(
+          "warning",
+          "Payment already exists",
+          `A weekly payment for Sunday, ${weekStart}, already exists.`,
+        );
         return;
       }
 
-      // Calculate the collection from all member heads
-      const totalAmount =
-        members.reduce((sum, member) => sum + Number(member.heads || 0), 0) *
-        RATE;
+      // 2. Calculate the collection from all member heads.
+      const totalHeads = members.reduce(
+        (sum, member) => sum + Number(member.heads || 0),
+        0,
+      );
 
-      // Insert and retrieve the newly created payment
+      const totalAmount = totalHeads * RATE;
+
+      // 3. Insert the weekly payment and retrieve its record.
       const { data: newPayment, error: insertError } = await supabase
         .from("payments")
         .insert({
@@ -129,7 +156,37 @@ export default function PaymentsPage() {
         );
       }
 
-      // Update only the weekly payments table
+      paymentCreated = true;
+
+      // 4. Insert the audit record.
+      const { error: auditError } = await supabase
+        .from("payments_audit_log")
+        .insert({
+          ref_id: newPayment.id,
+          amount: totalAmount,
+          week_start: weekStart,
+          action: "Weekly Payment Created",
+          remarks: `Weekly sinking fund collection generated for Sunday, ${weekStart}. Total member heads: ${totalHeads}. Rate per head: ${RATE}.`,
+          created_date: new Date().toISOString(),
+        });
+
+      if (auditError) {
+        console.error("Payment audit logging failed:", auditError);
+
+        // The payment already exists. Refresh the table and do not
+        // ask the user to retry as that could create a duplicate.
+        await load();
+
+        showToast(
+          "warning",
+          "Payment created with a warning",
+          "The weekly payment was created, but its audit record failed. Check the audit log before retrying.",
+        );
+
+        return;
+      }
+
+      // 5. Update the weekly payments table immediately.
       setPayments((currentPayments) =>
         [newPayment as Payment, ...currentPayments].sort(
           (a, b) =>
@@ -137,36 +194,89 @@ export default function PaymentsPage() {
         ),
       );
 
+      // 6. Reset and close the modal.
       setSelectedDate(null);
+      setIsGenerateModalOpen(false);
 
-      // Avoid a blocking alert so the animation can play immediately
+      showToast(
+        "success",
+        "Weekly payment generated",
+        `${formatCurrency(totalAmount)} has been recorded for ${weekStart}, and the audit entry was saved.`,
+      );
     } catch (error) {
       console.error("Error generating weekly payment:", error);
 
-      alert(
-        error instanceof Error
-          ? error.message
-          : "Unable to generate the weekly payment.",
-      );
+      if (paymentCreated) {
+        // The payment exists even though a later operation failed.
+        await load();
+
+        showToast(
+          "warning",
+          "Payment created with a warning",
+          "The weekly payment may already exist, but a subsequent operation failed. Check the payment records and audit log before retrying.",
+        );
+      } else {
+        showToast(
+          "error",
+          "Generation failed",
+          error instanceof Error
+            ? error.message
+            : "Unable to generate the weekly payment. Please try again.",
+        );
+      }
     } finally {
       setGenerating(false);
     }
   };
 
+  //Delete Payment
   const deletePayment = async (id: number) => {
-    if (!confirm("Delete this weekly payment?")) return;
+    if (deletingId !== null) return;
 
-    const { error } = await supabase.from("payments").delete().eq("id", id);
+    const paymentToRemove = payments.find((payment) => payment.id === id);
 
-    if (error) {
-      alert(error.message);
+    if (!paymentToRemove) {
+      setPaymentToDelete(null);
+
+      showToast(
+        "error",
+        "Payment not found",
+        "Refresh the records and try again.",
+      );
       return;
     }
 
-    // Remove the deleted payment from local state
-    setPayments((currentPayments) =>
-      currentPayments.filter((payment) => payment.id !== id),
-    );
+    setDeletingId(id);
+
+    try {
+      const { error } = await supabase.from("payments").delete().eq("id", id);
+
+      if (error) throw error;
+
+      setPayments((currentPayments) =>
+        currentPayments.filter((payment) => payment.id !== id),
+      );
+
+      setPaymentToDelete(null);
+
+      showToast(
+        "success",
+        "Payment deleted",
+        `The weekly payment for ${paymentToRemove.week_start} has been removed.`,
+      );
+    } catch (error) {
+      console.error("Error deleting weekly payment:", error);
+
+      showToast(
+        "error",
+        "Deletion failed",
+        error instanceof Error
+          ? error.message
+          : "Unable to delete the weekly payment. Please try again.",
+      );
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const total = payments.reduce(
@@ -180,8 +290,150 @@ export default function PaymentsPage() {
       maximumFractionDigits: 2,
     })}`;
 
+  const showToast = (type: Toast["type"], title: string, message: string) => {
+    setToast({
+      id: Date.now(),
+      type,
+      title,
+      message,
+    });
+  };
+
+  useEffect(() => {
+    if (!toast) return;
+
+    const timeout = setTimeout(() => setToast(null), 4000);
+
+    return () => clearTimeout(timeout);
+  }, [toast]);
+
   return (
     <div className="space-y-6">
+      {/* Animated toast notifications */}
+      <div
+        className="pointer-events-none fixed right-4 top-4 z-100 flex w-[calc(100%-2rem)] max-w-sm flex-col gap-3 sm:right-6 sm:top-6"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        <AnimatePresence mode="wait">
+          {toast && (
+            <motion.div
+              key={toast.id}
+              initial={{ opacity: 0, x: 40, scale: 0.96 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 30, scale: 0.96 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              role={toast.type === "error" ? "alert" : "status"}
+              className={`pointer-events-auto overflow-hidden rounded-xl border bg-white shadow-xl ${
+                toast.type === "success"
+                  ? "border-emerald-200"
+                  : toast.type === "error"
+                    ? "border-red-200"
+                    : toast.type === "warning"
+                      ? "border-amber-200"
+                      : "border-blue-200"
+              }`}
+            >
+              <div className="flex items-start gap-3 p-4">
+                <div
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+                    toast.type === "success"
+                      ? "bg-emerald-50 text-emerald-600"
+                      : toast.type === "error"
+                        ? "bg-red-50 text-red-600"
+                        : toast.type === "warning"
+                          ? "bg-amber-50 text-amber-600"
+                          : "bg-blue-50 text-blue-600"
+                  }`}
+                >
+                  {toast.type === "success" ? (
+                    <svg
+                      width="21"
+                      height="21"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="m5 12 4 4L19 6" />
+                    </svg>
+                  ) : toast.type === "error" ? (
+                    <svg
+                      width="21"
+                      height="21"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <path d="m15 9-6 6" />
+                      <path d="m9 9 6 6" />
+                    </svg>
+                  ) : (
+                    <svg
+                      width="21"
+                      height="21"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <path d="M12 16v-4" />
+                      <path d="M12 8h.01" />
+                    </svg>
+                  )}
+                </div>
+
+                <div className="min-w-0 flex-1 pt-0.5">
+                  <p className="text-sm font-semibold text-slate-900">
+                    {toast.title}
+                  </p>
+                  <p className="mt-1 wrap-break-word text-sm leading-5 text-slate-500">
+                    {toast.message}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setToast(null)}
+                  aria-label="Dismiss notification"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                >
+                  <span aria-hidden="true">✕</span>
+                </button>
+              </div>
+
+              <motion.div
+                key={`progress-${toast.id}`}
+                initial={{ scaleX: 1 }}
+                animate={{ scaleX: 0 }}
+                transition={{ duration: 4, ease: "linear" }}
+                style={{ transformOrigin: "left" }}
+                className={`h-1 ${
+                  toast.type === "success"
+                    ? "bg-emerald-500"
+                    : toast.type === "error"
+                      ? "bg-red-500"
+                      : toast.type === "warning"
+                        ? "bg-amber-500"
+                        : "bg-blue-500"
+                }`}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
       {/* Page header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
@@ -227,66 +479,329 @@ export default function PaymentsPage() {
         </div>
       </div>
 
-      {/* Weekly payment generator */}
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-        <h2 className="text-lg font-semibold text-slate-900">
-          Generate Weekly Reports
-        </h2>
+      {/* Generate Weekly Payment Button */}
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => setIsGenerateModalOpen(true)}
+          disabled={loading || generating}
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
+            <path d="M12 5v14" />
+            <path d="M5 12h14" />
+          </svg>
+          Generate Weekly Payment
+        </button>
+      </div>
 
-        <p className="mt-1 text-sm text-slate-500">
-          Select a date for the weekly collection. The system will automatically
-          assign the payment to the Sunday of that week.
-        </p>
-
-        <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_auto] lg:max-w-2xl">
-          {/* Collection date */}
-          <div className="relative z-20 min-w-0">
-            <label className="mb-2 block text-sm font-medium text-slate-700">
-              Collection date
-            </label>
-
-            <DatePicker
-              selected={selectedDate}
-              onChange={(date: Date | null) => setSelectedDate(date)}
-              dateFormat="MMMM d, yyyy"
-              placeholderText="Select a collection date"
-              isClearable
-              filterDate={(date) => date.getDay() === 0}
-              popperClassName="!z-[9999]"
-              className="h-11.5 w-full rounded-lg border border-slate-300 bg-white px-4 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              wrapperClassName="w-full"
-            />
-
-            <p className="mt-2 text-xs text-slate-500">
-              The payment will be recorded under the Sunday of the selected
-              week.
-            </p>
-          </div>
-
-          {/* Generate button */}
-          <div className="flex items-start pt-7.5 sm:pt-7.5">
-            <button
-              type="button"
-              onClick={generateWeeklyPayment}
-              disabled={!selectedDate || generating || loading}
-              className="inline-flex h-11.5 w-full items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+      {/* Generate Weekly Payment Modal */}
+      <AnimatePresence>
+        {isGenerateModalOpen && (
+          <motion.div
+            key="generate-payment-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/50 p-4 backdrop-blur-sm"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget && !generating) {
+                setIsGenerateModalOpen(false);
+                setSelectedDate(null);
+              }
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.98 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="generate-payment-title"
+              className="my-auto w-full max-w-2xl overflow-visible rounded-2xl border border-slate-200 bg-white shadow-2xl"
             >
-              {generating ? (
-                <>
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <span aria-hidden="true">+</span>
-                  Generate Weekly Payment
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </section>
+              {/* Header */}
+              <div className="flex items-start justify-between rounded-t-2xl border-b border-slate-100 px-6 py-5">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                    <svg
+                      width="22"
+                      height="22"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <rect x="3" y="5" width="18" height="14" rx="2" />
+                      <path d="M3 10h18M7 15h3" />
+                    </svg>
+                  </div>
 
+                  <div>
+                    <h2
+                      id="generate-payment-title"
+                      className="text-lg font-bold text-slate-900"
+                    >
+                      Generate Weekly Payment
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Select a collection Sunday and review the amount before
+                      generating the payment record.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsGenerateModalOpen(false);
+                    setSelectedDate(null);
+                  }}
+                  disabled={generating}
+                  aria-label="Close dialog"
+                  className="ml-3 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Modal content */}
+              <div className="space-y-5 px-6 py-6">
+                <div>
+                  <label
+                    htmlFor="collectionDate"
+                    className="mb-2 block text-sm font-semibold text-slate-700"
+                  >
+                    Collection Date <span className="text-red-500">*</span>
+                  </label>
+
+                  <DatePicker
+                    id="collectionDate"
+                    selected={selectedDate}
+                    onChange={(date: Date | null) => setSelectedDate(date)}
+                    dateFormat="MMMM d, yyyy"
+                    placeholderText="Select a collection Sunday"
+                    isClearable
+                    filterDate={(date) => date.getDay() === 0}
+                    popperClassName="!z-[9999]"
+                    disabled={generating}
+                    className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 disabled:opacity-60"
+                    wrapperClassName="w-full"
+                  />
+
+                  <p className="mt-2 text-xs leading-5 text-slate-500">
+                    Only Sundays can be selected. The payment will be assigned
+                    to the Sunday of the selected week.
+                  </p>
+                </div>
+
+                {/* Collection calculation */}
+                <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
+                  <h3 className="text-sm font-semibold text-blue-900">
+                    Collection Summary
+                  </h3>
+
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <span className="text-sm text-blue-800">
+                      Total member heads
+                    </span>
+                    <span className="font-semibold tabular-nums text-blue-900">
+                      {members
+                        .reduce(
+                          (sum, member) => sum + Number(member.heads || 0),
+                          0,
+                        )
+                        .toLocaleString("en-PH")}
+                    </span>
+                  </div>
+
+                  <div className="mt-2 flex items-center justify-between gap-3">
+                    <span className="text-sm text-blue-800">Rate per head</span>
+                    <span className="font-semibold text-blue-900">
+                      {formatCurrency(RATE)}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 border-t border-blue-200 pt-3">
+                    <p className="text-xs text-blue-700">
+                      Total weekly collection
+                    </p>
+                    <p className="mt-1 text-2xl font-bold tabular-nums text-blue-900">
+                      {formatCurrency(
+                        members.reduce(
+                          (sum, member) => sum + Number(member.heads || 0),
+                          0,
+                        ) * RATE,
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                {selectedDate && (
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <p className="text-xs text-slate-500">
+                      Payment will be recorded for
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-800">
+                      Sunday, {toDateString(getSunday(selectedDate))}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="flex flex-col-reverse gap-3 rounded-b-2xl border-t border-slate-100 bg-slate-50 px-6 py-4 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsGenerateModalOpen(false);
+                    setSelectedDate(null);
+                  }}
+                  disabled={generating}
+                  className="inline-flex h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => void generateWeeklyPayment()}
+                  disabled={!selectedDate || generating || loading}
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {generating ? (
+                    <>
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                      Generating...
+                    </>
+                  ) : (
+                    "Generate Payment"
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Payment Confirmation Modal */}
+      <AnimatePresence>
+        {paymentToDelete && (
+          <motion.div
+            key="delete-payment-confirmation"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-60 flex items-center justify-center overflow-y-auto bg-slate-950/50 p-4 backdrop-blur-sm"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget && deletingId === null) {
+                setPaymentToDelete(null);
+              }
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.97 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+              className="my-auto w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+              role="alertdialog"
+              aria-modal="true"
+              aria-labelledby="delete-payment-title"
+              aria-describedby="delete-payment-description"
+            >
+              <div className="px-6 py-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-600">
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M3 6h18" />
+                      <path d="M8 6V4h8v2" />
+                      <path d="m19 6-1 14H6L5 6" />
+                    </svg>
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <h2
+                      id="delete-payment-title"
+                      className="text-lg font-bold text-slate-900"
+                    >
+                      Delete Weekly Payment?
+                    </h2>
+
+                    <p
+                      id="delete-payment-description"
+                      className="mt-2 text-sm leading-6 text-slate-500"
+                    >
+                      This weekly payment will be permanently removed from your
+                      records. This action cannot be undone.
+                    </p>
+
+                    <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                      <p className="text-sm font-semibold text-slate-800">
+                        Week starting {paymentToDelete.week_start}
+                      </p>
+
+                      <p className="mt-1 text-sm font-medium text-red-600">
+                        {formatCurrency(Number(paymentToDelete.amount || 0))}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col-reverse gap-3 border-t border-slate-100 bg-slate-50 px-6 py-4 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setPaymentToDelete(null)}
+                  disabled={deletingId !== null}
+                  className="inline-flex h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => void deletePayment(paymentToDelete.id)}
+                  disabled={deletingId !== null}
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-red-600 px-5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {deletingId === paymentToDelete.id ? (
+                    <>
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                      Deleting...
+                    </>
+                  ) : (
+                    "Delete Payment"
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Weekly payments table */}
       <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 px-5 py-4">
@@ -368,11 +883,11 @@ export default function PaymentsPage() {
                       <td className="px-5 py-4">
                         <button
                           type="button"
-                          onClick={() => deletePayment(payment.id)}
-                          className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3 text-xs font-semibold text-red-600 shadow-sm transition hover:border-red-300 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500/30"
+                          onClick={() => setPaymentToDelete(payment)}
+                          disabled={deletingId !== null}
+                          className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3 text-xs font-semibold text-red-600 shadow-sm transition hover:border-red-300 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500/30 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <svg
-                            xmlns="http://www.w3.org/2000/svg"
                             width="15"
                             height="15"
                             viewBox="0 0 24 24"
