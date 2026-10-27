@@ -6,7 +6,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { supabase } from "@/lib/supabase";
 import { MemberCount } from "@/lib/types/member";
 import { LoanPayment, Payment } from "@/lib/types/payment";
-import { RATE } from "@/lib/constants/payment";
+import { RATE } from "@/lib/constants/member";
 import { motion, AnimatePresence } from "motion/react";
 
 export default function PaymentsPage() {

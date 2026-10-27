@@ -1,7 +1,7 @@
 export type Member = {
   id: number;
   name: string;
-  heads: number | null;
+  heads: number;
   roles: string;
 };
 
@@ -13,4 +13,11 @@ export type MemberOption = {
 export type MemberCount = {
   id: number;
   heads: number;
+};
+
+export type Toast = {
+  id: number;
+  type: "success" | "error" | "warning" | "info";
+  title: string;
+  message: string;
 };
