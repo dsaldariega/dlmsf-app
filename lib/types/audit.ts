@@ -5,14 +5,24 @@ export type LoanAudit = {
   interest: number;
   total: number;
   monthly: number;
-  status: string;
+  action: string;
   remarks: string | null;
   created_date: string;
+  ref_id: string | null;
 };
 
 export type PaymentAudit = {
   id: number;
-  week: string;
+  week_start: string;
   amount: number;
   remarks: string | null;
+  ref_id: string | null;
+  action: string;
+};
+
+export type AuditToast = {
+  id: number;
+  type: "success" | "error" | "warning";
+  title: string;
+  message: string;
 };

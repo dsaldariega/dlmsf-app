@@ -10,4 +10,6 @@ export type LoanPayment = {
   member_id: number;
   amount: number | string | null;
   paid_at: string;
+  remarks: string;
+  action: string;
 };
