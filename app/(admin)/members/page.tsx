@@ -9,6 +9,7 @@ import { Member, Toast } from "@/lib/types/member";
 import { formatCurrency } from "@/lib/utils/members";
 import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
 import { tableClass, tdClass, thClass } from "@/components/ui/table-styles";
+import TableLoading from "@/components/ui/TableLoading";
 
 function MembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
@@ -1155,7 +1156,7 @@ function MembersPage() {
 
         {/* Members table */}
         <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="h-100 overflow-y-scroll">
+          <div className="h-105 overflow-y-scroll">
             <DataTable
               data={members}
               columns={memberColumns}
@@ -1165,12 +1166,7 @@ function MembersPage() {
               tdClassName={tdClass}
               tbodyClassName="divide-y divide-slate-100"
               loading={loading}
-              loadingContent={
-                <span className="inline-flex items-center justify-center gap-3">
-                  <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
-                  Loading members...
-                </span>
-              }
+              loadingRow={<TableLoading message="Loading members..." />}
               emptyContent={
                 <div>
                   <p className="font-semibold text-slate-800">No members yet</p>

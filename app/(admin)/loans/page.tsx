@@ -20,6 +20,7 @@ import {
 
 import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
 import { tableClass, tdClass, thClass } from "@/components/ui/table-styles";
+import TableLoading from "@/components/ui/TableLoading";
 
 export default function LoansPage() {
   const [loans, setLoans] = useState<Loan[]>([]);
@@ -95,22 +96,6 @@ export default function LoansPage() {
       }
     }
   };
-
-  function TableLoading({ message }: { message: string }) {
-    return (
-      <tr>
-        <td
-          colSpan={4}
-          className="h-75 px-5 py-10 text-center align-middle text-slate-500"
-        >
-          <span className="inline-flex items-center justify-center gap-3">
-            <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
-            {message}
-          </span>
-        </td>
-      </tr>
-    );
-  }
 
   // Add loan and create audit log
   const addLoan = async () => {
@@ -1170,18 +1155,20 @@ export default function LoansPage() {
           </p>
         </div>
 
-        <div className="h-105 overflow-y-scroll overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-          <DataTable
-            data={loans}
-            columns={loanColumns}
-            getRowKey={(loan) => loan.id}
-            tableClassName={`${tableClass} min-w-300`}
-            thClassName={thClass}
-            tdClassName={tdClass}
-            loading={loading}
-            loadingMessage="Loading loans..."
-            emptyMessage="No loan records yet."
-          />
+        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="h-105 overflow-y-scroll">
+            <DataTable
+              data={loans}
+              columns={loanColumns}
+              getRowKey={(loan) => loan.id}
+              tableClassName={`${tableClass} min-w-300`}
+              thClassName={thClass}
+              tdClassName={tdClass}
+              loading={loading}
+              loadingRow={<TableLoading message="Loading loans..." />}
+              emptyMessage="No loan records yet."
+            />
+          </div>
         </div>
 
         {/* Table footer */}

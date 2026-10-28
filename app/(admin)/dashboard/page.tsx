@@ -432,22 +432,21 @@ function AdminDashboard() {
           Monthly contribution targets and actual collections.
         </p>
 
-        <div className="h-105 overflow-y-scroll overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-          <DataTable
-            data={MONTHS}
-            columns={sinkingCollectionColumns}
-            getRowKey={(month) => month}
-            tableClassName={`${tableClass} relative`}
-            thClassName={thClass}
-            tdClassName={tdClass}
-            loading={loading}
-            loadingRow={
-              <TableLoading
-                message="Loading sinking fund collections..."
-                colSpan={sinkingCollectionColumns.length}
-              />
-            }
-          />
+        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="h-105 overflow-y-scroll">
+            <DataTable
+              data={MONTHS}
+              columns={sinkingCollectionColumns}
+              getRowKey={(month) => month}
+              tableClassName={`${tableClass} relative`}
+              thClassName={thClass}
+              tdClassName={tdClass}
+              loading={loading}
+              loadingRow={
+                <TableLoading message="Loading sinking fund collections..." />
+              }
+            />
+          </div>
         </div>
       </section>
 

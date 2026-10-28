@@ -9,8 +9,8 @@ export default function TableLoading({
 }: TableLoadingProps) {
   return (
     <tr>
-      <td colSpan={colSpan} className="px-5 py-10 text-center align-middle">
-        <div className="flex flex-col items-center justify-center gap-3">
+      <td colSpan={colSpan} className="p-0">
+        <div className="flex min-h-105 w-full flex-col items-center justify-center gap-3">
           <span
             className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600"
             role="status"
