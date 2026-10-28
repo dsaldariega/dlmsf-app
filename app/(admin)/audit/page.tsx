@@ -52,14 +52,6 @@ export default function AuditPage() {
 
       setLoanAudits((loans.data || []) as LoanAudit[]);
       setPaymentAudits((payments.data || []) as PaymentAudit[]);
-
-      if (showLoading) {
-        showToast(
-          "success",
-          "Records refreshed",
-          "Loan and payment audit records are up to date.",
-        );
-      }
     } catch (error) {
       console.error("Error loading audit records:", error);
 
@@ -296,15 +288,6 @@ export default function AuditPage() {
             Review and manage loan and payment audit records.
           </p>
         </div>
-
-        <button
-          type="button"
-          onClick={() => void load()}
-          disabled={loading}
-          className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50"
-        >
-          {loading ? "Refreshing..." : "Refresh records"}
-        </button>
       </div>
       {errorMessage && (
         <div
