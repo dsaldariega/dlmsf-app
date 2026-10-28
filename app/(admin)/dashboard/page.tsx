@@ -16,6 +16,9 @@ import { LoanPayment, Payment } from "@/lib/types/payment";
 import { Loan } from "@/lib/types/loan";
 import { CUTOFF_MONTHS, MONTHS } from "@/lib/constants/dashboard";
 import { motion, AnimatePresence } from "motion/react";
+import { tableClass, tdClass, thClass } from "@/components/ui/table-styles";
+import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
+import TableLoading from "@/components/ui/TableLoading";
 
 function amount(value: number | string | null | undefined): number {
   return Number(value ?? 0) || 0;
@@ -40,22 +43,6 @@ function monthOf(date: string | null | undefined): string {
     year: "numeric",
     timeZone: "UTC",
   });
-}
-
-function TableLoading({ message }: { message: string }) {
-  return (
-    <tr>
-      <td
-        colSpan={4}
-        className="h-75 px-5 py-10 text-center align-middle text-slate-500"
-      >
-        <span className="inline-flex items-center justify-center gap-3">
-          <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
-          {message}
-        </span>
-      </td>
-    </tr>
-  );
 }
 
 function AdminDashboard() {
@@ -122,14 +109,36 @@ function AdminDashboard() {
   const availableFunds = totalSinkingCollected - totalLoanPrincipalDisbursed;
 
   const getMonthlySinkingTarget = (month: string): number | null => {
-    if (CUTOFF_MONTHS.includes(month)) return null;
-    return heads * RATE * 4;
+    // Your month format: "December 2025"
+    const parsedDate = new Date(`${month} 1`);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+      console.error("Invalid month:", month);
+      return 0;
+    }
+
+    const year = parsedDate.getFullYear();
+    const monthIndex = parsedDate.getMonth();
+    const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+
+    let sundayCount = 0;
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      if (new Date(year, monthIndex, day).getDay() === 0) {
+        sundayCount++;
+      }
+    }
+
+    return heads * RATE * sundayCount;
   };
 
-  const getMonthlySinkingCollected = (month: string) =>
-    payments
-      .filter((payment) => monthOf(payment.week_start) === month)
-      .reduce((sum, payment) => sum + amount(payment.amount), 0);
+  const getMonthlySinkingCollected = (month: string): number => {
+    const sundays = payments.filter(
+      (payment) => monthOf(payment.week_start) === month,
+    );
+
+    return sundays.reduce((sum) => sum + Number(heads) * RATE, 0);
+  };
 
   const getMonthlyLoanTarget = (month: string): number | null => {
     if (CUTOFF_MONTHS.includes(month)) return null;
@@ -164,13 +173,110 @@ function AdminDashboard() {
   const cardClass =
     "rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md";
 
-  const tableClass =
-    "w-full min-w-[600px] table-fixed border-collapse text-left text-sm";
+  const sinkingCollectionColumns: DataTableColumn<string>[] = [
+    {
+      key: "month",
+      header: "Month",
+      render: (month) => month,
+    },
+    {
+      key: "target",
+      header: "Target",
+      render: (month) => {
+        const target = getMonthlySinkingTarget(month);
+        return target === null ? "Cutoff" : currency(target);
+      },
+    },
+    {
+      key: "collected",
+      header: "Collected",
+      cellClassName: "font-semibold text-blue-700",
+      render: (month) => currency(getMonthlySinkingCollected(month)),
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (month) => {
+        const target = getMonthlySinkingTarget(month);
+        const collected = getMonthlySinkingCollected(month);
 
-  const thClass =
-    "border-b border-slate-200 bg-slate-50 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500";
+        const status =
+          target === null
+            ? "Cutoff"
+            : collected >= target
+              ? "Target reached"
+              : "Pending";
 
-  const tdClass = "border-b border-slate-100 px-5 py-4 text-slate-700";
+        const statusClass =
+          status === "Target reached"
+            ? "bg-green-50 text-green-700"
+            : status === "Cutoff"
+              ? "bg-slate-100 text-slate-600"
+              : "bg-amber-50 text-amber-700";
+
+        return (
+          <span
+            className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass}`}
+          >
+            {status}
+          </span>
+        );
+      },
+    },
+  ];
+
+  const loanCollectionColumns: DataTableColumn<string>[] = [
+    {
+      key: "month",
+      header: "Month",
+      render: (month) => month,
+    },
+    {
+      key: "target",
+      header: "Target",
+      render: (month) => {
+        const target = getMonthlyLoanTarget(month);
+
+        return target === null ? "Cutoff" : currency(target);
+      },
+    },
+    {
+      key: "collected",
+      header: "Collected",
+      cellClassName: "font-semibold text-blue-700",
+      render: (month) => currency(getMonthlyLoanCollected(month)),
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (month) => {
+        const target = getMonthlyLoanTarget(month);
+        const collected = getMonthlyLoanCollected(month);
+
+        const status =
+          target === null
+            ? "Cutoff"
+            : collected >= target
+              ? "Target reached"
+              : "Pending";
+
+        const statusClass =
+          status === "Target reached"
+            ? "bg-green-100 text-green-700"
+            : status === "Cutoff"
+              ? "bg-slate-100 text-slate-600"
+              : "bg-amber-100 text-amber-700";
+
+        return (
+          <span
+            className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${statusClass}`}
+          >
+            {status}
+          </span>
+        );
+      },
+    },
+  ];
 
   return (
     <div className="space-y-8">
@@ -327,74 +433,21 @@ function AdminDashboard() {
         </p>
 
         <div className="h-105 overflow-y-scroll overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-          <table className="w-full min-w-190 table-fixed border-collapse text-left text-sm">
-            <thead className="sticky top-0 z-10 bg-slate-50">
-              <tr>
-                <th className={`${thClass} w-1/4`}>Member</th>
-                <th className={`${thClass} w-1/4`}>Heads</th>
-                <th className={`${thClass} w-1/4`}>Weekly Due</th>
-                <th className={`${thClass} w-1/4`}>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <TableLoading message="Loading sinking fund collections..." />
-              ) : (
-                <AnimatePresence mode="sync">
-                  {MONTHS.map((month, index) => {
-                    const target = getMonthlySinkingTarget(month);
-                    const collected = getMonthlySinkingCollected(month);
-                    const achieved = target !== null && collected >= target;
-
-                    return (
-                      <motion.tr
-                        key={month}
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -8 }}
-                        transition={{
-                          duration: 0.3,
-                          delay: index * 0.035,
-                          ease: "easeOut",
-                        }}
-                        className="hover:bg-slate-50"
-                      >
-                        <td className={tdClass}>{month}</td>
-
-                        <td className={tdClass}>
-                          {target === null ? "Cutoff" : currency(target)}
-                        </td>
-
-                        <td
-                          className={`${tdClass} font-semibold text-green-700`}
-                        >
-                          {currency(collected)}
-                        </td>
-
-                        <td className={tdClass}>
-                          <span
-                            className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                              target === null
-                                ? "bg-slate-100 text-slate-600"
-                                : achieved
-                                  ? "bg-green-50 text-green-700"
-                                  : "bg-amber-50 text-amber-700"
-                            }`}
-                          >
-                            {target === null
-                              ? "Cutoff"
-                              : achieved
-                                ? "Target reached"
-                                : "In progress"}
-                          </span>
-                        </td>
-                      </motion.tr>
-                    );
-                  })}
-                </AnimatePresence>
-              )}
-            </tbody>
-          </table>
+          <DataTable
+            data={MONTHS}
+            columns={sinkingCollectionColumns}
+            getRowKey={(month) => month}
+            tableClassName={`${tableClass} relative`}
+            thClassName={thClass}
+            tdClassName={tdClass}
+            loading={loading}
+            loadingRow={
+              <TableLoading
+                message="Loading sinking fund collections..."
+                colSpan={sinkingCollectionColumns.length}
+              />
+            }
+          />
         </div>
       </section>
 

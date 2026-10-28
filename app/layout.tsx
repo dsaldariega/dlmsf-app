@@ -14,10 +14,11 @@ const geistMono = Geist({
 
 export const metadata: Metadata = {
   title: {
-    default: "DLMSF Monitoring System",
-    template: "%s | DLMSF Monitoring System",
+    default: "DLMSF Singking Fund Management System",
+    template: "%s | DLMSF Singking Fund Management System",
   },
-  description: "DLMSF loan and member monitoring system",
+  description:
+    "A management system that tracks member sinking funds and loans to ensure continuous financial growth and sustainability.",
 };
 
 export default function RootLayout({

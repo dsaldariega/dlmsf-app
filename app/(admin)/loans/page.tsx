@@ -18,6 +18,9 @@ import {
   formatCurrency,
 } from "@/lib/utils/loans";
 
+import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
+import { tableClass, tdClass, thClass } from "@/components/ui/table-styles";
+
 export default function LoansPage() {
   const [loans, setLoans] = useState<Loan[]>([]);
   const [members, setMembers] = useState<MemberOption[]>([]);
@@ -108,14 +111,6 @@ export default function LoansPage() {
       </tr>
     );
   }
-
-  const tableClass =
-    "w-full min-w-[600px] table-fixed border-collapse text-left text-sm";
-
-  const thClass =
-    "border-b border-slate-200 bg-slate-50 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500";
-
-  const tdClass = "border-b border-slate-100 px-5 py-4 text-slate-700";
 
   // Add loan and create audit log
   const addLoan = async () => {
@@ -435,7 +430,97 @@ export default function LoansPage() {
     setAmount("");
     setLoanMonths(2);
   };
+  const loanColumns: DataTableColumn<Loan>[] = [
+    {
+      key: "borrower",
+      header: "Borrower",
+      render: (loan) => (
+        <span className="block truncate" title={loan.borrower?.name || "N/A"}>
+          {loan.borrower?.name || "N/A"}
+        </span>
+      ),
+    },
+    {
+      key: "principal",
+      header: "Principal",
+      render: (loan) => formatCurrency(Number(loan.amount)),
+    },
+    {
+      key: "duration",
+      header: "Duration",
+      render: (loan) => {
+        const months = loan.months || 2;
 
+        return `${months} ${months === 1 ? "Month" : "Months"}`;
+      },
+    },
+    {
+      key: "interest",
+      header: "Interest",
+      render: (loan) => formatCurrency(Number(loan.interest)),
+    },
+    {
+      key: "total",
+      header: "Total",
+      render: (loan) => formatCurrency(Number(loan.total)),
+    },
+    {
+      key: "monthly",
+      header: "Monthly",
+      render: (loan) => formatCurrency(Number(loan.monthly)),
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (loan) => {
+        const status = loan.status || "Unknown";
+
+        const badgeStyle: Record<string, string> = {
+          Paid: "bg-emerald-500 text-white",
+          Ongoing: "bg-amber-400 text-slate-900",
+          Cancelled: "bg-red-500 text-white",
+          Unknown: "bg-slate-500 text-white",
+        };
+
+        return (
+          <span
+            className={`inline-flex rounded px-2 py-1 text-xs font-medium ${
+              badgeStyle[status] || badgeStyle.Unknown
+            }`}
+          >
+            {status}
+          </span>
+        );
+      },
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      render: (loan) => (
+        <div className="flex w-max items-center gap-2 whitespace-nowrap">
+          {loan.status !== "Paid" && (
+            <button
+              type="button"
+              onClick={() => setLoanAction({ type: "paid", loan })}
+              disabled={processingId !== null}
+              className="shrink-0 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Mark Paid
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setLoanAction({ type: "delete", loan })}
+            disabled={processingId !== null}
+            className="shrink-0 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Delete
+          </button>
+        </div>
+      ),
+    },
+  ];
   return (
     <div className="space-y-6">
       {/* Animated toast notifications */}
@@ -710,7 +795,6 @@ export default function LoansPage() {
                   ✕
                 </button>
               </div>
-
               <form
                 onSubmit={(event) => {
                   event.preventDefault();
@@ -1087,131 +1171,17 @@ export default function LoansPage() {
         </div>
 
         <div className="h-105 overflow-y-scroll overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-          <table className={`${tableClass} relative min-w-300`}>
-            <thead className="sticky top-0 z-10">
-              <tr>
-                <th className={thClass}>Borrower</th>
-                <th className={thClass}>Principal</th>
-                <th className={thClass}>Duration</th>
-                <th className={thClass}>Interest</th>
-                <th className={thClass}>Total</th>
-                <th className={thClass}>Monthly</th>
-                <th className={thClass}>Status</th>
-                <th className={thClass}>Actions</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {loading ? (
-                <TableLoading message="Loading loans..." />
-              ) : loans.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className={`${tdClass} text-center`}>
-                    No loan records yet.
-                  </td>
-                </tr>
-              ) : (
-                <AnimatePresence mode="sync">
-                  {loans.map((loan) => {
-                    const status = loan.status || "Unknown";
-
-                    const badgeStyle: Record<string, string> = {
-                      Paid: "bg-emerald-500 text-white",
-                      Ongoing: "bg-amber-400 text-slate-900",
-                      Cancelled: "bg-red-500 text-white",
-                      Unknown: "bg-slate-500 text-white",
-                    };
-
-                    return (
-                      <motion.tr
-                        key={loan.id}
-                        layout
-                        initial={{ opacity: 0, y: -16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        transition={{
-                          duration: 0.3,
-                          ease: "easeOut",
-                          layout: { duration: 0.25 },
-                        }}
-                        className="hover:bg-slate-50"
-                      >
-                        <td
-                          className={`${tdClass} w-72 font-medium text-slate-700`}
-                        >
-                          <span
-                            className="block truncate"
-                            title={loan.borrower?.name || "N/A"}
-                          >
-                            {loan.borrower?.name || "N/A"}
-                          </span>
-                        </td>
-
-                        <td className={tdClass}>
-                          {formatCurrency(Number(loan.amount))}
-                        </td>
-
-                        <td className={tdClass}>
-                          {loan.months || 2}{" "}
-                          {(loan.months || 2) === 1 ? "Month" : "Months"}
-                        </td>
-
-                        <td className={tdClass}>
-                          {formatCurrency(Number(loan.interest))}
-                        </td>
-
-                        <td className={tdClass}>
-                          {formatCurrency(Number(loan.total))}
-                        </td>
-
-                        <td className={tdClass}>
-                          {formatCurrency(Number(loan.monthly))}
-                        </td>
-
-                        <td className={tdClass}>
-                          <span
-                            className={`inline-flex rounded px-2 py-1 text-xs font-medium ${
-                              badgeStyle[status] || badgeStyle.Unknown
-                            }`}
-                          >
-                            {status}
-                          </span>
-                        </td>
-
-                        <td className={tdClass}>
-                          <div className="flex items-center gap-2">
-                            {loan.status !== "Paid" && (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setLoanAction({ type: "paid", loan })
-                                }
-                                disabled={processingId !== null}
-                                className="shrink-0 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                Mark Paid
-                              </button>
-                            )}
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setLoanAction({ type: "delete", loan })
-                              }
-                              disabled={processingId !== null}
-                              className="shrink-0 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </td>
-                      </motion.tr>
-                    );
-                  })}
-                </AnimatePresence>
-              )}
-            </tbody>
-          </table>
+          <DataTable
+            data={loans}
+            columns={loanColumns}
+            getRowKey={(loan) => loan.id}
+            tableClassName={`${tableClass} min-w-300`}
+            thClassName={thClass}
+            tdClassName={tdClass}
+            loading={loading}
+            loadingMessage="Loading loans..."
+            emptyMessage="No loan records yet."
+          />
         </div>
 
         {/* Table footer */}

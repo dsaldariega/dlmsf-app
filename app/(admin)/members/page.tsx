@@ -7,6 +7,8 @@ import { motion, AnimatePresence } from "motion/react";
 import { RATE } from "@/lib/constants/member";
 import { Member, Toast } from "@/lib/types/member";
 import { formatCurrency } from "@/lib/utils/members";
+import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
+import { tableClass, tdClass, thClass } from "@/components/ui/table-styles";
 
 function MembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
@@ -262,6 +264,78 @@ function MembersPage() {
 
     return () => clearTimeout(timeout);
   }, [toast]);
+
+  const memberColumns: DataTableColumn<(typeof members)[number]>[] = [
+    {
+      key: "member",
+      header: "Member",
+      headerClassName: "w-1/3",
+      cellClassName: "overflow-hidden px-5 py-4",
+      render: (member) => (
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-sm font-semibold text-blue-700">
+            {member.name.trim().charAt(0).toUpperCase() || "M"}
+          </span>
+
+          <div className="min-w-0">
+            <p className="truncate font-medium text-slate-800">{member.name}</p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "heads",
+      header: "Heads",
+      headerClassName: "w-1/3",
+      cellClassName: "whitespace-nowrap px-5 py-4",
+      render: (member) => (
+        <span className="inline-flex items-center rounded-lg bg-slate-100 px-3 py-1.5 font-medium tabular-nums text-slate-700">
+          {member.heads}
+        </span>
+      ),
+    },
+    {
+      key: "weeklyDue",
+      header: "Weekly Due",
+      headerClassName: "w-1/3",
+      cellClassName: "whitespace-nowrap px-5 py-4",
+      render: (member) => (
+        <>
+          <p className="font-semibold tabular-nums text-emerald-700">
+            {formatCurrency(weeklyDue(Number(member.heads || 0)))}
+          </p>
+          <p className="mt-0.5 text-xs text-slate-400">Per week</p>
+        </>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      headerClassName: "w-1/3 text-right",
+      cellClassName: "whitespace-nowrap px-5 py-4",
+      render: (member) => (
+        <div className="flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => startEdit(member)}
+            disabled={saving || deletingId !== null}
+            className="inline-flex h-9 items-center justify-center rounded-lg border border-blue-200 bg-white px-3 text-xs font-semibold text-blue-700 shadow-sm transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Edit
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setDeleteTarget(member)}
+            disabled={deletingId !== null || saving}
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3 text-xs font-semibold text-red-600 shadow-sm transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Delete
+          </button>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -1082,127 +1156,30 @@ function MembersPage() {
         {/* Members table */}
         <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="h-100 overflow-y-scroll">
-            <table className="w-full min-w-175 table-fixed text-left text-sm">
-              <thead className="sticky top-0 z-10 bg-slate-50">
-                <tr>
-                  <th className="w-[40%] border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    Member
-                  </th>
-                  <th className="w-[15%] border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    Heads
-                  </th>
-                  <th className="w-[20%] border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    Weekly Due
-                  </th>
-                  <th className="w-[25%] border-b border-slate-200 px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-
-              <tbody className="divide-y divide-slate-100">
-                {loading ? (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="h-87.5 px-5 text-center align-middle text-slate-500"
-                    >
-                      <span className="inline-flex items-center justify-center gap-3">
-                        <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
-                        Loading members...
-                      </span>
-                    </td>
-                  </tr>
-                ) : members.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="h-87.5 px-5 text-center align-middle"
-                    >
-                      <p className="font-semibold text-slate-800">
-                        No members yet
-                      </p>
-                      <p className="mt-1 text-sm text-slate-500">
-                        Add your first member using the form above.
-                      </p>
-                    </td>
-                  </tr>
-                ) : (
-                  <AnimatePresence>
-                    {members.map((member) => {
-                      return (
-                        <motion.tr
-                          key={member.id}
-                          layout
-                          initial={{ opacity: 0, y: -12 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, x: -20 }}
-                          transition={{
-                            duration: 0.3,
-                            ease: "easeOut",
-                            layout: { duration: 0.25 },
-                          }}
-                          className="transition-colors hover:bg-slate-50"
-                        >
-                          <td className="overflow-hidden px-5 py-4">
-                            <div className="flex items-center gap-3">
-                              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-sm font-semibold text-blue-700">
-                                {member.name.trim().charAt(0).toUpperCase() ||
-                                  "M"}
-                              </span>
-                              <div className="min-w-0">
-                                <p className="truncate font-medium text-slate-800">
-                                  {member.name}
-                                </p>
-                              </div>
-                            </div>
-                          </td>
-
-                          <td className="whitespace-nowrap px-5 py-4">
-                            <span className="inline-flex items-center rounded-lg bg-slate-100 px-3 py-1.5 font-medium tabular-nums text-slate-700">
-                              {member.heads}
-                            </span>
-                          </td>
-
-                          <td className="whitespace-nowrap px-5 py-4">
-                            <p className="font-semibold tabular-nums text-emerald-700">
-                              {formatCurrency(
-                                weeklyDue(Number(member.heads || 0)),
-                              )}
-                            </p>
-                            <p className="mt-0.5 text-xs text-slate-400">
-                              Per week
-                            </p>
-                          </td>
-
-                          <td className="whitespace-nowrap px-5 py-4">
-                            <div className="flex items-center justify-end gap-2">
-                              <button
-                                type="button"
-                                onClick={() => startEdit(member)}
-                                disabled={saving || deletingId !== null}
-                                className="inline-flex h-9 items-center justify-center rounded-lg border border-blue-200 bg-white px-3 text-xs font-semibold text-blue-700 shadow-sm transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                Edit
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => setDeleteTarget(member)}
-                                disabled={deletingId !== null || saving}
-                                className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3 text-xs font-semibold text-red-600 shadow-sm transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          </td>
-                        </motion.tr>
-                      );
-                    })}
-                  </AnimatePresence>
-                )}
-              </tbody>
-            </table>
+            <DataTable
+              data={members}
+              columns={memberColumns}
+              getRowKey={(member) => member.id}
+              tableClassName={tableClass}
+              thClassName={thClass}
+              tdClassName={tdClass}
+              tbodyClassName="divide-y divide-slate-100"
+              loading={loading}
+              loadingContent={
+                <span className="inline-flex items-center justify-center gap-3">
+                  <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
+                  Loading members...
+                </span>
+              }
+              emptyContent={
+                <div>
+                  <p className="font-semibold text-slate-800">No members yet</p>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Add your first member using the form above.
+                  </p>
+                </div>
+              }
+            />
           </div>
         </div>
 
