@@ -1085,16 +1085,16 @@ function MembersPage() {
             <table className="w-full min-w-175 table-fixed text-left text-sm">
               <thead className="sticky top-0 z-10 bg-slate-50">
                 <tr>
-                  <th className="w-[40%] border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="w-1/3 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
                     Member
                   </th>
-                  <th className="w-[15%] border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="w-1/3 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
                     Heads
                   </th>
-                  <th className="w-[20%] border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="w-1/3 border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500">
                     Weekly Due
                   </th>
-                  <th className="w-[25%] border-b border-slate-200 px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="w-1/3 border-b border-slate-200 px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
                     Actions
                   </th>
                 </tr>
