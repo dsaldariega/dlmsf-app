@@ -230,6 +230,7 @@ export default function PaymentsPage() {
   };
 
   //Delete Payment
+
   const deletePayment = async (id: number) => {
     if (deletingId !== null) return;
 
@@ -249,20 +250,52 @@ export default function PaymentsPage() {
     setDeletingId(id);
 
     try {
-      const { error } = await supabase.from("payments").delete().eq("id", id);
+      // 1. Delete the weekly payment.
+      const { error: deleteError } = await supabase
+        .from("payments")
+        .delete()
+        .eq("id", id);
 
-      if (error) throw error;
+      if (deleteError) throw deleteError;
 
+      // 2. Update the UI immediately after deletion.
       setPayments((currentPayments) =>
         currentPayments.filter((payment) => payment.id !== id),
       );
 
       setPaymentToDelete(null);
 
+      // 3. Create an audit record for the deleted payment.
+      const { error: auditError } = await supabase
+        .from("payments_audit_log")
+        .insert({
+          ref_id: paymentToRemove.id,
+          amount: Number(paymentToRemove.amount || 0),
+          week_start: paymentToRemove.week_start,
+          action: "Weekly Payment Deleted",
+          remarks: `Weekly sinking fund payment deleted for Sunday, ${paymentToRemove.week_start}. Deleted payment ID: ${paymentToRemove.id}. Amount: ${formatCurrency(Number(paymentToRemove.amount || 0))}.`,
+          created_date: new Date().toISOString(),
+        });
+
+      // The payment is already deleted, so don't report the deletion itself
+      // as failed if only the audit operation fails.
+      if (auditError) {
+        console.error("Payment deletion audit logging failed:", auditError);
+
+        showToast(
+          "warning",
+          "Payment deleted with a warning",
+          "The weekly payment was deleted, but its audit record could not be saved. Check the audit log.",
+        );
+
+        return;
+      }
+
+      // 4. Confirm that both operations succeeded.
       showToast(
         "success",
         "Payment deleted",
-        `The weekly payment for ${paymentToRemove.week_start} has been removed.`,
+        `The weekly payment for ${paymentToRemove.week_start} has been deleted and recorded in the audit log.`,
       );
     } catch (error) {
       console.error("Error deleting weekly payment:", error);

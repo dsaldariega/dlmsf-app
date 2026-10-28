@@ -37,23 +37,12 @@ export default function DataTable<T>({
   loadingMessage = "",
   emptyMessage = "No data available.",
   tbodyClassName = "",
-  loadingContent,
   emptyContent,
   loadingRow,
   getRowKey,
 }: DataTableProps<T>) {
   return (
-    <motion.table
-      layout
-      className={`${tableClassName} relative`}
-      style={{ width: "100%" }}
-      transition={{
-        layout: {
-          duration: 0.3,
-          ease: "easeInOut",
-        },
-      }}
-    >
+    <table className={`${tableClassName} relative`} style={{ width: "100%" }}>
       <thead className="sticky top-0 z-10 bg-slate-50">
         <tr>
           {columns.map((column) => (
@@ -143,6 +132,6 @@ export default function DataTable<T>({
           </AnimatePresence>
         )}
       </tbody>
-    </motion.table>
+    </table>
   );
 }
