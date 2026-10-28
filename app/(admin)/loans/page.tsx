@@ -434,7 +434,6 @@ export default function LoansPage() {
     {
       key: "borrower",
       header: "Borrower",
-      cellClassName: "w-72 font-medium text-slate-700",
       render: (loan) => (
         <span className="block truncate" title={loan.borrower?.name || "N/A"}>
           {loan.borrower?.name || "N/A"}

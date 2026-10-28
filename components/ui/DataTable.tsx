@@ -20,6 +20,10 @@ type DataTableProps<T> = {
   loading?: boolean;
   loadingMessage?: string;
   emptyMessage?: string;
+  tbodyClassName?: string;
+  loadingContent?: ReactNode;
+  emptyContent?: ReactNode;
+  loadingRow?: ReactNode;
   getRowKey: (row: T) => string | number;
 };
 
@@ -30,8 +34,12 @@ export default function DataTable<T>({
   thClassName = "",
   tdClassName = "",
   loading = false,
-  loadingMessage = "Loading...",
+  loadingMessage = "",
   emptyMessage = "No data available.",
+  tbodyClassName = "",
+  loadingContent,
+  emptyContent,
+  loadingRow,
   getRowKey,
 }: DataTableProps<T>) {
   return (
@@ -66,23 +74,34 @@ export default function DataTable<T>({
         </tr>
       </thead>
 
-      <tbody>
+      <tbody className={tbodyClassName}>
         {loading ? (
-          <tr>
-            <td
-              colSpan={columns.length}
-              className={`${tdClassName} text-center`}
-            >
-              {loadingMessage}
-            </td>
-          </tr>
+          (loadingRow ?? (
+            <tr>
+              <td
+                colSpan={columns.length}
+                className={`${tdClassName} text-center`}
+              >
+                <div className="flex flex-col items-center justify-center gap-3 py-6">
+                  <span
+                    className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600"
+                    role="status"
+                    aria-label="Loading"
+                  />
+                  <span className="text-sm text-slate-500">
+                    {loadingMessage || "Loading..."}
+                  </span>
+                </div>
+              </td>
+            </tr>
+          ))
         ) : data.length === 0 ? (
           <tr>
             <td
               colSpan={columns.length}
               className={`${tdClassName} text-center`}
             >
-              {emptyMessage}
+              {emptyContent ?? emptyMessage}
             </td>
           </tr>
         ) : (
