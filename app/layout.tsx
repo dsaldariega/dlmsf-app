@@ -14,8 +14,8 @@ const geistMono = Geist({
 
 export const metadata: Metadata = {
   title: {
-    default: "DLMSF Singking Fund Management System",
-    template: "%s | DLMSF Singking Fund Management System",
+    default: "DLM Singking Fund Management System",
+    template: "%s | DLM Singking Fund Management System",
   },
   description:
     "A management system that tracks member sinking funds and loans to ensure continuous financial growth and sustainability.",
