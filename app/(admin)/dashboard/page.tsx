@@ -109,8 +109,26 @@ function AdminDashboard() {
   const availableFunds = totalSinkingCollected - totalLoanPrincipalDisbursed;
 
   const getMonthlySinkingTarget = (month: string): number | null => {
-    // Your month format: "December 2025"
-    const parsedDate = new Date(`${month} 1`);
+    const [monthName, yearString] = month.split(" ");
+
+    const parsedMonthIndex = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ].indexOf(monthName);
+
+    if (parsedMonthIndex === -1 || !yearString) return 0;
+
+    const parsedDate = new Date(Number(yearString), parsedMonthIndex, 1);
 
     if (Number.isNaN(parsedDate.getTime())) {
       console.error("Invalid month:", month);
