@@ -108,7 +108,7 @@ function AdminDashboard() {
 
   const availableFunds = totalSinkingCollected - totalLoanPrincipalDisbursed;
 
-  const getMonthlySinkingTarget = (month: string): number | null => {
+  const getMonthlySinkingTarget = (month: string): number => {
     const [monthName, yearString] = month.split(" ");
 
     const parsedMonthIndex = [
@@ -200,10 +200,7 @@ function AdminDashboard() {
     {
       key: "target",
       header: "Target",
-      render: (month) => {
-        const target = getMonthlySinkingTarget(month);
-        return target === null ? "Cutoff" : currency(target);
-      },
+      render: (month) => currency(getMonthlySinkingTarget(month)),
     },
     {
       key: "collected",
