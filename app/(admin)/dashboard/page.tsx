@@ -215,9 +215,7 @@ function AdminDashboard() {
               : "bg-amber-50 text-amber-700";
 
         return (
-          <span
-            className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass}`}
-          >
+          <span className={`rounded-full text-xs font-semibold ${statusClass}`}>
             {status}
           </span>
         );
