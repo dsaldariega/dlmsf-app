@@ -494,7 +494,7 @@ export default function AuditPage() {
             }
             emptyMessage="No loan audit records found."
             emptyContent={
-              <div className="flex min-h-[420px] items-center justify-center text-slate-400">
+              <div className="flex min-h-105 items-center justify-center text-slate-400">
                 No loan audit records found.
               </div>
             }
@@ -538,7 +538,7 @@ export default function AuditPage() {
             }
             emptyMessage="No payment audit records found."
             emptyContent={
-              <div className="flex min-h-[420px] items-center justify-center text-slate-400">
+              <div className="flex min-h-105 items-center justify-center text-slate-400">
                 No payment audit records found.
               </div>
             }
