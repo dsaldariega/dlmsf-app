@@ -215,9 +215,7 @@ function AdminDashboard() {
               : "bg-amber-50 text-amber-700";
 
         return (
-          <span
-            className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass}`}
-          >
+          <span className={`rounded-full text-xs font-semibold ${statusClass}`}>
             {status}
           </span>
         );
@@ -300,7 +298,6 @@ function AdminDashboard() {
           {loading ? "Refreshing..." : "Refresh"}
         </button>
       </div>
-
       {loadError && (
         <p
           role="alert"
@@ -309,7 +306,6 @@ function AdminDashboard() {
           {loadError}
         </p>
       )}
-
       <section>
         <h3 className="mb-4 text-base font-semibold text-slate-900">
           Financial Summary
@@ -423,7 +419,6 @@ function AdminDashboard() {
           </div>
         </div>
       </section>
-
       <section>
         <h3 className="mb-1 text-lg font-semibold text-slate-900">
           Sinking Fund Collection (Monthly)
@@ -432,25 +427,24 @@ function AdminDashboard() {
           Monthly contribution targets and actual collections.
         </p>
 
-        <div className="h-105 overflow-y-scroll overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-          <DataTable
-            data={MONTHS}
-            columns={sinkingCollectionColumns}
-            getRowKey={(month) => month}
-            tableClassName={`${tableClass} relative`}
-            thClassName={thClass}
-            tdClassName={tdClass}
-            loading={loading}
-            loadingRow={
-              <TableLoading
-                message="Loading sinking fund collections..."
-                colSpan={sinkingCollectionColumns.length}
-              />
-            }
-          />
+        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="h-105 overflow-y-scroll">
+            <DataTable
+              data={MONTHS}
+              columns={sinkingCollectionColumns}
+              getRowKey={(month) => month}
+              tableClassName={`${tableClass} relative`}
+              thClassName={thClass}
+              tdClassName={tdClass}
+              loading={loading}
+              loadingRow={
+                <TableLoading message="Loading sinking fund collections..." />
+              }
+            />
+          </div>
         </div>
       </section>
-
+      {/* Loan Collection Monthly */}
       <section>
         <h3 className="mb-1 text-lg font-semibold text-slate-900">
           Loan Collection (Monthly)
@@ -459,78 +453,21 @@ function AdminDashboard() {
           Monthly loan repayment targets and actual collections.
         </p>
 
-        <div className="h-105 overflow-y-scroll overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-          <table className={`${tableClass} relative`}>
-            <thead className="sticky top-0 z-10">
-              <tr>
-                <th className={thClass}>Month</th>
-                <th className={thClass}>Target</th>
-                <th className={thClass}>Collected</th>
-                <th className={thClass}>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
+        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="h-105 overflow-y-scroll">
+            <DataTable
+              data={MONTHS}
+              columns={loanCollectionColumns}
+              getRowKey={(month) => month}
+              tableClassName={`${tableClass} relative`}
+              thClassName={thClass}
+              tdClassName={tdClass}
+              loading={loading}
+              loadingRow={
                 <TableLoading message="Loading loan collections..." />
-              ) : (
-                <AnimatePresence mode="sync">
-                  {MONTHS.map((month, index) => {
-                    const target = getMonthlyLoanTarget(month);
-                    const collected = getMonthlyLoanCollected(month);
-                    const achieved = target !== null && collected >= target;
-
-                    const status =
-                      target === null
-                        ? "Cutoff"
-                        : achieved
-                          ? "Target reached"
-                          : "Pending";
-
-                    return (
-                      <motion.tr
-                        key={month}
-                        initial={{ opacity: 0, y: 12 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -8 }}
-                        transition={{
-                          duration: 0.3,
-                          delay: index * 0.035,
-                          ease: "easeOut",
-                        }}
-                        className="hover:bg-slate-50"
-                      >
-                        <td className={tdClass}>{month}</td>
-
-                        <td className={tdClass}>
-                          {target === null ? "Cutoff" : currency(target)}
-                        </td>
-
-                        <td
-                          className={`${tdClass} font-semibold text-blue-700`}
-                        >
-                          {currency(collected)}
-                        </td>
-
-                        <td className={tdClass}>
-                          <span
-                            className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                              status === "Target reached"
-                                ? "bg-green-50 text-green-700"
-                                : status === "Cutoff"
-                                  ? "bg-slate-100 text-slate-600"
-                                  : "bg-amber-50 text-amber-700"
-                            }`}
-                          >
-                            {status}
-                          </span>
-                        </td>
-                      </motion.tr>
-                    );
-                  })}
-                </AnimatePresence>
-              )}
-            </tbody>
-          </table>
+              }
+            />
+          </div>
         </div>
       </section>
 
