@@ -1,9 +1,9 @@
 import DashboardShell from "@/components/layout/DashboardShell";
 
-export default function AdminLayout({
+export default function SystemLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return <DashboardShell>{children}</DashboardShell>;
 }
