@@ -1,7 +1,7 @@
 "use client";
 
 import { useUserRole } from "@/app/hooks/useUserRole";
-import RoleLoading from "@/components/layout/RoleLoading";
+import Loading from "@/components/layout/Loading";
 import UnderDevelopment from "@/components/layout/UnderDevelopment";
 
 import AdminPayments from "@/components/payments/AdminPayments";
@@ -10,7 +10,7 @@ import MemberPayments from "@/components/payments/MemberPayments";
 export default function PaymentsPage() {
   const { role, loading, error } = useUserRole();
 
-  if (loading) return <RoleLoading />;
+  if (loading) return <Loading />;
   if (error) return <p>{error}</p>;
 
   if (role === "member") {
