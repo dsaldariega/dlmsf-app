@@ -1,7 +1,7 @@
 "use client";
 
 import { useUserRole } from "@/app/hooks/useUserRole";
-import RoleLoading from "@/components/layout/RoleLoading";
+import Loading from "@/components/layout/Loading";
 
 import AdminDashboard from "@/components/dashboard/AdminDashboard";
 import MemberDashboard from "@/components/dashboard/MemberDashboard";
@@ -10,7 +10,7 @@ import UnderDevelopment from "@/components/layout/UnderDevelopment";
 export default function DashboardPage() {
   const { role, loading, error } = useUserRole();
 
-  if (loading) return <RoleLoading />;
+  if (loading) return <Loading />;
   if (error) return <p>{error}</p>;
   if (role === "member") {
     return (
