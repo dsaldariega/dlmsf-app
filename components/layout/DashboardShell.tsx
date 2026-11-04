@@ -21,9 +21,16 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
-const navigation = [
+const adminNavigation = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Members", href: "/members", icon: Users },
+  { label: "Loans", href: "/loans", icon: Banknote },
+  { label: "Payments", href: "/payments", icon: CreditCard },
+  { label: "Audit", href: "/audit", icon: Activity },
+];
+
+const memberNavigation = [
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Loans", href: "/loans", icon: Banknote },
   { label: "Payments", href: "/payments", icon: CreditCard },
   { label: "Audit", href: "/audit", icon: Activity },
@@ -39,14 +46,22 @@ export default function DashboardShell({
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-  const router = useRouter();
-
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [profile, setProfile] = useState<MemberProfile | null>(null);
+
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const isAdmin = profile?.role
+    .toLowerCase()
+    .split(",")
+    .map((role) => role.trim())
+    .includes("admin");
+
+  const navigation = isAdmin ? adminNavigation : memberNavigation;
 
   // Load the authenticated user's member profile.
   useEffect(() => {

@@ -25,9 +25,11 @@ function parseRoles(value: unknown): string[] {
 }
 
 function getDashboard(roles: string[]): string | null {
-  if (roles.includes("admin")) return "/dashboard";
-  if (roles.includes("member")) return "/member-dashboard";
-  return null;
+  const hasValidRole = roles.some(
+    (role) => role === "admin" || role === "member",
+  );
+
+  return hasValidRole ? "/dashboard" : null;
 }
 
 export default function LoginPage() {
