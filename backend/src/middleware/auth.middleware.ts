@@ -1,3 +1,4 @@
+
 import type {
   Request,
   Response,
@@ -12,6 +13,7 @@ declare global {
       user?: {
         id: string;
         email?: string;
+        role?: "admin" | "member";
       };
       accessToken?: string;
     }
@@ -52,17 +54,29 @@ export async function authenticate(
       return;
     }
 
+    const role = data.user.app_metadata?.role;
+
+    if (role !== "admin" && role !== "member") {
+      res.status(403).json({
+        success: false,
+        message: "Invalid user role"
+      });
+      return;
+    }
+
     req.user = {
       id: data.user.id,
       email: data.user.email,
-      role: userRole,
+      role
     };
-
 
     req.accessToken = token;
 
     next();
-  } catch {
+
+  } catch (error) {
+    console.error("Authentication error:", error);
+
     res.status(401).json({
       success: false,
       message: "Authentication failed"

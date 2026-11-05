@@ -1,5 +1,3 @@
-export {};
-
 declare global {
   namespace Express {
     interface Request {
@@ -8,6 +6,7 @@ declare global {
         email?: string;
         role?: "admin" | "member";
       };
+      accessToken?: string;
     }
   }
 }
