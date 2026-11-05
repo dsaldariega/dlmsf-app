@@ -687,7 +687,6 @@ export default function AuditPage() {
           </motion.div>
         )}
       </AnimatePresence>
-      tsx
       {/* Payment Audit Delete Confirmation Modal */}
       <AnimatePresence>
         {isDeletePaymentModalOpen && paymentToDelete && (
