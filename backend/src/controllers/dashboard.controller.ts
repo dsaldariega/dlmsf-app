@@ -11,7 +11,7 @@ export async function getDashboard(req: Request, res: Response, next: NextFuncti
       if (memberError) throw memberError;
       if (!member) throw Object.assign(new Error("Member profile not found."), { status: 404 });
       const [payments, loans, loanPayments] = await Promise.all([
-        client.from("payment_submissions").select("id,week_start,amount").eq("member_id", member.id).eq("payment_type", "Weekly").eq("status", "Confirmed").order("week_start", { ascending: false }),
+        client.from("weekly_contribution_allocations").select("id,week_start,amount").eq("member_id", member.id).order("week_start", { ascending: false }),
         client.from("loans").select("*").eq("borrower_id", member.id),
         client.from("loan_payments").select("*").eq("member_id", member.id).order("paid_at", { ascending: false })
       ]);
@@ -20,14 +20,14 @@ export async function getDashboard(req: Request, res: Response, next: NextFuncti
       return;
     }
 
-    const [membersResult, groupPaymentsResult, confirmedSubmissionsResult, loansResult, loanPaymentsResult] = await Promise.all([
+    const [membersResult, groupPaymentsResult, confirmedAllocationsResult, loansResult, loanPaymentsResult] = await Promise.all([
       client.from("members").select("*"),
       client.from("payments").select("id,amount,week_start"),
-      client.from("payment_submissions").select("id,amount,week_start").eq("payment_type", "Weekly").eq("status", "Confirmed"),
+      client.from("weekly_contribution_allocations").select("id,amount,week_start"),
       client.from("loans").select("*"),
       client.from("loan_payments").select("*")
     ]);
-    for (const result of [membersResult, groupPaymentsResult, confirmedSubmissionsResult, loansResult, loanPaymentsResult]) {
+    for (const result of [membersResult, groupPaymentsResult, confirmedAllocationsResult, loansResult, loanPaymentsResult]) {
       if (result.error) throw result.error;
     }
 
@@ -41,7 +41,7 @@ export async function getDashboard(req: Request, res: Response, next: NextFuncti
       entry.id = Number(row.id);
       weeklyTotals.set(week, entry);
     }
-    for (const row of confirmedSubmissionsResult.data ?? []) {
+    for (const row of confirmedAllocationsResult.data ?? []) {
       if (!row.week_start) continue;
       const week = String(row.week_start);
       const entry = weeklyTotals.get(week) ?? { group: 0, member: 0, id: -Date.parse(week) };
