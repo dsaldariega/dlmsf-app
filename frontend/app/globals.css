@@ -46,3 +46,30 @@ button {
   background: #dbeafe;
   color: #1e40af;
 }
+
+
+/* Shared motion for dialogs, toasts, and interactive surfaces. */
+@keyframes dlmsf-modal-backdrop {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes dlmsf-modal-panel {
+  from { opacity: 0; transform: translate3d(0, 14px, 0) scale(.975); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+@keyframes dlmsf-toast-pop {
+  from { opacity: 0; transform: translate3d(0, 12px, 0) scale(.97); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+.animate-modal-backdrop { animation: dlmsf-modal-backdrop 180ms ease-out both; }
+.animate-modal-panel { animation: dlmsf-modal-panel 240ms cubic-bezier(.2,.8,.2,1) both; }
+.animate-toast-pop { animation: dlmsf-toast-pop 220ms cubic-bezier(.2,.8,.2,1) both; }
+button, a, input, select, textarea { transition-duration: 160ms; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
+}
