@@ -88,16 +88,19 @@ function AdminDashboard() {
     0,
   );
 
-  const totalLoanInterestCollected = loanPayments.reduce(
+  const totalLoanRepaymentsCollected = loanPayments.reduce(
     (sum, payment) => sum + amount(payment.amount),
     0,
   );
 
-  const totalLoanPrincipalDisbursed = loans
-    .filter((loan) => loan.status?.toLowerCase() !== "paid")
-    .reduce((sum, loan) => sum + amount(loan.amount), 0);
+  const totalLoanPrincipalDisbursed = loans.reduce(
+    (sum, loan) => sum + amount(loan.amount),
+    0,
+  );
 
-  const availableFunds = totalSinkingCollected - totalLoanPrincipalDisbursed;
+  // Loan repayments return principal and interest to the available fund.
+  const availableFunds =
+    totalSinkingCollected + totalLoanRepaymentsCollected - totalLoanPrincipalDisbursed;
 
   const getMonthlySinkingTarget = (month: string): number => {
     const [monthName, yearString] = month.split(" ");
@@ -146,7 +149,7 @@ function AdminDashboard() {
       (payment) => monthOf(payment.week_start) === month,
     );
 
-    return sundays.reduce((sum) => sum + Number(heads) * RATE, 0);
+    return sundays.reduce((sum, payment) => sum + amount(payment.amount), 0);
   };
 
   const getMonthlyLoanTarget = (month: string): number | null => {
@@ -398,7 +401,7 @@ function AdminDashboard() {
                   transition={{ duration: 0.35, delay: 0.2, ease: "easeOut" }}
                   className="mt-3 text-2xl font-bold text-purple-700"
                 >
-                  {loading ? "—" : currency(totalLoanInterestCollected)}
+                  {loading ? "—" : currency(totalLoanRepaymentsCollected)}
                 </motion.p>
               </div>
               <HandCoins className="text-purple-600" size={26} />
