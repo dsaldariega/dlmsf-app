@@ -14,8 +14,15 @@ function validId(value: string | string[]) {
 export async function getAuditRecords(req: Request, res: Response, next: NextFunction) {
   try {
     const client = db(req);
+    let loanQuery = client.from("loans_audit_log").select("*").order("created_date", { ascending: false });
+    if (req.user?.role === "member") {
+      const { data: member, error: memberError } = await client.from("members").select("name").eq("auth_id", req.user.id).maybeSingle();
+      if (memberError) throw memberError;
+      if (!member) throw Object.assign(new Error("Member profile not found."), { status: 404 });
+      loanQuery = loanQuery.eq("borrower_name", member.name);
+    }
     const [loans, payments] = await Promise.all([
-      client.from("loans_audit_log").select("*").order("created_date", { ascending: false }),
+      loanQuery,
       client.from("payments_audit_log").select("*").order("id", { ascending: false })
     ]);
     if (loans.error) throw loans.error;
