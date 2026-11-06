@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\\/api\\/?$/, "").replace(/\\/$/, "");
+const API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/?$/, "").replace(/\/$/, "");
 
 type ApiEnvelope<T> = { success: boolean; data: T; message?: string };
 
