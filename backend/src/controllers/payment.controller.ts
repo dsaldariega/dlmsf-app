@@ -57,16 +57,21 @@ export async function deleteWeeklyPayment(req: Request, res: Response, next: Nex
     const { data: payment, error: readError } = await client.from("payments").select("*").eq("id", id).maybeSingle();
     if (readError) throw readError;
     if (!payment) throw Object.assign(new Error("Weekly payment not found."), { status: 404 });
+
+    const { data: deleted, error: deleteError } = await client.from("payments").delete().eq("id", id).select("id").maybeSingle();
+    if (deleteError) throw deleteError;
+    if (!deleted) throw Object.assign(new Error("Payment could not be deleted."), { status: 409 });
+
     const amount = Number(payment.amount || 0);
     const { error: auditError } = await client.from("payments_audit_log").insert({
       ref_id: payment.id, amount, week_start: payment.week_start, action: "Weekly Payment Deleted",
       remarks: `Weekly sinking fund payment deleted for Sunday, ${payment.week_start}. Deleted payment ID: ${payment.id}. Amount: ${amount}.`,
       created_date: new Date().toISOString()
     });
-    if (auditError) throw auditError;
-    const { data, error } = await client.from("payments").delete().eq("id", id).select("id").maybeSingle();
-    if (error) throw error;
-    if (!data) throw Object.assign(new Error("Payment could not be deleted."), { status: 409 });
-    res.json({ success: true, data, message: "Payment deleted and audit entry saved." });
+    res.json({
+      success: true, data: deleted,
+      message: auditError ? "Payment deleted, but its audit record could not be saved." : "Payment deleted and audit entry saved.",
+      auditWarning: auditError?.message ?? null
+    });
   } catch (error) { next(error); }
 }
