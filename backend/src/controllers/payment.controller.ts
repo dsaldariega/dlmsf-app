@@ -13,10 +13,22 @@ function validSunday(value: unknown): value is string {
 export async function getPayments(req: Request, res: Response, next: NextFunction) {
   try {
     const client = db(req);
+    const isMember = req.user?.role === "member";
+    let memberId: number | null = null;
+    if (isMember) {
+      const { data: member, error: memberError } = await client.from("members").select("id,heads").eq("auth_id", req.user!.id).maybeSingle();
+      if (memberError) throw memberError;
+      if (!member) throw Object.assign(new Error("Member profile not found."), { status: 404 });
+      memberId = Number(member.id);
+    }
     const [members, payments, loanPayments] = await Promise.all([
-      client.from("members").select("id, heads"),
+      isMember ? client.from("members").select("id,heads").eq("id", memberId) : client.from("members").select("id, heads"),
       client.from("payments").select("*").order("week_start", { ascending: false }),
-      client.from("loan_payments").select("*, borrower:members!loan_payments_member_id_fkey(name)").order("paid_at", { ascending: false })
+      (() => {
+        let query = client.from("loan_payments").select("*, borrower:members!loan_payments_member_id_fkey(name)").order("paid_at", { ascending: false });
+        if (memberId !== null) query = query.eq("member_id", memberId);
+        return query;
+      })()
     ]);
     if (members.error) throw members.error;
     if (payments.error) throw payments.error;
