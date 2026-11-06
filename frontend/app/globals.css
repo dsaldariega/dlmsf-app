@@ -73,3 +73,16 @@ button, a, input, select, textarea { transition-duration: 160ms; }
     transition-duration: .01ms !important;
   }
 }
+
+
+/* Global modal motion: applies to dialogs across member and admin screens. */
+div:has(> [role="dialog"]) {
+  animation: dlmsf-modal-backdrop 220ms ease-out both;
+}
+[role="dialog"] {
+  animation: dlmsf-modal-panel 360ms cubic-bezier(.16, 1, .3, 1) both;
+  transform-origin: center;
+}
+[data-toast="true"] {
+  animation: dlmsf-toast-pop 260ms cubic-bezier(.16, 1, .3, 1) both;
+}
