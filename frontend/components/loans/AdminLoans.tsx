@@ -157,62 +157,38 @@ export default function LoansPage() {
       const monthly = calculateMonthly(principal, loanMonths);
       const status = "Ongoing";
 
-      // 1. Insert loan and retrieve the created record
-      const { data: newLoan, error: loanError } = await supabase
-        .from("loans")
-        .insert({
-          borrower_id: memberExists.id,
-          amount: principal,
-          interest,
-          total,
-          monthly,
-          months: loanMonths,
-          status,
-        })
-        .select("*, borrower:borrower_id(name)")
-        .single();
+      // Create the loan and its audit record in one database transaction.
+      const { data: createdLoan, error: loanError } = await supabase.rpc(
+        "create_loan",
+        {
+          p_borrower_id: memberExists.id,
+          p_amount: principal,
+          p_months: loanMonths,
+        },
+      );
 
       if (loanError) throw loanError;
 
-      if (!newLoan) {
-        throw new Error(
-          "Loan was created, but its record could not be retrieved.",
-        );
+      const loanId = (createdLoan as { id?: number } | null)?.id;
+      if (!loanId) {
+        throw new Error("Loan creation completed but the new loan ID was not returned.");
       }
 
       loanCreated = true;
 
-      // 2. Insert an audit record for the new loan
-      const { error: auditError } = await supabase
-        .from("loans_audit_log")
-        .insert({
-          borrower_name: memberExists.name,
-          amount: principal,
-          interest,
-          total,
-          monthly,
-          action: "New Loan Created",
-          remarks: `New loan created for ${loanMonths} ${
-            loanMonths === 1 ? "month" : "months"
-          }`,
-          created_date: new Date().toISOString(),
-        });
+      // Retrieve the joined row for the existing table display.
+      const { data: newLoan, error: fetchError } = await supabase
+        .from("loans")
+        .select("*, borrower:borrower_id(name)")
+        .eq("id", loanId)
+        .single();
 
-      if (auditError) {
-        console.error("Loan audit logging failed:", auditError);
-
-        await fetchLoans(false);
-
-        showToast(
-          "warning",
-          "Loan created with a warning",
-          "The loan was created, but its audit record failed. Check the audit log before retrying.",
-        );
-
-        return;
+      if (fetchError) throw fetchError;
+      if (!newLoan) {
+        throw new Error("Loan was created, but its record could not be retrieved.");
       }
 
-      // 3. Insert the new loan into the table immediately
+      // Insert the new loan into the table immediately.
       setLoans((currentLoans) => [newLoan as Loan, ...currentLoans]);
 
       // 4. Reset the form
