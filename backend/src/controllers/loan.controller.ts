@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { createUserSupabaseClient } from "../config/supabase-user.js";
-import { LOAN_DURATIONS } from "../services/loan-calculation.service.js";
+const LOAN_DURATIONS = Array.from({ length: 12 }, (_, index) => index + 1);
 
 function db(req: Request) {
   if (!req.accessToken) throw Object.assign(new Error("Authentication required"), { status: 401 });
