@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { createUserSupabaseClient } from "../config/supabase-user.js";
-const LOAN_DURATIONS = Array.from({ length: 12 }, (_, index) => index + 1);
+const LOAN_DURATIONS = [1, 2, 3, 4, 5, 6, 9, 12, 18, 24];
 
 function db(req: Request) {
   if (!req.accessToken) throw Object.assign(new Error("Authentication required"), { status: 401 });
@@ -61,16 +61,19 @@ export async function deleteLoan(req: Request, res: Response, next: NextFunction
     if (readError) throw readError;
     if (!loan) throw Object.assign(new Error("Loan not found."), { status: 404 });
 
+    const { data: deleted, error: deleteError } = await client.from("loans").delete().eq("id", id).select("id").maybeSingle();
+    if (deleteError) throw deleteError;
+    if (!deleted) throw Object.assign(new Error("Loan could not be deleted."), { status: 409 });
+
     const { error: auditError } = await client.from("loans_audit_log").insert({
       borrower_name: loan.borrower?.name ?? "Unknown borrower",
       amount: loan.amount, interest: loan.interest, total: loan.total, monthly: loan.monthly,
       action: "Loan Deleted", remarks: "Loan deleted from loan records", created_date: new Date().toISOString()
     });
-    if (auditError) throw auditError;
-
-    const { data, error } = await client.from("loans").delete().eq("id", id).select("id").maybeSingle();
-    if (error) throw error;
-    if (!data) throw Object.assign(new Error("Loan could not be deleted."), { status: 409 });
-    res.json({ success: true, data, message: "Loan deleted and audit record saved." });
+    res.json({
+      success: true, data: deleted,
+      message: auditError ? "Loan deleted, but its audit record could not be saved." : "Loan deleted and audit record saved.",
+      auditWarning: auditError?.message ?? null
+    });
   } catch (error) { next(error); }
 }
