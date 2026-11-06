@@ -6,7 +6,8 @@ function db(req: Request) {
   if (!req.accessToken) throw Object.assign(new Error("Authentication required"), { status: 401 });
   return createUserSupabaseClient(req.accessToken);
 }
-function idParam(value: string) {
+function idParam(value: string | string[]) {
+  if (typeof value !== "string") throw Object.assign(new Error("Invalid loan ID."), { status: 400 });
   const id = Number(value);
   if (!Number.isSafeInteger(id) || id < 1) throw Object.assign(new Error("Invalid loan ID."), { status: 400 });
   return id;
