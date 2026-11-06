@@ -683,3 +683,32 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+
+## Monorepo structure and development
+
+The repository contains two separate applications. Keep all application source files inside their respective folders:
+
+```text
+.
+├── frontend/          # Next.js application (app/, components/, lib/)
+├── backend/           # Express + TypeScript API
+├── .github/           # CI workflows
+├── package.json       # Root development scripts
+└── package-lock.json  # Root tooling dependencies
+```
+
+Do not create duplicate `app/`, `components/`, or `lib/` folders at the repository root. The Vercel frontend project root is `frontend`; the API project root is `backend`.
+
+For local setup, install the root tools and both applications:
+
+```sh
+npm install
+npm --prefix frontend install
+npm --prefix backend ci
+npm run dev
+```
+
+Use `npm --prefix frontend install` after frontend dependency updates so its lockfile is refreshed. Copy `frontend/.env.example` to `frontend/.env.local` and `backend/.env-example` to `backend/.env`; never commit real credentials.
+
+Vercel uses `main` for Production and `dev` for Preview deployments. See [backend/DEPLOYMENT.md](backend/DEPLOYMENT.md) for deployment settings.

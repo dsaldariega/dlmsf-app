@@ -1,33 +1,54 @@
-# Deploying the DLMSF Node API to Vercel
+# Deploying the DLMSF Node API
 
-## Vercel project
+The repository is a monorepo with two independent applications:
 
-Create a separate Vercel project named `dlmsf-api` from the `dsaldariega/dlmsf-app` Git repository.
+- `frontend/`: Next.js web application
+- `backend/`: Express API
 
-- Root Directory: `backend`
-- Framework Preset: Other
-- Function Region: `sin1` (Singapore)
-- Production Branch: `feat/node-api-integration` while validating this pull request; change to `main` after it is merged
+## Vercel backend project
 
-The catch-all function in `api/[...path].ts` forwards `/api/*` requests to the Express app.
+Create or configure a separate Vercel project connected to this repository:
 
-## Backend environment variables
+- Project root directory: `backend`
+- Framework preset: Other
+- Production branch: `main`
+- The `dev` branch and feature branches create Preview deployments; do not make `dev` the production branch
+- The catch-all function in `api/[...path].ts` forwards API requests to the Express app.
 
-Add these in the `dlmsf-api` Vercel project for Production, Preview, and Development:
+Set these environment variables in the backend Vercel project for the required environments:
 
-- `SUPABASE_URL`: the same Supabase project URL used by the frontend
-- `SUPABASE_ANON_KEY`: the Supabase anon/publishable key used by the frontend (never use a service-role key here)
-- `FRONTEND_URL`: `https://dlmsf-app.vercel.app`
+- `SUPABASE_URL`: Supabase project URL
+- `SUPABASE_ANON_KEY`: Supabase anon/publishable key (never use a service-role key)
+- `FRONTEND_URL`: comma-separated frontend origins allowed by CORS, e.g. `https://dlmsf-app.vercel.app,https://dlmsf-app-git-dev-dsaldariegas-projects.vercel.app`
 - `NODE_ENV`: `production`
 
-Do not commit secrets or paste them into GitHub. Add them directly in Vercel Project Settings → Environment Variables.
+Do not commit secrets. Add them in Vercel Project Settings → Environment Variables.
 
-## Frontend environment variable
+## Vercel frontend project
 
-In the existing `dlmsf-app` Vercel project, add `NEXT_PUBLIC_API_URL` with the deployed API origin, for example `https://dlmsf-api.vercel.app` (use the actual domain assigned by Vercel). Apply it to Production, Preview, and Development as appropriate, then redeploy the frontend.
+Configure the existing frontend Vercel project with:
 
-The frontend's shared `frontend/lib/api.ts` client prefixes each endpoint with `NEXT_PUBLIC_API_URL`, obtains the current Supabase access token, and sends it as `Authorization: Bearer ...`. Frontend CRUD pages should call this client rather than querying the database directly.
+- Project root directory: `frontend`
+- Production branch: `main`
+- The `dev` branch and feature branches create Preview deployments
+- `NEXT_PUBLIC_API_URL`: deployed backend origin, e.g. `https://dlmsf-api.vercel.app`
 
-## Smoke test
+Set the variable for Production, Preview, and Development as needed, then redeploy.
 
-Open `https://<actual-api-domain>/api/health`. It should return a JSON success envelope. Authenticated endpoints should then be tested from the frontend after signing in.
+The frontend API client in `frontend/lib/api.ts` obtains the current Supabase session token and sends it as a Bearer token to the Node API.
+
+## Local development
+
+From the repository root:
+
+```sh
+npm install
+npm run dev
+```
+
+The root scripts run the frontend and backend concurrently. Each application also has its own package manifest and lockfile.
+
+## Smoke tests
+
+- Backend health: `https://<api-domain>/api/health`
+- After signing in, verify authenticated members, loans, payments, dashboard, and audit pages in the frontend.
