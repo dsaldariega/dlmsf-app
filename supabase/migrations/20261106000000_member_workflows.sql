@@ -33,7 +33,7 @@ revoke all on public.loan_requests,public.payment_submissions from anon,authenti
 grant select on public.loan_requests,public.payment_submissions to authenticated;
 
 alter table public.loans_audit_log add column if not exists member_id bigint references public.members(id) on delete set null;
-update public.loans_audit_log a set member_id=m.id from public.members m where a.member_id is null and a.borrower_name=m.name;
+update public.loans_audit_log a set member_id=m.id from (select name,min(id) as id from public.members group by name having count(*)=1) m where a.member_id is null and a.borrower_name=m.name;
 drop policy if exists "Members can view own loan audit rows" on public.loans_audit_log;
 create policy "Members can view own loan audit rows" on public.loans_audit_log for select to authenticated using((select private.is_admin()) or exists(select 1 from public.members m where m.id=loans_audit_log.member_id and m.auth_id=(select auth.uid())));
 
