@@ -9,6 +9,7 @@ export type LoanAudit = {
   remarks: string | null;
   created_date: string;
   ref_id: string | null;
+  synthetic?: boolean;
 };
 
 export type PaymentAudit = {
@@ -18,6 +19,7 @@ export type PaymentAudit = {
   remarks: string | null;
   ref_id: string | null;
   action: string;
+  synthetic?: boolean;
 };
 
 export type AuditToast = {
