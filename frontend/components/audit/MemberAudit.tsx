@@ -5,7 +5,6 @@ import { supabase } from "@/lib/supabase";
 import { apiRequest } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils/loans";
 import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
-import TableLoading from "@/components/ui/TableLoading";
 import { Activity, ShieldCheck } from "lucide-react";
 
 type LoanAudit = { id: number; borrower_name: string; amount: number | string; total: number | string; action: string; remarks?: string; created_date: string };
@@ -50,7 +49,7 @@ export default function MemberAudit() {
     <div><h2 className="text-2xl font-bold text-slate-900">Audit History</h2><p className="mt-1 text-sm text-slate-500">Read-only financial activity for {name || "your account"}.</p></div>
     {error && <p role="alert" className="rounded-lg bg-red-50 p-4 text-sm text-red-700">{error}</p>}
     <div className="flex gap-3 rounded-xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-900"><ShieldCheck size={20} className="shrink-0"/><p>Members have read-only access. Editing and deleting audit records remain administrator-only actions.</p></div>
-    <section className="rounded-xl border border-slate-200 bg-white p-5"><div className="mb-4 flex items-center gap-2"><Activity size={19} className="text-blue-600"/><h3 className="font-semibold">My loan activity</h3></div>{loading ? <TableLoading/> : <DataTable data={loans} columns={loanColumns} emptyMessage="No loan audit activity found for your account."/>}</section>
-    <section className="rounded-xl border border-slate-200 bg-white p-5"><h3 className="mb-4 font-semibold">Sinking fund collection activity</h3>{loading ? <TableLoading/> : <DataTable data={payments} columns={paymentColumns} emptyMessage="No payment audit records found."/>}</section>
+    <section className="rounded-xl border border-slate-200 bg-white p-5"><div className="mb-4 flex items-center gap-2"><Activity size={19} className="text-blue-600"/><h3 className="font-semibold">My loan activity</h3></div>{loading ? <p className="py-8 text-center text-sm text-slate-500">Loading records...</p> : <DataTable data={loans} columns={loanColumns} getRowKey={x => x.id} emptyMessage="No loan audit activity found for your account."/>}</section>
+    <section className="rounded-xl border border-slate-200 bg-white p-5"><h3 className="mb-4 font-semibold">Sinking fund collection activity</h3>{loading ? <TableLoading/> : <DataTable data={payments} columns={paymentColumns} getRowKey={x => x.id} emptyMessage="No payment audit records found."/>}</section>
   </div>;
 }
