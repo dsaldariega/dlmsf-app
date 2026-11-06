@@ -11,7 +11,7 @@ export async function getDashboard(req: Request, res: Response, next: NextFuncti
       if (memberError) throw memberError;
       if (!member) throw Object.assign(new Error("Member profile not found."), { status: 404 });
       const [payments, loans, loanPayments] = await Promise.all([
-        client.from("payments").select("*"),
+        client.from("payment_submissions").select("id,week_start,amount").eq("member_id", member.id).eq("payment_type", "Weekly").eq("status", "Confirmed"),
         client.from("loans").select("*").eq("borrower_id", member.id),
         client.from("loan_payments").select("*").eq("member_id", member.id)
       ]);
