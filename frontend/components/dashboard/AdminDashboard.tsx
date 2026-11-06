@@ -8,8 +8,10 @@ import {
   HandCoins,
   TrendingUp,
   RefreshCw,
+  ClipboardList,
+  Receipt,
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { apiRequest } from "@/lib/api";
 import { withAuth } from "@/lib/withAuth";
 import { Member } from "@/lib/types/member";
 import { LoanPayment, Payment } from "@/lib/types/payment";
@@ -52,35 +54,29 @@ function AdminDashboard() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loans, setLoans] = useState<Loan[]>([]);
   const [loanPayments, setLoanPayments] = useState<LoanPayment[]>([]);
+  const [loanRequests, setLoanRequests] = useState<Array<{id:number;status:string}>>([]);
+  const [paymentSubmissions, setPaymentSubmissions] = useState<Array<{id:number;payment_type:string;status:string}>>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
   const loadData = useCallback(async () => {
     setLoading(true);
     setLoadError("");
-
     try {
-      const results = await Promise.all([
-        supabase.from("members").select("*"),
-        supabase.from("payments").select("*"),
-        supabase.from("loans").select("*"),
-        supabase.from("loan_payments").select("*"),
+      const [data, requests, submissions] = await Promise.all([
+        apiRequest<{members:Member[];payments:Payment[];loans:Loan[];loanPayments:LoanPayment[]}>("/api/dashboard"),
+        apiRequest<Array<{id:number;status:string}>>("/api/loans/requests"),
+        apiRequest<Array<{id:number;payment_type:string;status:string}>>("/api/payments/submissions"),
       ]);
-
-      const [m, p, l, lp] = results;
-
-      if (m.error || p.error || l.error || lp.error) {
-        console.error("Dashboard query errors:", results);
-        setLoadError("Some dashboard data could not be loaded.");
-      }
-
-      setMembers((m.data ?? []) as Member[]);
-      setPayments((p.data ?? []) as Payment[]);
-      setLoans((l.data ?? []) as Loan[]);
-      setLoanPayments((lp.data ?? []) as LoanPayment[]);
+      setMembers(data.members);
+      setPayments(data.payments);
+      setLoans(data.loans);
+      setLoanPayments(data.loanPayments);
+      setLoanRequests(requests);
+      setPaymentSubmissions(submissions);
     } catch (error) {
-      console.error(error);
-      setLoadError("Unable to load dashboard data. Please try again.");
+      console.error("Dashboard API error:", error);
+      setLoadError(error instanceof Error ? error.message : "Unable to load dashboard data. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -97,16 +93,19 @@ function AdminDashboard() {
     0,
   );
 
-  const totalLoanInterestCollected = loanPayments.reduce(
+  const totalLoanRepaymentsCollected = loanPayments.reduce(
     (sum, payment) => sum + amount(payment.amount),
     0,
   );
 
-  const totalLoanPrincipalDisbursed = loans
-    .filter((loan) => loan.status?.toLowerCase() !== "paid")
-    .reduce((sum, loan) => sum + amount(loan.amount), 0);
+  const totalLoanPrincipalDisbursed = loans.reduce(
+    (sum, loan) => sum + amount(loan.amount),
+    0,
+  );
 
-  const availableFunds = totalSinkingCollected - totalLoanPrincipalDisbursed;
+  // Loan repayments return principal and interest to the available fund.
+  const availableFunds =
+    totalSinkingCollected + totalLoanRepaymentsCollected - totalLoanPrincipalDisbursed;
 
   const getMonthlySinkingTarget = (month: string): number => {
     const [monthName, yearString] = month.split(" ");
@@ -155,7 +154,7 @@ function AdminDashboard() {
       (payment) => monthOf(payment.week_start) === month,
     );
 
-    return sundays.reduce((sum) => sum + Number(heads) * RATE, 0);
+    return sundays.reduce((sum, payment) => sum + amount(payment.amount), 0);
   };
 
   const getMonthlyLoanTarget = (month: string): number | null => {
@@ -230,7 +229,7 @@ function AdminDashboard() {
               : "bg-amber-50 text-amber-700";
 
         return (
-          <span className={`rounded-full text-xs font-semibold ${statusClass}`}>
+          <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${statusClass}`}>
             {status}
           </span>
         );
@@ -407,7 +406,7 @@ function AdminDashboard() {
                   transition={{ duration: 0.35, delay: 0.2, ease: "easeOut" }}
                   className="mt-3 text-2xl font-bold text-purple-700"
                 >
-                  {loading ? "—" : currency(totalLoanInterestCollected)}
+                  {loading ? "—" : currency(totalLoanRepaymentsCollected)}
                 </motion.p>
               </div>
               <HandCoins className="text-purple-600" size={26} />
@@ -435,6 +434,18 @@ function AdminDashboard() {
         </div>
       </section>
       <section>
+        <h3 className="mb-1 text-lg font-semibold text-slate-900">Request monitoring</h3>
+        <p className="mb-4 text-sm text-slate-500">Track member loan requests and payment submissions separately.</p>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            {title:"Loan requests",total:loanRequests.length,approved:loanRequests.filter(x=>x.status==="Approved").length,pending:loanRequests.filter(x=>x.status==="Pending").length,href:"/loans",Icon:ClipboardList},
+            {title:"Weekly payment requests",total:paymentSubmissions.filter(x=>x.payment_type==="Weekly").length,approved:paymentSubmissions.filter(x=>x.payment_type==="Weekly"&&x.status==="Confirmed").length,pending:paymentSubmissions.filter(x=>x.payment_type==="Weekly"&&x.status==="Pending").length,href:"/payments",Icon:Receipt},
+            {title:"Loan repayment requests",total:paymentSubmissions.filter(x=>x.payment_type==="Loan").length,approved:paymentSubmissions.filter(x=>x.payment_type==="Loan"&&x.status==="Confirmed").length,pending:paymentSubmissions.filter(x=>x.payment_type==="Loan"&&x.status==="Pending").length,href:"/payments",Icon:HandCoins},
+          ].map(item=><a key={item.title} href={item.href} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-200 hover:shadow-md"><div className="flex items-center justify-between"><p className="text-sm font-medium text-slate-600">{item.title}</p><item.Icon className="text-blue-600" size={21}/></div><p className="mt-3 text-3xl font-bold tabular-nums text-slate-900">{loading?"—":item.total}</p><div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs"><span className="font-medium text-emerald-700">{item.approved} approved</span><span className="font-medium text-amber-700">{item.pending} pending</span></div></a>)}
+          <article className="rounded-xl border border-slate-200 bg-slate-50 p-5"><p className="text-sm font-medium text-slate-600">All requests</p><p className="mt-3 text-3xl font-bold tabular-nums text-slate-900">{loading?"—":loanRequests.length+paymentSubmissions.length}</p><div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs"><span className="font-medium text-emerald-700">{loanRequests.filter(x=>x.status==="Approved").length+paymentSubmissions.filter(x=>x.status==="Confirmed").length} approved</span><span className="font-medium text-amber-700">{loanRequests.filter(x=>x.status==="Pending").length+paymentSubmissions.filter(x=>x.status==="Pending").length} pending</span></div></article>
+        </div>
+      </section>
+      <section>
         <h3 className="mb-1 text-lg font-semibold text-slate-900">
           Sinking Fund Collection (Monthly)
         </h3>
@@ -443,7 +454,7 @@ function AdminDashboard() {
         </p>
 
         <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="h-105 overflow-y-scroll">
+          <div className="max-h-[26rem] overflow-y-auto">
             <DataTable
               data={MONTHS}
               columns={sinkingCollectionColumns}
@@ -469,7 +480,7 @@ function AdminDashboard() {
         </p>
 
         <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="h-105 overflow-y-scroll">
+          <div className="max-h-[26rem] overflow-y-auto">
             <DataTable
               data={MONTHS}
               columns={loanCollectionColumns}

@@ -30,20 +30,20 @@ type DataTableProps<T> = {
 export default function DataTable<T>({
   data,
   columns,
-  tableClassName = "",
-  thClassName = "",
-  tdClassName = "",
+  tableClassName = "w-full min-w-175 table-auto text-left text-sm",
+  thClassName = "border-b border-slate-200 px-5 py-3.5 text-xs font-semibold uppercase tracking-wider text-slate-500",
+  tdClassName = "border-b border-slate-100 px-5 py-4 text-slate-700",
   loading = false,
   loadingMessage = "",
   emptyMessage = "No data available.",
-  tbodyClassName = "",
+  tbodyClassName = "divide-y divide-slate-100",
   emptyContent,
   loadingRow,
   getRowKey,
 }: DataTableProps<T>) {
   return (
     <table className={`${tableClassName} relative`} style={{ width: "100%" }}>
-      <thead className="sticky top-0 z-10 bg-slate-50">
+      <thead className="bg-slate-50">
         <tr>
           {columns.map((column) => (
             <th

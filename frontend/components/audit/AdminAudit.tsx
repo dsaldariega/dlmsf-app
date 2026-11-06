@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { apiRequest } from "@/lib/api";
 import { AuditToast, LoanAudit, PaymentAudit } from "@/lib/types/audit";
 import { motion, AnimatePresence } from "motion/react";
 import { formatCurrency } from "@/lib/utils/loans";
@@ -32,38 +32,19 @@ export default function AuditPage() {
     useState(false);
   const [toast, setToast] = useState<AuditToast | null>(null);
 
-  // Load audit records
+  // Load audit records through the Node API
   const load = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
-
     try {
-      const [loans, payments] = await Promise.all([
-        supabase
-          .from("loans_audit_log")
-          .select("*")
-          .order("created_date", { ascending: false }),
-
-        supabase
-          .from("payments_audit_log")
-          .select("*")
-          .order("id", { ascending: false }),
-      ]);
-
-      if (loans.error) throw loans.error;
-      if (payments.error) throw payments.error;
-
-      setLoanAudits((loans.data || []) as LoanAudit[]);
-      setPaymentAudits((payments.data || []) as PaymentAudit[]);
+      const data = await apiRequest<{ loans: LoanAudit[]; payments: PaymentAudit[] }>("/api/audit");
+      setLoanAudits(data.loans);
+      setPaymentAudits(data.payments);
+      setErrorMessage("");
     } catch (error) {
       console.error("Error loading audit records:", error);
-
-      showToast(
-        "error",
-        "Unable to load audit records",
-        error instanceof Error
-          ? error.message
-          : "Please refresh the page and try again.",
-      );
+      const message = error instanceof Error ? error.message : "Please refresh the page and try again.";
+      setErrorMessage(message);
+      showToast("error", "Unable to load audit records", message);
     } finally {
       if (showLoading) setLoading(false);
     }
@@ -75,80 +56,32 @@ export default function AuditPage() {
 
   const deleteLoanAudit = async (id: number) => {
     if (deletingLoanId !== null || deletingPaymentId !== null) return;
-
     setDeletingLoanId(id);
-
     try {
-      const { error } = await supabase
-        .from("loans_audit_log")
-        .delete()
-        .eq("id", id);
-
-      if (error) throw error;
-
+      await apiRequest<{ id: number }>(`/api/audit/loans/${id}`, { method: "DELETE" });
       setLoanAudits((current) => current.filter((audit) => audit.id !== id));
-
       setIsDeleteLoanModalOpen(false);
       setLoanToDelete(null);
-
-      showToast(
-        "success",
-        "Audit record deleted",
-        "The loan audit record was successfully removed.",
-      );
+      showToast("success", "Audit record deleted", "The loan audit record was successfully removed.");
     } catch (error) {
       console.error("Error deleting loan audit:", error);
-
-      showToast(
-        "error",
-        "Deletion failed",
-        error instanceof Error
-          ? error.message
-          : "Failed to delete loan audit record.",
-      );
-    } finally {
-      setDeletingLoanId(null);
-    }
+      showToast("error", "Deletion failed", error instanceof Error ? error.message : "Failed to delete loan audit record.");
+    } finally { setDeletingLoanId(null); }
   };
 
   const deletePaymentAudit = async (id: number) => {
     if (deletingLoanId !== null || deletingPaymentId !== null) return;
-
     setDeletingPaymentId(id);
-
     try {
-      const { error } = await supabase
-        .from("payments_audit_log")
-        .delete()
-        .eq("id", id);
-
-      if (error) throw error;
-
-      setPaymentAudits((current) =>
-        current.filter((payment) => payment.id !== id),
-      );
-
+      await apiRequest<{ id: number }>(`/api/audit/payments/${id}`, { method: "DELETE" });
+      setPaymentAudits((current) => current.filter((payment) => payment.id !== id));
       setIsDeletePaymentModalOpen(false);
       setPaymentToDelete(null);
-
-      showToast(
-        "success",
-        "Audit record deleted",
-        "The payment audit record was successfully removed.",
-      );
+      showToast("success", "Audit record deleted", "The payment audit record was successfully removed.");
     } catch (error) {
       console.error("Error deleting payment audit:", error);
-
-      showToast(
-        "error",
-        "Deletion failed",
-        error instanceof Error
-          ? error.message
-          : "Failed to delete payment audit record.",
-      );
-    } finally {
-      setDeletingPaymentId(null);
-    }
+      showToast("error", "Deletion failed", error instanceof Error ? error.message : "Failed to delete payment audit record.");
+    } finally { setDeletingPaymentId(null); }
   };
 
   const thClass =
@@ -161,7 +94,9 @@ export default function AuditPage() {
       key: "ref_id",
       header: "Reference ID",
       headerClassName: "w-40",
-      render: (audit) => (
+      render: (audit) => audit.synthetic ? (
+        <span className="text-xs text-slate-400">Workflow record</span>
+      ) : (
         <span className="font-mono text-xs font-semibold text-blue-700">
           {audit.ref_id || "Not assigned"}
         </span>
@@ -272,7 +207,9 @@ export default function AuditPage() {
     {
       key: "ref_id",
       header: "Reference ID",
-      render: (payment) => (
+      render: (payment) => payment.synthetic ? (
+        <span className="text-xs text-slate-400">Workflow record</span>
+      ) : (
         <span className="font-mono text-xs font-semibold text-blue-700">
           {payment.ref_id || "Not assigned"}
         </span>

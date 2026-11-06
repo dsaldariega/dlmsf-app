@@ -1,0 +1,14 @@
+import { Router } from "express";
+import { authenticate } from "../middleware/auth.middleware.js";
+import { authorize } from "../middleware/role.middleware.js";
+import { getPayments, createWeeklyPayment, deleteWeeklyPayment } from "../controllers/payment.controller.js";
+import { listPaymentSubmissions, submitPayment, reviewPaymentSubmission } from "../controllers/member-workflow.controller.js";
+const router = Router();
+router.use(authenticate);
+router.get("/", getPayments);
+router.get("/submissions", listPaymentSubmissions);
+router.post("/submissions", authorize("member"), submitPayment);
+router.patch("/submissions/:id", authorize("admin"), reviewPaymentSubmission);
+router.post("/", authorize("admin"), createWeeklyPayment);
+router.delete("/:id", authorize("admin"), deleteWeeklyPayment);
+export default router;

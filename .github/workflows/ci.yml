@@ -1,0 +1,48 @@
+name: Build and test
+
+on:
+  pull_request:
+    branches: [dev]
+  push:
+    branches: [dev]
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    name: Frontend build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend dependencies
+        run: npm install
+        working-directory: frontend
+      - name: Build Next.js application
+        run: npm run build
+        working-directory: frontend
+
+  backend:
+    name: Backend build and tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: backend
+      - name: Compile Node API
+        run: npm run build
+        working-directory: backend
+      - name: Run backend tests
+        run: npm test -- --passWithNoTests
+        working-directory: backend

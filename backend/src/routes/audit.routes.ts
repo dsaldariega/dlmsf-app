@@ -1,0 +1,10 @@
+import { Router } from "express";
+import { authenticate } from "../middleware/auth.middleware.js";
+import { authorize } from "../middleware/role.middleware.js";
+import { getAuditRecords, deleteLoanAudit, deletePaymentAudit } from "../controllers/audit.controller.js";
+const router = Router();
+router.use(authenticate);
+router.get("/", getAuditRecords);
+router.delete("/loans/:id", authorize("admin"), deleteLoanAudit);
+router.delete("/payments/:id", authorize("admin"), deletePaymentAudit);
+export default router;
