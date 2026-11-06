@@ -10,9 +10,10 @@ type Member = { id: number; name?: string; heads?: number };
 type Loan = { id: number; borrower_id: number; amount: number | string; total: number; months: number; status: string | null };
 type Payment = { id: number; week_start: string; amount: number | string };
 type LoanPayment = { id: number | string; loan_id?: number; member_id: number; amount: number | string; paid_at: string; action?: string };
-type Data = { payments: Payment[]; loans: Loan[]; loanPayments: LoanPayment[] };
+type RequestRow = { id:number; status:string };
+type Data = { payments: Payment[]; loans: Loan[]; loanPayments: LoanPayment[]; loanRequests:RequestRow[]; paymentSubmissions:RequestRow[] };
 const money = (n: number) => `₱${n.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const monthOf = (date: string) => new Date(date + "T00:00:00").toLocaleDateString("en-US", { month: "long", year: "numeric" });
+const monthOf = (date: string) => new Date(date + "T00:00:00Z").toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone:"UTC" });
 
 export default function MemberDashboard() {
   const [member, setMember] = useState<Member | null>(null);
@@ -27,8 +28,12 @@ export default function MemberDashboard() {
       const { data: profile, error: profileError } = await supabase.from("members").select("id,name,heads").eq("auth_id", user.id).maybeSingle();
       if (profileError) throw profileError;
       if (!profile) throw new Error("Your member profile could not be found.");
-      const summary = await apiRequest<Data>("/api/dashboard");
-      setMember(profile as Member); setData(summary);
+      const [summary,loanRequests,paymentSubmissions] = await Promise.all([
+        apiRequest<Omit<Data,"loanRequests"|"paymentSubmissions">>("/api/dashboard"),
+        apiRequest<RequestRow[]>("/api/loans/requests"),
+        apiRequest<RequestRow[]>("/api/payments/submissions"),
+      ]);
+      setMember(profile as Member); setData({...summary,loanRequests,paymentSubmissions});
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to load dashboard."); }
     finally { setLoading(false); }
   }, []);
@@ -41,7 +46,11 @@ export default function MemberDashboard() {
   const loanTotal = loans.reduce((s, x) => s + Number(x.total || 0), 0);
   const outstanding = loans.filter(x => x.status?.toLowerCase() !== "paid").reduce((sum, loan) => { const paid = repayments.filter(payment => Number(payment.loan_id) === loan.id).reduce((total, payment) => total + Number(payment.amount || 0), 0); return sum + Math.max(Number(loan.total || 0) - paid, 0); }, 0);
   const fundGrowth = repayments.filter(x => !/pending|rejected/i.test(x.action || "")).reduce((s, x) => s + Number(x.amount || 0), 0);
-  const thisMonth = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const requestRows=[...(data?.loanRequests??[]),...(data?.paymentSubmissions??[])];
+  const totalRequests=requestRows.length;
+  const approvedRequests=requestRows.filter(x=>x.status==="Approved"||x.status==="Confirmed").length;
+  const pendingRequests=requestRows.filter(x=>x.status==="Pending").length;
+  const thisMonth = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone:"UTC" });
   const currentMonthPayments = weeks.filter(x => monthOf(x.week_start) === thisMonth);
   const monthlyWeeks = currentMonthPayments.length;
   const monthlyContribution = currentMonthPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
@@ -72,9 +81,14 @@ export default function MemberDashboard() {
     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {cards.map(({label,value,hint,Icon,color}) => <article key={label} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><p className="text-sm text-slate-500">{label}</p><span className={`rounded-lg p-2 ${color}`}><Icon size={20}/></span></div><p className="mt-4 text-2xl font-bold tabular-nums">{loading ? "—" : value}</p><p className="mt-1 text-xs text-slate-500">{hint}</p></article>)}
     </section>
+    <section className="grid gap-4 sm:grid-cols-3">
+      <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-sm text-slate-500">Total requests</p><p className="mt-3 text-2xl font-bold tabular-nums">{loading?"—":totalRequests}</p><p className="mt-1 text-xs text-slate-500">Loan and payment submissions</p></article>
+      <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-sm text-slate-500">Approved requests</p><p className="mt-3 text-2xl font-bold tabular-nums text-emerald-700">{loading?"—":approvedRequests}</p><p className="mt-1 text-xs text-slate-500">Approved loans and confirmed payments</p></article>
+      <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-sm text-slate-500">Pending requests</p><p className="mt-3 text-2xl font-bold tabular-nums text-amber-700">{loading?"—":pendingRequests}</p><p className="mt-1 text-xs text-slate-500">Awaiting administrator review</p></article>
+    </section>
     <section className="grid gap-4 lg:grid-cols-3">
       <article className="rounded-xl border border-slate-200 bg-white p-5 lg:col-span-2"><h3 className="font-semibold text-slate-900">My weekly sinking fund collections</h3><p className="mt-1 text-sm text-slate-500">Monthly summary of confirmed weekly contributions.</p><div className="mt-4">{loading ? <p className="py-8 text-center text-sm text-slate-500">Loading records...</p> : <DataTable data={months} columns={columns} getRowKey={x => x.month} emptyMessage="No weekly collections have been recorded yet."/>}</div></article>
-      <article className="rounded-xl border border-slate-200 bg-white p-5"><h3 className="font-semibold">This month</h3><p className="mt-4 text-3xl font-bold text-blue-700">{loading ? "—" : money(monthlyContribution)}</p><p className="mt-1 text-sm text-slate-500">{monthlyWeeks} group collection weeks recorded</p><div className="mt-5 border-t border-slate-100 pt-4 text-sm"><p className="text-slate-500">Registered heads</p><p className="mt-1 text-lg font-semibold">{member?.heads ?? "—"}</p></div></article>
+      <article className="rounded-xl border border-slate-200 bg-white p-5"><h3 className="font-semibold">This month</h3><p className="mt-4 text-3xl font-bold text-blue-700">{loading ? "—" : money(monthlyContribution)}</p><p className="mt-1 text-sm text-slate-500">{monthlyWeeks} confirmed weekly payment submissions</p><div className="mt-5 border-t border-slate-100 pt-4 text-sm"><p className="text-slate-500">Registered heads</p><p className="mt-1 text-lg font-semibold">{member?.heads ?? "—"}</p></div></article>
     </section>
     <section className="rounded-xl border border-slate-200 bg-white p-5">
       <h3 className="mb-4 font-semibold text-slate-900">My loan records</h3>
