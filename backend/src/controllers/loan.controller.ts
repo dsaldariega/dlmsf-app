@@ -36,7 +36,7 @@ export async function createLoan(req: Request, res: Response, next: NextFunction
     const months = Number(req.body?.months);
     if (!Number.isSafeInteger(borrowerId) || borrowerId < 1) throw Object.assign(new Error("Choose a valid registered borrower."), { status: 400 });
     if (!Number.isFinite(amount) || amount < 500 || amount % 500 !== 0) throw Object.assign(new Error("Loan amount must be at least ₱500 and in increments of ₱500."), { status: 400 });
-    if (!Number.isInteger(months) || !LOAN_DURATIONS.includes(months)) throw Object.assign(new Error("Choose a valid repayment duration (1–12 months)."), { status: 400 });
+    if (!Number.isInteger(months) || !LOAN_DURATIONS.includes(months)) throw Object.assign(new Error("Choose a valid repayment duration (1, 2, 3, 4, 5, 6, 9, 12, 18, or 24 months)."), { status: 400 });
 
     const client = db(req);
     const { data: created, error: createError } = await client.rpc("create_loan", {
