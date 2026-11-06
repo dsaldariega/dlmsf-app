@@ -43,7 +43,7 @@ export default function DataTable<T>({
 }: DataTableProps<T>) {
   return (
     <table className={`${tableClassName} relative`} style={{ width: "100%" }}>
-      <thead className="sticky top-0 z-10 bg-slate-50">
+      <thead className="bg-slate-50">
         <tr>
           {columns.map((column) => (
             <th
