@@ -23,7 +23,7 @@ export async function getPayments(req: Request, res: Response, next: NextFunctio
     }
     const [members, payments, loanPayments] = await Promise.all([
       isMember ? client.from("members").select("id,heads").eq("id", memberId) : client.from("members").select("id, heads"),
-      client.from("payments").select("*").order("week_start", { ascending: false }),
+      isMember ? Promise.resolve({ data: [], error: null } as any) : client.from("payments").select("*").order("week_start", { ascending: false }),
       (() => {
         let query = client.from("loan_payments").select("*, borrower:members!loan_payments_member_id_fkey(name)").order("paid_at", { ascending: false });
         if (memberId !== null) query = query.eq("member_id", memberId);
