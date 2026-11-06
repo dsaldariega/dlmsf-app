@@ -229,7 +229,7 @@ function AdminDashboard() {
               : "bg-amber-50 text-amber-700";
 
         return (
-          <span className={`rounded-full text-xs font-semibold ${statusClass}`}>
+          <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${statusClass}`}>
             {status}
           </span>
         );
@@ -454,7 +454,7 @@ function AdminDashboard() {
         </p>
 
         <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="h-105 overflow-y-scroll">
+          <div className="max-h-[26rem] overflow-y-auto">
             <DataTable
               data={MONTHS}
               columns={sinkingCollectionColumns}
@@ -480,7 +480,7 @@ function AdminDashboard() {
         </p>
 
         <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="h-105 overflow-y-scroll">
+          <div className="max-h-[26rem] overflow-y-auto">
             <DataTable
               data={MONTHS}
               columns={loanCollectionColumns}
