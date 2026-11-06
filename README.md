@@ -24,7 +24,7 @@ Keep frontend source code inside `frontend/` and backend source code inside `bac
 
 ```sh
 npm install
-npm --prefix frontend ci
+npm --prefix frontend install
 npm --prefix backend ci
 ```
 
@@ -52,7 +52,7 @@ npm run build
 
 ## Environment variables
 
-Copy `frontend/.env.example` to `frontend/.env.local` and fill in the Supabase and API values.
+Copy `frontend/.env.example` to `frontend/.env.local` and fill in the Supabase and API values. Run `npm --prefix frontend install` after dependency updates to refresh the frontend lockfile.
 
 Copy `backend/.env-example` to `backend/.env` and fill in the Supabase values.
 
