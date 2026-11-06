@@ -555,7 +555,7 @@ function MembersPage() {
 
                     <div className="mt-4 rounded-lg border border-red-100 bg-red-50/70 px-3 py-3">
                       <p className="mt-1 text-xs text-red-600">
-                        This member will be removed from your records.
+                        This member will be removed from your records, and the linked development login account will also be permanently deleted. This cannot be undone.
                       </p>
                     </div>
                   </div>
