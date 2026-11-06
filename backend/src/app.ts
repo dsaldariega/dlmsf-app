@@ -4,6 +4,8 @@ import helmet from "helmet";
 import memberRoutes from "./routes/member.routes.js";
 import loanRoutes from "./routes/loan.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";
+import dashboardRoutes from "./routes/dashboard.routes.js";
+import auditRoutes from "./routes/audit.routes.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.middleware.js";
 
 const app = express();
@@ -18,6 +20,8 @@ app.get("/api/health", (_req, res) => {
 app.use("/api/members", memberRoutes);
 app.use("/api/loans", loanRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/audit", auditRoutes);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
