@@ -5,7 +5,7 @@ import {formatCurrency} from "@/lib/utils/loans";
 import DataTable,{type DataTableColumn} from "@/components/ui/DataTable";
 import TableLoading from "@/components/ui/TableLoading";
 import {tableClass,tdClass,thClass} from "@/components/ui/table-styles";
-type Row={id:number;member?:{name:string}|null;payment_type:string;amount:number|string;paid_on:string;week_start?:string|null;reference?:string|null;status:string};
+type Row={id:number;member?:{name:string}|null;loan?:{id:number}|null;payment_type:string;amount:number|string;paid_on:string;week_start?:string|null;reference?:string|null;status:string};
 export default function AdminPaymentSubmissions(){
  const [rows,setRows]=useState<Row[]>([]),[loading,setLoading]=useState(true),[busy,setBusy]=useState<number|null>(null),[error,setError]=useState(""),[remarks,setRemarks]=useState<Record<number,string>>({});
  const load=useCallback(async()=>{setLoading(true);try{setRows(await apiRequest<Row[]>("/api/payments/submissions"));}catch(e){setError(e instanceof Error?e.message:"Unable to load payment submissions.");}finally{setLoading(false);}},[]);
@@ -15,6 +15,7 @@ export default function AdminPaymentSubmissions(){
  {key:"member",header:"Member",render:x=>x.member?.name||"—"},
  {key:"type",header:"Type",render:x=>x.payment_type},
  {key:"amount",header:"Amount",render:x=>formatCurrency(Number(x.amount))},
+ {key:"loan",header:"Loan",render:x=>x.loan?.id?"Loan #"+x.loan.id:"—"},
  {key:"paid",header:"Paid on / week",render:x=>x.payment_type==="Weekly"?(x.week_start||"—"):new Date(x.paid_on+"T00:00:00").toLocaleDateString("en-PH")},
  {key:"reference",header:"Reference",render:x=>x.reference||"—"},
  {key:"status",header:"Status",render:x=><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${x.status==="Confirmed"?"bg-emerald-50 text-emerald-700":x.status==="Rejected"?"bg-red-50 text-red-700":"bg-amber-50 text-amber-700"}`}>{x.status}</span>},
