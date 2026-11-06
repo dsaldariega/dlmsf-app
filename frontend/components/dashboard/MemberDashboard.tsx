@@ -5,7 +5,6 @@ import { RefreshCw, Wallet, HandCoins, CircleDollarSign, PiggyBank } from "lucid
 import { supabase } from "@/lib/supabase";
 import { apiRequest } from "@/lib/api";
 import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
-import { RATE } from "@/lib/constants/member";
 
 type Member = { id: number; name?: string; heads?: number };
 type Loan = { id: number; borrower_id: number; amount: number | string; total: number; months: number; status: string | null };
