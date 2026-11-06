@@ -42,6 +42,7 @@ export async function getAuditRecords(req: Request, res: Response, next: NextFun
 
     const loanRequestRows = (loanRequests.data ?? []).map((row: any) => ({
       id: -Number(row.id),
+      synthetic: true,
       member_id: row.member_id,
       borrower_name: row.member?.name ?? "Member",
       amount: row.amount,
@@ -52,6 +53,7 @@ export async function getAuditRecords(req: Request, res: Response, next: NextFun
     }));
     const paymentSubmissionRows = (paymentSubmissions.data ?? []).map((row: any) => ({
       id: -Number(row.id),
+      synthetic: true,
       member_id: row.member_id,
       amount: row.amount,
       week_start: row.week_start,
