@@ -50,7 +50,7 @@ export default function PaymentsPage() {
           .order("week_start", { ascending: false }),
         supabase
           .from("loan_payments")
-          .select("*")
+          .select("*, borrower:members!loan_payments_member_id_fkey(name)")
           .order("paid_at", { ascending: false }),
       ]);
 
@@ -60,7 +60,12 @@ export default function PaymentsPage() {
 
       setMembers(m.data || []);
       setPayments(p.data || []);
-      setLoanPayments(lp.data || []);
+      setLoanPayments(
+        (lp.data || []).map((payment) => ({
+          ...payment,
+          borrower: payment.borrower?.name ?? "—",
+        })),
+      );
     } catch (error) {
       console.error("Error loading payment data:", error);
 
