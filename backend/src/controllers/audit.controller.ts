@@ -40,7 +40,7 @@ export async function getAuditRecords(req: Request, res: Response, next: NextFun
     ]);
     for (const result of [loanAudit, loanRequests, paymentSubmissions, paymentAudit]) if (result.error) throw result.error;
 
-    const loanRequestRows = (loanRequestEvents.data ?? []).map((row: any) => ({
+    const loanRequestRows = (loanRequests.data ?? []).map((row: any) => ({
       id: -Number(row.id),
       synthetic: true,
       member_id: row.member_id,
