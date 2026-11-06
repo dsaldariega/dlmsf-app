@@ -5,7 +5,6 @@ import { supabase } from "@/lib/supabase";
 import { apiRequest } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils/loans";
 import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
-import TableLoading from "@/components/ui/TableLoading";
 import { HandCoins, Info } from "lucide-react";
 
 type Loan = { id: number; borrower_id: number; amount: number | string | null; interest: number; total: number; monthly: number; months: number; status: string | null };
@@ -43,7 +42,7 @@ export default function MemberLoans() {
     <div><h2 className="text-2xl font-bold text-slate-900">My Loans</h2><p className="mt-1 text-sm text-slate-500">Your loan terms, repayment status, and remaining balance.</p></div>
     {error && <p role="alert" className="rounded-lg bg-red-50 p-4 text-sm text-red-700">{error}</p>}
     <div className="grid gap-4 sm:grid-cols-2"><article className="rounded-xl border border-slate-200 bg-white p-5"><p className="text-sm text-slate-500">Total loans including interest</p><p className="mt-2 text-2xl font-bold">{loading ? "—" : formatCurrency(total)}</p></article><article className="rounded-xl border border-slate-200 bg-white p-5"><p className="text-sm text-slate-500">Outstanding loan balance</p><p className="mt-2 text-2xl font-bold text-amber-700">{loading ? "—" : formatCurrency(balance)}</p></article></div>
-    <section className="rounded-xl border border-slate-200 bg-white p-5"><div className="mb-4 flex items-center gap-2"><HandCoins size={20} className="text-blue-600"/><h3 className="font-semibold">Loan history</h3></div>{loading ? <TableLoading/> : <DataTable data={loans} columns={columns} emptyMessage="You don't have any loans yet."/>}</section>
+    <section className="rounded-xl border border-slate-200 bg-white p-5"><div className="mb-4 flex items-center gap-2"><HandCoins size={20} className="text-blue-600"/><h3 className="font-semibold">Loan history</h3></div>{loading ? <p className="py-8 text-center text-sm text-slate-500">Loading records...</p> : <DataTable data={loans} columns={columns} getRowKey={x => x.id} emptyMessage="No loans available."/>}</section>
     <aside className="flex gap-3 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900"><Info size={19} className="mt-0.5 shrink-0"/><div><p className="font-semibold">Loan requests</p><p className="mt-1">The current database workflow creates loans directly from the admin side. Member loan requests, pending-request checks, available-fund validation, and admin approval need a dedicated request/approval record before they can safely be enabled. Existing loans are read-only here.</p></div></aside>
   </div>;
 }
