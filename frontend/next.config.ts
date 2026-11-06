@@ -1,8 +1,12 @@
+import path from "node:path";
 import type { NextConfig } from "next";
 
-// Keep Next.js defaults. Vercel already scopes the build to frontend/ and
-// injects its own tracing root; overriding only Turbopack's root creates a
-// mismatch between the two roots in monorepo builds.
-const nextConfig: NextConfig = {};
+const nextConfig: NextConfig = {
+  turbopack: {
+    // The repository is a monorepo: keep Turbopack's workspace root aligned
+    // with Vercel's output tracing root (the repository root).
+    root: path.resolve(process.cwd(), ".."),
+  },
+};
 
 export default nextConfig;
