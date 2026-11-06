@@ -23,33 +23,35 @@ export async function getAuditRecords(req: Request, res: Response, next: NextFun
     }
 
     let loanAuditQuery = client.from("loans_audit_log").select("*").order("created_date", { ascending: false });
-    let loanRequestQuery = client.from("loan_requests").select("id,member_id,amount,status,requested_at,reviewed_at,admin_remarks,member:members!loan_requests_member_id_fkey(name)").order("requested_at", { ascending: false });
+    let loanRequestEventsQuery = client.from("loan_request_audit_events").select("id,loan_request_id,member_id,amount,months,action,actor_role,remarks,created_at,member:members!loan_request_audit_events_member_id_fkey(name)").order("created_at", { ascending: false });
     let paymentSubmissionQuery = client.from("payment_submissions").select("id,member_id,payment_type,amount,paid_on,week_start,status,submitted_at,reviewed_at,admin_remarks,reference").order("submitted_at", { ascending: false });
     if (memberId !== null) {
       loanAuditQuery = loanAuditQuery.eq("member_id", memberId);
-      loanRequestQuery = loanRequestQuery.eq("member_id", memberId);
+      loanRequestEventsQuery = loanRequestEventsQuery.eq("member_id", memberId);
       paymentSubmissionQuery = paymentSubmissionQuery.eq("member_id", memberId);
     }
 
     const [loanAudit, loanRequests, paymentSubmissions, paymentAudit] = await Promise.all([
       loanAuditQuery,
-      loanRequestQuery,
+      loanRequestEventsQuery,
       paymentSubmissionQuery,
       isMember ? Promise.resolve({ data: [], error: null } as any)
         : client.from("payments_audit_log").select("*").order("id", { ascending: false })
     ]);
     for (const result of [loanAudit, loanRequests, paymentSubmissions, paymentAudit]) if (result.error) throw result.error;
 
-    const loanRequestRows = (loanRequests.data ?? []).map((row: any) => ({
+    const loanRequestRows = (loanRequestEvents.data ?? []).map((row: any) => ({
       id: -Number(row.id),
       synthetic: true,
       member_id: row.member_id,
       borrower_name: row.member?.name ?? "Member",
       amount: row.amount,
       total: row.amount,
-      action: "Loan request " + String(row.status || "Pending").toLowerCase(),
-      remarks: row.admin_remarks || null,
-      created_date: row.reviewed_at || row.requested_at
+      action: "Loan request " + String(row.action || "Requested").toLowerCase(),
+      remarks: row.remarks || (row.action === "Requested" ? "Submitted by member" : null),
+      created_date: row.created_at,
+      actor_role: row.actor_role,
+      loan_request_id: row.loan_request_id
     }));
     const paymentSubmissionRows = (paymentSubmissions.data ?? []).map((row: any) => ({
       id: -Number(row.id),
