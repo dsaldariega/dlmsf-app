@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { apiRequest } from "@/lib/api";
 import { Loan, LoanAction, Toast } from "@/lib/types/loan";
 import { MemberOption } from "@/lib/types/member";
 import {
@@ -42,339 +42,111 @@ export default function LoansPage() {
     void fetchLoans();
   }, []);
 
-  // Fetch members
+  // Fetch members and loans through the Node API
   const fetchMembers = async () => {
     setLoadingMembers(true);
-
     try {
-      const { data, error } = await supabase
-        .from("members")
-        .select("id, name")
-        .order("id", { ascending: true });
-
-      if (error) throw error;
-
-      setMembers(data || []);
+      const data = await apiRequest<MemberOption[]>("/api/members");
+      setMembers(data);
     } catch (error) {
       console.error("Error fetching members:", error);
-
-      showToast(
-        "error",
-        "Unable to load members",
-        "Please refresh the page and try again.",
-      );
-    } finally {
-      setLoadingMembers(false);
-    }
+      showToast("error", "Unable to load members", error instanceof Error ? error.message : "Please try again.");
+    } finally { setLoadingMembers(false); }
   };
 
-  // Fetch loans
   const fetchLoans = async (showLoading = true) => {
-    if (showLoading) {
-      setLoading(true);
-    }
-
+    if (showLoading) setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("loans")
-        .select("*, borrower:borrower_id(name)")
-        .order("id", { ascending: false });
-
-      if (error) throw error;
-
-      setLoans((data || []) as Loan[]);
+      const data = await apiRequest<Loan[]>("/api/loans");
+      setLoans(data);
     } catch (error) {
       console.error("Error fetching loans:", error);
-      showToast(
-        "error",
-        "Unable to load loans",
-        "Please refresh the page and try again.",
-      );
-    } finally {
-      if (showLoading) {
-        setLoading(false);
-      }
-    }
+      showToast("error", "Unable to load loans", error instanceof Error ? error.message : "Please try again.");
+    } finally { if (showLoading) setLoading(false); }
   };
 
-  // Add loan and create audit log
+  // Create a loan through the Node API
   const addLoan = async () => {
     if (adding) return;
-
     if (borrowerId === null) {
-      showToast(
-        "warning",
-        "Borrower required",
-        "Please select a member before creating a loan.",
-      );
+      showToast("warning", "Borrower required", "Please select a member before creating a loan.");
       return;
     }
-
-    if (
-      amount === "" ||
-      !Number.isFinite(amount) ||
-      amount <= 0 ||
-      amount < 500 ||
-      amount % 500 !== 0
-    ) {
-      showToast(
-        "warning",
-        "Invalid loan amount",
-        "Enter an amount of at least ₱500 in increments of ₱500.",
-      );
+    if (amount === "" || !Number.isFinite(amount) || amount < 500 || amount % 500 !== 0) {
+      showToast("warning", "Invalid loan amount", "Enter an amount of at least ₱500 in increments of ₱500.");
       return;
     }
-
     if (!Number.isInteger(loanMonths) || !LOAN_DURATIONS.includes(loanMonths)) {
-      showToast(
-        "warning",
-        "Invalid loan duration",
-        "Please select a valid repayment duration.",
-      );
+      showToast("warning", "Invalid loan duration", "Please select a valid repayment duration.");
       return;
     }
-
     const memberExists = members.find((member) => member.id === borrowerId);
-
     if (!memberExists) {
-      showToast(
-        "warning",
-        "Invalid borrower",
-        "Please select a valid registered member.",
-      );
+      showToast("warning", "Invalid borrower", "Please select a valid registered member.");
       return;
     }
 
     setAdding(true);
-
-    let loanCreated = false;
-
     try {
-      // Calculate loan amounts
-      const principal = Number(amount.toFixed(2));
-      const interest = calculateInterest(principal, loanMonths);
-      const total = Number((principal + interest).toFixed(2));
-      const monthly = calculateMonthly(principal, loanMonths);
-      const status = "Ongoing";
-
-      // 1. Insert loan and retrieve the created record
-      const { data: newLoan, error: loanError } = await supabase
-        .from("loans")
-        .insert({
-          borrower_id: memberExists.id,
-          amount: principal,
-          interest,
-          total,
-          monthly,
-          months: loanMonths,
-          status,
-        })
-        .select("*, borrower:borrower_id(name)")
-        .single();
-
-      if (loanError) throw loanError;
-
-      if (!newLoan) {
-        throw new Error(
-          "Loan was created, but its record could not be retrieved.",
-        );
-      }
-
-      loanCreated = true;
-
-      // 2. Insert an audit record for the new loan
-      const { error: auditError } = await supabase
-        .from("loans_audit_log")
-        .insert({
-          borrower_name: memberExists.name,
-          amount: principal,
-          interest,
-          total,
-          monthly,
-          action: "New Loan Created",
-          remarks: `New loan created for ${loanMonths} ${
-            loanMonths === 1 ? "month" : "months"
-          }`,
-          created_date: new Date().toISOString(),
-        });
-
-      if (auditError) {
-        console.error("Loan audit logging failed:", auditError);
-
-        await fetchLoans(false);
-
-        showToast(
-          "warning",
-          "Loan created with a warning",
-          "The loan was created, but its audit record failed. Check the audit log before retrying.",
-        );
-
-        return;
-      }
-
-      // 3. Insert the new loan into the table immediately
-      setLoans((currentLoans) => [newLoan as Loan, ...currentLoans]);
-
-      // 4. Reset the form
+      const newLoan = await apiRequest<Loan>("/api/loans", {
+        method: "POST",
+        body: JSON.stringify({ borrowerId, amount: Number(amount.toFixed(2)), months: loanMonths }),
+      });
+      setLoans((current) => [newLoan, ...current]);
       setBorrowerId(null);
       setAmount("");
       setLoanMonths(2);
       setIsAddModalOpen(false);
-
-      showToast(
-        "success",
-        "Loan created successfully",
-        `${memberExists.name}'s loan has been added to your records.`,
-      );
+      showToast("success", "Loan created successfully", `${memberExists.name}'s loan has been added to your records.`);
     } catch (error) {
       console.error("Error adding loan:", error);
-
-      if (loanCreated) {
-        await fetchLoans(false);
-
-        showToast(
-          "warning",
-          "Loan created with a warning",
-          "The loan may already exist. Check the loan records and audit log before retrying.",
-        );
-      } else {
-        showToast(
-          "error",
-          "Failed to create loan",
-          error instanceof Error ? error.message : "Please try again.",
-        );
-      }
-    } finally {
-      setAdding(false);
-    }
+      showToast("error", "Failed to create loan", error instanceof Error ? error.message : "Please try again.");
+    } finally { setAdding(false); }
   };
 
-  // Mark loan as paid
+  // Mark a loan as paid through the Node API
   const markPaid = async (id: number) => {
     if (processingId !== null) return;
-
     setProcessingId(id);
-
     try {
-      const { error } = await supabase
-        .from("loans")
-        .update({ status: "Paid" })
-        .eq("id", id);
-
-      if (error) throw error;
-
-      setLoans((currentLoans) =>
-        currentLoans.map((loan) =>
-          loan.id === id ? { ...loan, status: "Paid" } : loan,
-        ),
-      );
-
+      const updated = await apiRequest<Loan>(`/api/loans/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: "Paid" }),
+      });
+      setLoans((current) => current.map((loan) => loan.id === id ? updated : loan));
       setLoanAction(null);
-
-      showToast(
-        "success",
-        "Loan marked as paid",
-        "The loan status has been updated successfully.",
-      );
+      showToast("success", "Loan marked as paid", "The loan status has been updated successfully.");
     } catch (error) {
       console.error("Error marking loan as paid:", error);
-
-      showToast(
-        "error",
-        "Update failed",
-        error instanceof Error ? error.message : "Please try again.",
-      );
-    } finally {
-      setProcessingId(null);
-    }
+      showToast("error", "Update failed", error instanceof Error ? error.message : "Please try again.");
+    } finally { setProcessingId(null); }
   };
 
-  // Delete loan
+  // Delete a loan through the Node API
   const deleteLoan = async (id: number) => {
     if (processingId !== null) return;
-
     const loanToDelete = loans.find((loan) => loan.id === id);
-
     if (!loanToDelete) {
-      showToast(
-        "error",
-        "Loan not found",
-        "The loan could not be found. Refresh the records and try again.",
-      );
+      showToast("error", "Loan not found", "Refresh the records and try again.");
       return;
     }
-
-    const borrower = members.find(
-      (member) => member.id === loanToDelete.borrower_id,
-    );
-
     setProcessingId(id);
-
     try {
-      // 1. Delete the actual loan
-      const { error: deleteError } = await supabase
-        .from("loans")
-        .delete()
-        .eq("id", id);
-
-      if (deleteError) throw deleteError;
-
-      // 2. Insert the deletion audit record
-      const { error: auditError } = await supabase
-        .from("loans_audit_log")
-        .insert({
-          borrower_name: borrower?.name ?? "Unknown borrower",
-          amount: loanToDelete.amount,
-          interest: loanToDelete.interest,
-          total: loanToDelete.total,
-          monthly: loanToDelete.monthly,
-          action: "Loan Deleted",
-          remarks: "Loan deleted from loan records",
-          created_date: new Date().toISOString(),
-        });
-
-      if (auditError) {
-        console.error("Loan deletion audit failed:", auditError);
-
-        setLoans((currentLoans) =>
-          currentLoans.filter((loan) => loan.id !== id),
-        );
-
-        setLoanAction(null);
-
-        showToast(
-          "warning",
-          "Loan deleted with a warning",
-          "The loan was deleted, but its audit record failed. Please check the audit log.",
-        );
-
-        return;
-      }
-
-      // 3. Update the UI
-      setLoans((currentLoans) => currentLoans.filter((loan) => loan.id !== id));
-
+      const result = await apiRequest<{ id: number; auditWarning?: string | null }>(`/api/loans/${id}`, { method: "DELETE" });
+      setLoans((current) => current.filter((loan) => loan.id !== id));
       setLoanAction(null);
-
-      showToast(
-        "success",
-        "Loan deleted",
-        "The loan was removed and its deletion was recorded in the audit log.",
-      );
+      if (result.auditWarning) {
+        showToast("warning", "Loan deleted with a warning", "The loan was deleted, but its audit record could not be saved. " + result.auditWarning);
+      } else {
+        showToast("success", "Loan deleted", "The loan was removed and its deletion was recorded in the audit log.");
+      }
     } catch (error) {
       console.error("Error deleting loan:", error);
-
-      showToast(
-        "error",
-        "Deletion failed",
-        error instanceof Error ? error.message : "Please try again.",
-      );
-
+      showToast("error", "Deletion failed", error instanceof Error ? error.message : "Please try again.");
       await fetchLoans(false);
-    } finally {
-      setProcessingId(null);
-    }
+    } finally { setProcessingId(null); }
   };
+
   // Summary calculations
   const totalLoanAmount = loans.reduce(
     (sum, loan) => sum + Number(loan.amount || 0),

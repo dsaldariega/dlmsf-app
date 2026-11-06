@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { supabase } from "@/lib/supabase";
+import { apiRequest } from "@/lib/api";
 import { MemberCount } from "@/lib/types/member";
 import { LoanPayment, Payment } from "@/lib/types/payment";
 import { Toast } from "@/lib/types/loan";
@@ -40,40 +40,15 @@ export default function PaymentsPage() {
 
   const load = async () => {
     setLoading(true);
-
     try {
-      const [m, p, lp] = await Promise.all([
-        supabase.from("members").select("id, heads"),
-        supabase
-          .from("payments")
-          .select("*")
-          .order("week_start", { ascending: false }),
-        supabase
-          .from("loan_payments")
-          .select("*")
-          .order("paid_at", { ascending: false }),
-      ]);
-
-      if (m.error) throw m.error;
-      if (p.error) throw p.error;
-      if (lp.error) throw lp.error;
-
-      setMembers(m.data || []);
-      setPayments(p.data || []);
-      setLoanPayments(lp.data || []);
+      const data = await apiRequest<{ members: MemberCount[]; payments: Payment[]; loanPayments: LoanPayment[] }>("/api/payments");
+      setMembers(data.members);
+      setPayments(data.payments);
+      setLoanPayments(data.loanPayments);
     } catch (error) {
       console.error("Error loading payment data:", error);
-
-      showToast(
-        "error",
-        "Unable to load payment data",
-        error instanceof Error
-          ? error.message
-          : "Please refresh the page and try again.",
-      );
-    } finally {
-      setLoading(false);
-    }
+      showToast("error", "Unable to load payment data", error instanceof Error ? error.message : "Please try again.");
+    } finally { setLoading(false); }
   };
 
   // Format a local calendar date as YYYY-MM-DD.
@@ -99,225 +74,58 @@ export default function PaymentsPage() {
     return sunday;
   };
 
-  // Generate exactly one weekly payment record
+  // Generate a weekly payment through the Node API
   const generateWeeklyPayment = async () => {
     if (generating || loading) return;
-
     if (!selectedDate) {
-      showToast(
-        "warning",
-        "Collection date required",
-        "Please select a Sunday for the weekly collection.",
-      );
+      showToast("warning", "Collection date required", "Please select a Sunday for the weekly collection.");
       return;
     }
-
     setGenerating(true);
-
-    let paymentCreated = false;
-
     try {
-      const sunday = getSunday(selectedDate);
-      const weekStart = toDateString(sunday);
-
-      // 1. Check whether this Sunday already has a payment.
-      const { data: existing, error: existingError } = await supabase
-        .from("payments")
-        .select("id")
-        .eq("week_start", weekStart)
-        .limit(1);
-
-      if (existingError) throw existingError;
-
-      if (existing && existing.length > 0) {
-        showToast(
-          "warning",
-          "Payment already exists",
-          `A weekly payment for Sunday, ${weekStart}, already exists.`,
-        );
-        return;
-      }
-
-      // 2. Calculate the collection from all member heads.
-      const totalHeads = members.reduce(
-        (sum, member) => sum + Number(member.heads || 0),
-        0,
-      );
-
-      const totalAmount = totalHeads * RATE;
-
-      // 3. Insert the weekly payment and retrieve its record.
-      const { data: newPayment, error: insertError } = await supabase
-        .from("payments")
-        .insert({
-          amount: totalAmount,
-          week_start: weekStart,
-        })
-        .select("*")
-        .single();
-
-      if (insertError) throw insertError;
-
-      if (!newPayment) {
-        throw new Error(
-          "Payment was created, but its record could not be retrieved.",
-        );
-      }
-
-      paymentCreated = true;
-
-      // 4. Insert the audit record.
-      const { error: auditError } = await supabase
-        .from("payments_audit_log")
-        .insert({
-          ref_id: newPayment.id,
-          amount: totalAmount,
-          week_start: weekStart,
-          action: "Weekly Payment Created",
-          remarks: `Weekly sinking fund collection generated for Sunday, ${weekStart}. Total member heads: ${totalHeads}. Rate per head: ${RATE}.`,
-          created_date: new Date().toISOString(),
-        });
-
-      if (auditError) {
-        console.error("Payment audit logging failed:", auditError);
-
-        // The payment already exists. Refresh the table and do not
-        // ask the user to retry as that could create a duplicate.
-        await load();
-
-        showToast(
-          "warning",
-          "Payment created with a warning",
-          "The weekly payment was created, but its audit record failed. Check the audit log before retrying.",
-        );
-
-        return;
-      }
-
-      // 5. Update the weekly payments table immediately.
-      setPayments((currentPayments) =>
-        [newPayment as Payment, ...currentPayments].sort(
-          (a, b) =>
-            new Date(b.week_start).getTime() - new Date(a.week_start).getTime(),
-        ),
-      );
-
-      // 6. Reset and close the modal.
+      const weekStart = toDateString(getSunday(selectedDate));
+      const payment = await apiRequest<Payment & { auditWarning?: string | null }>("/api/payments", {
+        method: "POST",
+        body: JSON.stringify({ weekStart }),
+      });
+      setPayments((current) => [payment, ...current].sort((a, b) => new Date(b.week_start).getTime() - new Date(a.week_start).getTime()));
       setSelectedDate(null);
       setIsGenerateModalOpen(false);
-
-      showToast(
-        "success",
-        "Weekly payment generated",
-        `${formatCurrency(totalAmount)} has been recorded for ${weekStart}, and the audit entry was saved.`,
-      );
+      if (payment.auditWarning) {
+        showToast("warning", "Payment created with a warning", payment.auditWarning);
+      } else {
+        showToast("success", "Weekly payment generated", `${formatCurrency(Number(payment.amount || 0))} has been recorded for ${weekStart}.`);
+      }
     } catch (error) {
       console.error("Error generating weekly payment:", error);
-
-      if (paymentCreated) {
-        // The payment exists even though a later operation failed.
-        await load();
-
-        showToast(
-          "warning",
-          "Payment created with a warning",
-          "The weekly payment may already exist, but a subsequent operation failed. Check the payment records and audit log before retrying.",
-        );
-      } else {
-        showToast(
-          "error",
-          "Generation failed",
-          error instanceof Error
-            ? error.message
-            : "Unable to generate the weekly payment. Please try again.",
-        );
-      }
-    } finally {
-      setGenerating(false);
-    }
+      showToast("error", "Generation failed", error instanceof Error ? error.message : "Unable to generate the weekly payment.");
+    } finally { setGenerating(false); }
   };
 
   //Delete Payment
 
   const deletePayment = async (id: number) => {
     if (deletingId !== null) return;
-
     const paymentToRemove = payments.find((payment) => payment.id === id);
-
     if (!paymentToRemove) {
       setPaymentToDelete(null);
-
-      showToast(
-        "error",
-        "Payment not found",
-        "Refresh the records and try again.",
-      );
+      showToast("error", "Payment not found", "Refresh the records and try again.");
       return;
     }
-
     setDeletingId(id);
-
     try {
-      // 1. Delete the weekly payment.
-      const { error: deleteError } = await supabase
-        .from("payments")
-        .delete()
-        .eq("id", id);
-
-      if (deleteError) throw deleteError;
-
-      // 2. Update the UI immediately after deletion.
-      setPayments((currentPayments) =>
-        currentPayments.filter((payment) => payment.id !== id),
-      );
-
+      const result = await apiRequest<{ id: number; auditWarning?: string | null }>(`/api/payments/${id}`, { method: "DELETE" });
+      setPayments((current) => current.filter((payment) => payment.id !== id));
       setPaymentToDelete(null);
-
-      // 3. Create an audit record for the deleted payment.
-      const { error: auditError } = await supabase
-        .from("payments_audit_log")
-        .insert({
-          ref_id: paymentToRemove.id,
-          amount: Number(paymentToRemove.amount || 0),
-          week_start: paymentToRemove.week_start,
-          action: "Weekly Payment Deleted",
-          remarks: `Weekly sinking fund payment deleted for Sunday, ${paymentToRemove.week_start}. Deleted payment ID: ${paymentToRemove.id}. Amount: ${formatCurrency(Number(paymentToRemove.amount || 0))}.`,
-          created_date: new Date().toISOString(),
-        });
-
-      // The payment is already deleted, so don't report the deletion itself
-      // as failed if only the audit operation fails.
-      if (auditError) {
-        console.error("Payment deletion audit logging failed:", auditError);
-
-        showToast(
-          "warning",
-          "Payment deleted with a warning",
-          "The weekly payment was deleted, but its audit record could not be saved. Check the audit log.",
-        );
-
-        return;
+      if (result.auditWarning) {
+        showToast("warning", "Payment deleted with a warning", "The payment was deleted, but its audit record could not be saved. " + result.auditWarning);
+      } else {
+        showToast("success", "Payment deleted", `The weekly payment for ${paymentToRemove.week_start} has been deleted and recorded in the audit log.`);
       }
-
-      // 4. Confirm that both operations succeeded.
-      showToast(
-        "success",
-        "Payment deleted",
-        `The weekly payment for ${paymentToRemove.week_start} has been deleted and recorded in the audit log.`,
-      );
     } catch (error) {
       console.error("Error deleting weekly payment:", error);
-
-      showToast(
-        "error",
-        "Deletion failed",
-        error instanceof Error
-          ? error.message
-          : "Unable to delete the weekly payment. Please try again.",
-      );
-    } finally {
-      setDeletingId(null);
-    }
+      showToast("error", "Deletion failed", error instanceof Error ? error.message : "Unable to delete the weekly payment.");
+    } finally { setDeletingId(null); }
   };
 
   const total = payments.reduce(

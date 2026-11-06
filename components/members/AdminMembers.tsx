@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { apiRequest } from "@/lib/api";
 import { withAuth } from "@/lib/withAuth";
 import { motion, AnimatePresence } from "motion/react";
 import { RATE } from "@/lib/constants/member";
@@ -35,14 +35,8 @@ function MembersPage() {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase
-        .from("members")
-        .select("*")
-        .order("id", { ascending: false });
-
-      if (error) throw error;
-
-      setMembers((data || []) as Member[]);
+      const data = await apiRequest<Member[]>("/api/members");
+      setMembers(data);
     } catch (error) {
       console.error("Error fetching members:", error);
       showToast(
@@ -78,19 +72,10 @@ function MembersPage() {
     setAdding(true);
 
     try {
-      const { data, error } = await supabase
-        .from("members")
-        .insert([
-          {
-            name: trimmedName,
-            heads,
-          },
-        ])
-        .select()
-        .single();
-
-      if (error) throw error;
-      if (!data) throw new Error("The new member could not be retrieved.");
+      const data = await apiRequest<Member>("/api/members", {
+        method: "POST",
+        body: JSON.stringify({ name: trimmedName, heads }),
+      });
 
       // Add only the newly created member to the existing list.
       setMembers((currentMembers) => [data as Member, ...currentMembers]);
@@ -135,12 +120,9 @@ function MembersPage() {
     setDeletingId(member.id);
 
     try {
-      const { error } = await supabase
-        .from("members")
-        .delete()
-        .eq("id", member.id);
-
-      if (error) throw error;
+      await apiRequest<{ id: number }>(`/api/members/${member.id}`, {
+        method: "DELETE",
+      });
 
       // Remove only the deleted member from local state.
       setMembers((currentMembers) =>
@@ -198,17 +180,15 @@ function MembersPage() {
     setSaving(true);
 
     try {
-      const { error } = await supabase
-        .from("members")
-        .update({ heads: editHeads })
-        .eq("id", id);
-
-      if (error) throw error;
+      const updated = await apiRequest<Member>(`/api/members/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ heads: editHeads }),
+      });
 
       // Update only the edited member in local state.
       setMembers((currentMembers) =>
         currentMembers.map((member) =>
-          member.id === id ? { ...member, heads: editHeads } : member,
+          member.id === id ? updated : member,
         ),
       );
 
