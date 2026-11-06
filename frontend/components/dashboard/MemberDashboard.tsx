@@ -5,7 +5,6 @@ import { RefreshCw, Wallet, HandCoins, CircleDollarSign, PiggyBank } from "lucid
 import { supabase } from "@/lib/supabase";
 import { apiRequest } from "@/lib/api";
 import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
-import TableLoading from "@/components/ui/TableLoading";
 import { RATE } from "@/lib/constants/member";
 
 type Member = { id: number; name?: string; heads?: number };
@@ -67,7 +66,7 @@ export default function MemberDashboard() {
       {cards.map(({label,value,hint,Icon,color}) => <article key={label} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center justify-between"><p className="text-sm text-slate-500">{label}</p><span className={`rounded-lg p-2 ${color}`}><Icon size={20}/></span></div><p className="mt-4 text-2xl font-bold tabular-nums">{loading ? "—" : value}</p><p className="mt-1 text-xs text-slate-500">{hint}</p></article>)}
     </section>
     <section className="grid gap-4 lg:grid-cols-3">
-      <article className="rounded-xl border border-slate-200 bg-white p-5 lg:col-span-2"><h3 className="font-semibold text-slate-900">My weekly sinking fund collections</h3><p className="mt-1 text-sm text-slate-500">Monthly summary at ₱{RATE} per registered head.</p><div className="mt-4">{loading ? <TableLoading/> : <DataTable data={months} columns={columns} emptyMessage="No weekly collections have been recorded yet."/>}</div></article>
+      <article className="rounded-xl border border-slate-200 bg-white p-5 lg:col-span-2"><h3 className="font-semibold text-slate-900">My weekly sinking fund collections</h3><p className="mt-1 text-sm text-slate-500">Monthly summary at ₱{RATE} per registered head.</p><div className="mt-4">{loading ? <p className="py-8 text-center text-sm text-slate-500">Loading records...</p> : <DataTable data={months} columns={columns} getRowKey={x => x.month} emptyMessage="No weekly collections have been recorded yet."/>}</div></article>
       <article className="rounded-xl border border-slate-200 bg-white p-5"><h3 className="font-semibold">This month</h3><p className="mt-4 text-3xl font-bold text-blue-700">{loading ? "—" : money(monthlyWeeks * Number(member?.heads || 0) * RATE)}</p><p className="mt-1 text-sm text-slate-500">{monthlyWeeks} group collection weeks recorded</p><div className="mt-5 border-t border-slate-100 pt-4 text-sm"><p className="text-slate-500">Registered heads</p><p className="mt-1 text-lg font-semibold">{member?.heads ?? "—"}</p></div></article>
     </section>
   </div>;
