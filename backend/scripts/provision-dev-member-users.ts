@@ -67,14 +67,14 @@ for (const member of members) {
       createdForThisMember = true;
     }
 
-    const { error: linkError } = await supabase
-      .from("members").update({ auth_id: authId }).eq("id", member.id).is("auth_id", null);
-    if (linkError) {
+    const { data: linkedRow, error: linkError } = await supabase
+      .from("members").update({ auth_id: authId }).eq("id", member.id).is("auth_id", null).select("id").maybeSingle();
+    if (linkError || !linkedRow) {
       if (createdForThisMember && authId) {
         const { error: rollbackError } = await supabase.auth.admin.deleteUser(authId);
         if (rollbackError) console.error("Could not roll back newly created Auth user:", rollbackError);
       }
-      throw linkError;
+      throw linkError ?? new Error(`Member ${member.id} was not linked; it may have changed during provisioning.`);
     }
     linkedCount++;
   }
