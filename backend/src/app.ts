@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import memberRoutes from "./routes/member.routes.js";
+import loanRoutes from "./routes/loan.routes.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.middleware.js";
 
 const app = express();
@@ -14,6 +15,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/members", memberRoutes);
+app.use("/api/loans", loanRoutes);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
