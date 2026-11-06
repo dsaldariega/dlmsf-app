@@ -114,10 +114,14 @@ export default function PaymentsPage() {
     }
     setDeletingId(id);
     try {
-      await apiRequest<{ id: number }>(`/api/payments/${id}`, { method: "DELETE" });
+      const result = await apiRequest<{ id: number; auditWarning?: string | null }>(`/api/payments/${id}`, { method: "DELETE" });
       setPayments((current) => current.filter((payment) => payment.id !== id));
       setPaymentToDelete(null);
-      showToast("success", "Payment deleted", `The weekly payment for ${paymentToRemove.week_start} has been deleted and recorded in the audit log.`);
+      if (result.auditWarning) {
+        showToast("warning", "Payment deleted with a warning", "The payment was deleted, but its audit record could not be saved. " + result.auditWarning);
+      } else {
+        showToast("success", "Payment deleted", `The weekly payment for ${paymentToRemove.week_start} has been deleted and recorded in the audit log.`);
+      }
     } catch (error) {
       console.error("Error deleting weekly payment:", error);
       showToast("error", "Deletion failed", error instanceof Error ? error.message : "Unable to delete the weekly payment.");
