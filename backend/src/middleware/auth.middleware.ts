@@ -38,9 +38,19 @@ export async function authenticate(
 
     const token = authorization.substring(7);
 
+    // Use the authenticated user's token for both Auth and the members query.
+    // The application's source of truth for roles is public.members.roles,
+    // not auth.users.app_metadata.role.
     const supabaseAuth = createClient(
       process.env.SUPABASE_URL!,
-      process.env.SUPABASE_ANON_KEY!
+      process.env.SUPABASE_ANON_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      }
     );
 
     const { data, error } =
@@ -54,9 +64,57 @@ export async function authenticate(
       return;
     }
 
-    const role = data.user.app_metadata?.role;
+    const { data: member, error: memberError } = await supabaseAuth
+      .from("members")
+      .select("roles")
+      .eq("auth_id", data.user.id)
+      .maybeSingle();
 
-    if (role !== "admin" && role !== "member") {
+    if (memberError) {
+      console.error("Unable to load user role:", memberError);
+
+      res.status(403).json({
+        success: false,
+        message: "Unable to verify user role"
+      });
+      return;
+    }
+
+    if (!member) {
+      res.status(403).json({
+        success: false,
+        message: "User profile not found"
+      });
+      return;
+    }
+
+    const rawRoles = member.roles;
+    const roles =
+      typeof rawRoles === "string"
+        ? (() => {
+            try {
+              const parsed = JSON.parse(rawRoles);
+              return Array.isArray(parsed) ? parsed : [rawRoles];
+            } catch {
+              return [rawRoles];
+            }
+          })()
+        : Array.isArray(rawRoles)
+          ? rawRoles
+          : [rawRoles];
+
+    const normalizedRoles = roles
+      .filter((role): role is string => typeof role === "string")
+      .map((role) => role.trim().toLowerCase());
+
+    const role =
+      normalizedRoles.includes("admin")
+        ? "admin"
+        : normalizedRoles.includes("member")
+          ? "member"
+          : null;
+
+    if (!role) {
       res.status(403).json({
         success: false,
         message: "Invalid user role"
