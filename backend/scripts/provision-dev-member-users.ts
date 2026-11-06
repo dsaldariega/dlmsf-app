@@ -43,6 +43,7 @@ for (const member of members) {
       throw new Error(`Safety stop: member ${member.id} is already linked to a different or unavailable login.`);
     }
   } else {
+    let createdForThisMember = false;
     const existing = users.find((user) => user.email?.toLowerCase() === email);
     if (existing) {
       const { data: otherMember, error: otherError } = await supabase
@@ -63,11 +64,18 @@ for (const member of members) {
       if (!data.user) throw new Error(`Supabase did not return a user for member ${member.id}.`);
       authId = data.user.id;
       createdCount++;
+      createdForThisMember = true;
     }
 
     const { error: linkError } = await supabase
       .from("members").update({ auth_id: authId }).eq("id", member.id).is("auth_id", null);
-    if (linkError) throw linkError;
+    if (linkError) {
+      if (createdForThisMember && authId) {
+        const { error: rollbackError } = await supabase.auth.admin.deleteUser(authId);
+        if (rollbackError) console.error("Could not roll back newly created Auth user:", rollbackError);
+      }
+      throw linkError;
+    }
     linkedCount++;
   }
 
