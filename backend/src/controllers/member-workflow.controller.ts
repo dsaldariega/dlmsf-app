@@ -40,7 +40,7 @@ export async function reviewLoanRequest(req: Request,res: Response,next: NextFun
 }
 export async function listPaymentSubmissions(req: Request,res: Response,next: NextFunction) {
   try {
-    let q=client(req).from("payment_submissions").select("*, member:members!payment_submissions_member_id_fkey(name), loan:loans(id,total,months,status)").order("submitted_at",{ascending:false});
+    let q=client(req).from("payment_submissions").select("*, member:members!payment_submissions_member_id_fkey(name), loan:loans(id,total,monthly,months,status)").order("submitted_at",{ascending:false});
     if(req.user?.role==="member") {
       const {data:m,error}=await client(req).from("members").select("id").eq("auth_id",req.user.id).maybeSingle();
       if(error) throw error; if(!m) throw Object.assign(new Error("Member profile not found."),{status:404});
