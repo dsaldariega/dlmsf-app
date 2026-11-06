@@ -13,35 +13,57 @@ function validId(value: string | string[]) {
 export async function getAuditRecords(req: Request, res: Response, next: NextFunction) {
   try {
     const client = db(req);
-    let loanQuery = client.from("loans_audit_log").select("*").order("created_date", { ascending: false });
-    if (req.user?.role === "member") {
-      const { data: member, error } = await client.from("members").select("id").eq("auth_id", req.user.id).maybeSingle();
+    const isMember = req.user?.role === "member";
+    let memberId: number | null = null;
+    if (isMember) {
+      const { data: member, error } = await client.from("members").select("id").eq("auth_id", req.user!.id).maybeSingle();
       if (error) throw error;
       if (!member) throw Object.assign(new Error("Member profile not found."), { status: 404 });
-      loanQuery = loanQuery.eq("member_id", member.id);
+      memberId = Number(member.id);
     }
-    const [loans, payments] = await Promise.all([
-      loanQuery,
-      req.user?.role === "member"
-        ? (async () => {
-            const { data: member } = await client.from("members").select("id").eq("auth_id", req.user!.id).maybeSingle();
-            if (!member) return { data: [], error: null } as any;
-            const { data, error } = await client.from("payment_submissions").select("*").eq("member_id", member.id).order("submitted_at", { ascending: false });
-            return {
-              data: (data ?? []).map((row: any) => ({
-                id: row.id, amount: row.amount, week_start: row.week_start,
-                action: (row.payment_type === "Weekly" ? "Weekly contribution " : "Loan repayment ") + String(row.status || "Pending").toLowerCase(),
-                remarks: row.admin_remarks || row.reference || null,
-                created_date: row.reviewed_at || row.submitted_at
-              })),
-              error
-            };
-          })()
+
+    let loanAuditQuery = client.from("loans_audit_log").select("*").order("created_date", { ascending: false });
+    let loanRequestQuery = client.from("loan_requests").select("id,member_id,amount,status,requested_at,reviewed_at,admin_remarks,member:members!loan_requests_member_id_fkey(name)").order("requested_at", { ascending: false });
+    let paymentSubmissionQuery = client.from("payment_submissions").select("id,member_id,payment_type,amount,paid_on,week_start,status,submitted_at,reviewed_at,admin_remarks,reference").order("submitted_at", { ascending: false });
+    if (memberId !== null) {
+      loanAuditQuery = loanAuditQuery.eq("member_id", memberId);
+      loanRequestQuery = loanRequestQuery.eq("member_id", memberId);
+      paymentSubmissionQuery = paymentSubmissionQuery.eq("member_id", memberId);
+    }
+
+    const [loanAudit, loanRequests, paymentSubmissions, paymentAudit] = await Promise.all([
+      loanAuditQuery,
+      loanRequestQuery,
+      paymentSubmissionQuery,
+      isMember ? Promise.resolve({ data: [], error: null } as any)
         : client.from("payments_audit_log").select("*").order("id", { ascending: false })
     ]);
-    if (loans.error) throw loans.error;
-    if (payments.error) throw payments.error;
-    res.json({ success: true, data: { loans: loans.data ?? [], payments: payments.data ?? [] } });
+    for (const result of [loanAudit, loanRequests, paymentSubmissions, paymentAudit]) if (result.error) throw result.error;
+
+    const loanRequestRows = (loanRequests.data ?? []).map((row: any) => ({
+      id: -Number(row.id),
+      member_id: row.member_id,
+      borrower_name: row.member?.name ?? "Member",
+      amount: row.amount,
+      total: row.amount,
+      action: "Loan request " + String(row.status || "Pending").toLowerCase(),
+      remarks: row.admin_remarks || null,
+      created_date: row.reviewed_at || row.requested_at
+    }));
+    const paymentSubmissionRows = (paymentSubmissions.data ?? []).map((row: any) => ({
+      id: -Number(row.id),
+      member_id: row.member_id,
+      amount: row.amount,
+      week_start: row.week_start,
+      action: (row.payment_type === "Weekly" ? "Weekly contribution " : "Loan repayment ") + String(row.status || "Pending").toLowerCase(),
+      remarks: row.admin_remarks || row.reference || null,
+      created_date: row.reviewed_at || row.submitted_at
+    }));
+
+    res.json({ success: true, data: {
+      loans: [...(loanAudit.data ?? []), ...loanRequestRows],
+      payments: [...(paymentAudit.data ?? []), ...paymentSubmissionRows]
+    } });
   } catch (error) { next(error); }
 }
 export async function deleteLoanAudit(req: Request, res: Response, next: NextFunction) {
