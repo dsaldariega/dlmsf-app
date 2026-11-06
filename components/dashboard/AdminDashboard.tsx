@@ -9,7 +9,7 @@ import {
   TrendingUp,
   RefreshCw,
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { apiRequest } from "@/lib/api";
 import { withAuth } from "@/lib/withAuth";
 import { Member } from "@/lib/types/member";
 import { LoanPayment, Payment } from "@/lib/types/payment";
@@ -58,33 +58,23 @@ function AdminDashboard() {
   const loadData = useCallback(async () => {
     setLoading(true);
     setLoadError("");
-
     try {
-      const results = await Promise.all([
-        supabase.from("members").select("*"),
-        supabase.from("payments").select("*"),
-        supabase.from("loans").select("*"),
-        supabase.from("loan_payments").select("*"),
-      ]);
-
-      const [m, p, l, lp] = results;
-
-      if (m.error || p.error || l.error || lp.error) {
-        console.error("Dashboard query errors:", results);
-        setLoadError("Some dashboard data could not be loaded.");
-      }
-
-      setMembers((m.data ?? []) as Member[]);
-      setPayments((p.data ?? []) as Payment[]);
-      setLoans((l.data ?? []) as Loan[]);
-      setLoanPayments((lp.data ?? []) as LoanPayment[]);
+      const data = await apiRequest<{
+        members: Member[];
+        payments: Payment[];
+        loans: Loan[];
+        loanPayments: LoanPayment[];
+      }>("/api/dashboard");
+      setMembers(data.members);
+      setPayments(data.payments);
+      setLoans(data.loans);
+      setLoanPayments(data.loanPayments);
     } catch (error) {
-      console.error(error);
-      setLoadError("Unable to load dashboard data. Please try again.");
+      console.error("Dashboard API error:", error);
+      setLoadError(error instanceof Error ? error.message : "Unable to load dashboard data. Please try again.");
     } finally {
       setLoading(false);
     }
-  }, []);
 
   useEffect(() => {
     void loadData();
