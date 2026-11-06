@@ -11,14 +11,15 @@ Create or configure a separate Vercel project connected to this repository:
 
 - Project root directory: `backend`
 - Framework preset: Other
-- Production branch: `dev` while developing this branch; change only when your team promotes the code
+- Production branch: `main`
+- The `dev` branch and feature branches create Preview deployments; do not make `dev` the production branch
 - The catch-all function in `api/[...path].ts` forwards API requests to the Express app.
 
 Set these environment variables in the backend Vercel project for the required environments:
 
 - `SUPABASE_URL`: Supabase project URL
 - `SUPABASE_ANON_KEY`: Supabase anon/publishable key (never use a service-role key)
-- `FRONTEND_URL`: deployed frontend origin, e.g. `https://dlmsf-app.vercel.app`
+- `FRONTEND_URL`: comma-separated frontend origins allowed by CORS, e.g. `https://dlmsf-app.vercel.app,https://dlmsf-app-git-dev-dsaldariegas-projects.vercel.app`
 - `NODE_ENV`: `production`
 
 Do not commit secrets. Add them in Vercel Project Settings → Environment Variables.
@@ -28,7 +29,8 @@ Do not commit secrets. Add them in Vercel Project Settings → Environment Varia
 Configure the existing frontend Vercel project with:
 
 - Project root directory: `frontend`
-- Production branch: `dev` while developing this branch
+- Production branch: `main`
+- The `dev` branch and feature branches create Preview deployments
 - `NEXT_PUBLIC_API_URL`: deployed backend origin, e.g. `https://dlmsf-api.vercel.app`
 
 Set the variable for Production, Preview, and Development as needed, then redeploy.
