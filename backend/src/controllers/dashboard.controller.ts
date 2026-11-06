@@ -5,6 +5,21 @@ export async function getDashboard(req: Request, res: Response, next: NextFuncti
   try {
     if (!req.accessToken) throw Object.assign(new Error("Authentication required"), { status: 401 });
     const client = createUserSupabaseClient(req.accessToken);
+
+    if (req.user?.role === "member") {
+      const { data: member, error: memberError } = await client.from("members").select("id,name,heads").eq("auth_id", req.user.id).maybeSingle();
+      if (memberError) throw memberError;
+      if (!member) throw Object.assign(new Error("Member profile not found."), { status: 404 });
+      const [payments, loans, loanPayments] = await Promise.all([
+        client.from("payments").select("*"),
+        client.from("loans").select("*").eq("borrower_id", member.id),
+        client.from("loan_payments").select("*").eq("member_id", member.id)
+      ]);
+      for (const result of [payments, loans, loanPayments]) if (result.error) throw result.error;
+      res.json({ success: true, data: { member, payments: payments.data ?? [], loans: loans.data ?? [], loanPayments: loanPayments.data ?? [] } });
+      return;
+    }
+
     const results = await Promise.all([
       client.from("members").select("*"),
       client.from("payments").select("*"),
@@ -13,9 +28,6 @@ export async function getDashboard(req: Request, res: Response, next: NextFuncti
     ]);
     for (const result of results) if (result.error) throw result.error;
     const [members, payments, loans, loanPayments] = results;
-    res.json({ success: true, data: {
-      members: members.data ?? [], payments: payments.data ?? [],
-      loans: loans.data ?? [], loanPayments: loanPayments.data ?? []
-    }});
+    res.json({ success: true, data: { members: members.data ?? [], payments: payments.data ?? [], loans: loans.data ?? [], loanPayments: loanPayments.data ?? [] } });
   } catch (error) { next(error); }
 }
