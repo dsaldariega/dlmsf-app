@@ -40,3 +40,16 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Development/build artifacts
+/dev/
+/dist/
+/.turbo/
+
+# Dependencies (nested)
+**/node_modules/
+
+# Build outputs (nested)
+**/.next/
+**/build/
+**/dist/
