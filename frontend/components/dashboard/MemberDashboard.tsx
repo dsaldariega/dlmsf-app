@@ -9,7 +9,7 @@ import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
 type Member = { id: number; name?: string; heads?: number };
 type Loan = { id: number; borrower_id: number; amount: number | string; total: number; months: number; status: string | null };
 type Payment = { id: number; week_start: string; amount: number | string };
-type LoanPayment = { id: number | string; member_id: number; amount: number | string; paid_at: string; action?: string };
+type LoanPayment = { id: number | string; loan_id?: number; member_id: number; amount: number | string; paid_at: string; action?: string };
 type Data = { payments: Payment[]; loans: Loan[]; loanPayments: LoanPayment[] };
 const money = (n: number) => `₱${n.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const monthOf = (date: string) => new Date(date + "T00:00:00").toLocaleDateString("en-US", { month: "long", year: "numeric" });
@@ -39,7 +39,7 @@ export default function MemberDashboard() {
   const weeks = data?.payments ?? [];
   const contributed = weeks.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
   const loanTotal = loans.reduce((s, x) => s + Number(x.total || 0), 0);
-  const outstanding = loans.filter(x => x.status?.toLowerCase() !== "paid").reduce((s, x) => s + Number(x.total || 0), 0);
+  const outstanding = loans.filter(x => x.status?.toLowerCase() !== "paid").reduce((sum, loan) => { const paid = repayments.filter(payment => Number(payment.loan_id) === loan.id).reduce((total, payment) => total + Number(payment.amount || 0), 0); return sum + Math.max(Number(loan.total || 0) - paid, 0); }, 0);
   const fundGrowth = repayments.filter(x => !/pending|rejected/i.test(x.action || "")).reduce((s, x) => s + Number(x.amount || 0), 0);
   const thisMonth = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
   const currentMonthPayments = weeks.filter(x => monthOf(x.week_start) === thisMonth);
