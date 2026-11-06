@@ -75,6 +75,7 @@ export async function deleteLoan(req: Request, res: Response, next: NextFunction
     if (!deleted) throw Object.assign(new Error("Loan could not be deleted."), { status: 409 });
 
     const { error: auditError } = await client.from("loans_audit_log").insert({
+      member_id: loan.borrower_id,
       borrower_name: loan.borrower?.name ?? "Unknown borrower",
       amount: loan.amount, interest: loan.interest, total: loan.total, monthly: loan.monthly,
       action: "Loan Deleted", remarks: "Loan deleted from loan records", created_date: new Date().toISOString()
