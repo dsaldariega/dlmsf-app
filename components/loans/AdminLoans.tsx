@@ -132,10 +132,14 @@ export default function LoansPage() {
     }
     setProcessingId(id);
     try {
-      await apiRequest<{ id: number }>(`/api/loans/${id}`, { method: "DELETE" });
+      const result = await apiRequest<{ id: number; auditWarning?: string | null }>(`/api/loans/${id}`, { method: "DELETE" });
       setLoans((current) => current.filter((loan) => loan.id !== id));
       setLoanAction(null);
-      showToast("success", "Loan deleted", "The loan was removed and its deletion was recorded in the audit log.");
+      if (result.auditWarning) {
+        showToast("warning", "Loan deleted with a warning", "The loan was deleted, but its audit record could not be saved. " + result.auditWarning);
+      } else {
+        showToast("success", "Loan deleted", "The loan was removed and its deletion was recorded in the audit log.");
+      }
     } catch (error) {
       console.error("Error deleting loan:", error);
       showToast("error", "Deletion failed", error instanceof Error ? error.message : "Please try again.");
