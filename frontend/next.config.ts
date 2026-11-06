@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   turbopack: {
     // The repository is a monorepo: keep Turbopack's workspace root aligned
     // with Vercel's output tracing root (the repository root).
-    root: path.resolve(process.cwd(), ".."),
+    root: path.resolve(process.cwd()),
   },
 };
 
