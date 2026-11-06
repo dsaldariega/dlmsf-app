@@ -94,7 +94,7 @@ export default function AuditPage() {
       key: "ref_id",
       header: "Reference ID",
       headerClassName: "w-40",
-      render: (audit) => (
+      render: (audit) => audit.synthetic ? (\n        <span className="text-xs text-slate-400">Workflow record</span>\n      ) : (
         <span className="font-mono text-xs font-semibold text-blue-700">
           {audit.ref_id || "Not assigned"}
         </span>
@@ -205,7 +205,7 @@ export default function AuditPage() {
     {
       key: "ref_id",
       header: "Reference ID",
-      render: (payment) => (
+      render: (payment) => payment.synthetic ? (\n        <span className="text-xs text-slate-400">Workflow record</span>\n      ) : (
         <span className="font-mono text-xs font-semibold text-blue-700">
           {payment.ref_id || "Not assigned"}
         </span>
