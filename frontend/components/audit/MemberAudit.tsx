@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { apiRequest } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils/loans";
 import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
+import TableLoading from "@/components/ui/TableLoading";
 import { Activity, ShieldCheck } from "lucide-react";
 
 type LoanAudit = { id: number; borrower_name: string; amount: number | string; total: number | string; action: string; remarks?: string; created_date: string };
