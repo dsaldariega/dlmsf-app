@@ -15,7 +15,15 @@ function idParam(value: string | string[]) {
 
 export async function getLoans(req: Request, res: Response, next: NextFunction) {
   try {
-    const { data, error } = await db(req).from("loans").select("*, borrower:borrower_id(name)").order("id", { ascending: false });
+    const client = db(req);
+    let query = client.from("loans").select("*, borrower:borrower_id(name)").order("id", { ascending: false });
+    if (req.user?.role === "member") {
+      const { data: member, error: memberError } = await client.from("members").select("id").eq("auth_id", req.user.id).maybeSingle();
+      if (memberError) throw memberError;
+      if (!member) throw Object.assign(new Error("Member profile not found."), { status: 404 });
+      query = query.eq("borrower_id", member.id);
+    }
+    const { data, error } = await query;
     if (error) throw error;
     res.json({ success: true, data: data ?? [] });
   } catch (error) { next(error); }
