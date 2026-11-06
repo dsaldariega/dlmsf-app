@@ -1,7 +1,7 @@
 {
   "private": true,
   "scripts": {
-    "dev": "concurrently --kill-others-on-fail --names frontend,backend "npm:dev:frontend" "npm:dev:backend"",
+    "dev": "concurrently --kill-others-on-fail --names frontend,backend \"npm:dev:frontend\" \"npm:dev:backend\"",
     "dev:frontend": "npm --prefix frontend run dev",
     "dev:backend": "npm --prefix backend run dev",
     "build": "npm run build:frontend && npm run build:backend",
