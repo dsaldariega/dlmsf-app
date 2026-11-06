@@ -22,7 +22,7 @@ export async function getDashboard(req: Request, res: Response, next: NextFuncti
 
     const results = await Promise.all([
       client.from("members").select("*"),
-      client.from("payments").select("*"),
+      client.from("payment_submissions").select("id,week_start,amount").eq("member_id", member.id).eq("payment_type", "Weekly").eq("status", "Confirmed"),
       client.from("loans").select("*"),
       client.from("loan_payments").select("*")
     ]);
