@@ -16,7 +16,19 @@ export async function getDashboard(req: Request, res: Response, next: NextFuncti
         client.from("loan_payments").select("*").eq("member_id", member.id).order("paid_at", { ascending: false })
       ]);
       for (const result of [payments, loans, loanPayments]) if (result.error) throw result.error;
-      res.json({ success: true, data: { member, payments: payments.data ?? [], loans: loans.data ?? [], loanPayments: loanPayments.data ?? [] } });
+      const byWeek = new Map<string, { id: number; week_start: string; amount: number }>();
+      for (const row of payments.data ?? []) {
+        const week = String(row.week_start);
+        const entry = byWeek.get(week) ?? { id: Number(row.id), week_start: week, amount: 0 };
+        entry.amount += Number(row.amount || 0);
+        byWeek.set(week, entry);
+      }
+      res.json({ success: true, data: {
+        member,
+        payments: [...byWeek.values()].sort((a, b) => b.week_start.localeCompare(a.week_start)),
+        loans: loans.data ?? [],
+        loanPayments: loanPayments.data ?? []
+      } });
       return;
     }
 
