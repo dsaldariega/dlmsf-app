@@ -1,7 +1,7 @@
+import { randomBytes } from "node:crypto";
 import type { Request, Response, NextFunction } from "express";
 import { createSupabaseAdminClient } from "../config/supabase-admin.js";
 
-const DEFAULT_MEMBER_PASSWORD = "Password!123";
 
 function memberEmail(name: string): string {
   const slug = name
@@ -23,6 +23,7 @@ function parseId(value: string | string[]): number {
 
 export async function createMemberWithLogin(req: Request, res: Response, next: NextFunction) {
   let newlyCreatedAuthId: string | null = null;
+  let temporaryPassword: string | null = null;
   try {
     const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
     const heads = Number(req.body?.heads);
@@ -42,25 +43,28 @@ export async function createMemberWithLogin(req: Request, res: Response, next: N
         .from("members").select("id").eq("auth_id", authId).maybeSingle();
       if (linkedError) throw linkedError;
       if (linkedMember) throw Object.assign(new Error("That login email is already linked to another member."), { status: 409 });
-    } else {
-      const { data: created, error: createError } = await admin.auth.admin.createUser({
-        email,
-        password: DEFAULT_MEMBER_PASSWORD,
-        email_confirm: true,
-        user_metadata: { name }
-      });
-      if (createError) throw createError;
-      if (!created.user) throw new Error("Supabase did not return the created login.");
-      authId = created.user.id;
-      newlyCreatedAuthId = authId;
+      throw Object.assign(new Error("A Supabase login already exists for this generated email but is not linked to a member. Resolve that account before creating this member."), { status: 409 });
     }
+
+    const generatedPassword = randomBytes(24).toString("base64url");
+    temporaryPassword = generatedPassword;
+    const { data: created, error: createError } = await admin.auth.admin.createUser({
+      email,
+      password: generatedPassword,
+      email_confirm: true,
+      user_metadata: { name }
+    });
+    if (createError) throw createError;
+    if (!created.user) throw new Error("Supabase did not return the created login.");
+    authId = created.user.id;
+    newlyCreatedAuthId = authId;
 
     const { data, error } = await admin
       .from("members")
       .insert({ name, heads, roles: ["member"], auth_id: authId })
       .select("*").single();
     if (error) throw error;
-    res.status(201).json({ success: true, data, message: "Member and login created.", loginEmail: email });
+    res.status(201).json({ success: true, data: { member: data, loginEmail: email, temporaryPassword }, message: "Member and login created. Share the one-time temporary password securely." });
   } catch (error) {
     if (newlyCreatedAuthId) {
       try {

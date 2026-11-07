@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 
 const expectedProjectRef = "edbtjhifjtvmjvljculd";
@@ -36,6 +37,7 @@ let linkedCount = 0;
 for (const member of members) {
   const email = member.id === 1 ? "admin@test.com" : `member${member.id}@test.com`;
   let authId = member.auth_id as string | null;
+  let temporaryPassword: string | null = null;
 
   if (authId) {
     const { data, error } = await supabase.auth.admin.getUserById(authId);
@@ -54,9 +56,10 @@ for (const member of members) {
       }
       authId = existing.id;
     } else {
+      temporaryPassword = randomBytes(24).toString("base64url");
       const { data, error } = await supabase.auth.admin.createUser({
         email,
-        password: "Password!123",
+        password: temporaryPassword,
         email_confirm: true,
         user_metadata: { name: member.name }
       });
@@ -79,7 +82,7 @@ for (const member of members) {
     linkedCount++;
   }
 
-  console.log(`Prepared member ${member.id}: ${email}`);
+  console.log(`Prepared member ${member.id}: ${email}${temporaryPassword ? ` | temporary password: ${temporaryPassword}` : ""}`);
 }
 
 const { count, error: countError } = await supabase
