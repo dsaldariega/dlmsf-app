@@ -13,7 +13,7 @@ create or replace function public.admin_record_weekly_contribution(
 returns public.payment_submissions
 language plpgsql
 security definer
-set search_path = pg_catalog, public, private, auth
+set search_path = pg_catalog
 as $$
 declare
   v_member public.members;
