@@ -53,7 +53,7 @@ export async function listPaymentSubmissions(req: Request,res: Response,next: Ne
 export async function submitPayment(req: Request,res: Response,next: NextFunction) {
   try {
     const {paymentType,amount,paidOn,weekStart,loanId,reference}=req.body??{};
-    if(!["Weekly","Loan"].includes(paymentType)||!Number.isFinite(Number(amount))) throw Object.assign(new Error("Enter a valid payment type and amount."),{status:400});
+    if(paymentType!=="Loan"||!Number.isFinite(Number(amount))) throw Object.assign(new Error("Enter a valid payment type and amount."),{status:400});
     const {data,error}=await client(req).rpc("submit_payment",{
       p_type:paymentType,p_amount:Number(amount),p_paid_on:paidOn||null,p_week_start:weekStart||null,
       p_loan_id:loanId?Number(loanId):null,p_reference:typeof reference==="string"?reference:null
