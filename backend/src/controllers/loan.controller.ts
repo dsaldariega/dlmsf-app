@@ -15,7 +15,15 @@ function idParam(value: string | string[]) {
 
 export async function getLoans(req: Request, res: Response, next: NextFunction) {
   try {
-    const { data, error } = await db(req).from("loans").select("*, borrower:borrower_id(name)").order("id", { ascending: false });
+    const client = db(req);
+    let query = client.from("loans").select("*, borrower:borrower_id(name)").order("id", { ascending: false });
+    if (req.user?.role === "member") {
+      const { data: member, error: memberError } = await client.from("members").select("id").eq("auth_id", req.user.id).maybeSingle();
+      if (memberError) throw memberError;
+      if (!member) throw Object.assign(new Error("Member profile not found."), { status: 404 });
+      query = query.eq("borrower_id", member.id);
+    }
+    const { data, error } = await query;
     if (error) throw error;
     res.json({ success: true, data: data ?? [] });
   } catch (error) { next(error); }
@@ -28,7 +36,7 @@ export async function createLoan(req: Request, res: Response, next: NextFunction
     const months = Number(req.body?.months);
     if (!Number.isSafeInteger(borrowerId) || borrowerId < 1) throw Object.assign(new Error("Choose a valid registered borrower."), { status: 400 });
     if (!Number.isFinite(amount) || amount < 500 || amount % 500 !== 0) throw Object.assign(new Error("Loan amount must be at least ₱500 and in increments of ₱500."), { status: 400 });
-    if (!Number.isInteger(months) || !LOAN_DURATIONS.includes(months)) throw Object.assign(new Error("Choose a valid repayment duration (1–12 months)."), { status: 400 });
+    if (!Number.isInteger(months) || !LOAN_DURATIONS.includes(months)) throw Object.assign(new Error("Choose a valid repayment duration (1, 2, 3, 4, 5, 6, 9, 12, 18, or 24 months)."), { status: 400 });
 
     const client = db(req);
     const { data: created, error: createError } = await client.rpc("create_loan", {

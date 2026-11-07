@@ -25,6 +25,7 @@ function MembersPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Member | null>(null);
+  const [createdCredentials, setCreatedCredentials] = useState<{ email: string; password: string } | null>(null);
 
   useEffect(() => {
     void fetchMembers();
@@ -72,13 +73,14 @@ function MembersPage() {
     setAdding(true);
 
     try {
-      const data = await apiRequest<Member>("/api/members", {
+      const result = await apiRequest<{ member: Member; loginEmail: string; temporaryPassword: string }>("/api/members", {
         method: "POST",
         body: JSON.stringify({ name: trimmedName, heads }),
       });
 
       // Add only the newly created member to the existing list.
-      setMembers((currentMembers) => [data as Member, ...currentMembers]);
+      setMembers((currentMembers) => [result.member, ...currentMembers]);
+      setCreatedCredentials({ email: result.loginEmail, password: result.temporaryPassword });
 
       // Reset and close the add-member modal.
       setName("");
@@ -88,7 +90,7 @@ function MembersPage() {
       showToast(
         "success",
         "Member added successfully",
-        `${trimmedName} has been added to your member records.`,
+        `${trimmedName} has been added. Copy the one-time login details shown on this page.`,
       );
     } catch (error) {
       console.error("Error adding member:", error);
@@ -236,6 +238,18 @@ function MembersPage() {
     });
   };
 
+  const copyCreatedCredentials = async () => {
+    if (!createdCredentials) return;
+    try {
+      await navigator.clipboard.writeText(
+        `Email: ${createdCredentials.email}\nTemporary password: ${createdCredentials.password}`,
+      );
+      showToast("success", "Credentials copied", "Share them with the member through a secure channel.");
+    } catch {
+      showToast("warning", "Copy unavailable", "Select and copy the login details manually.");
+    }
+  };
+
   useEffect(() => {
     if (!toast) return;
 
@@ -320,6 +334,22 @@ function MembersPage() {
 
   return (
     <div className="space-y-6">
+      {createdCredentials && (
+        <section aria-live="polite" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-950">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <h2 className="font-semibold">One-time member login details</h2>
+              <p className="mt-1 text-sm">Copy these details and share them with the member through a secure channel. The temporary password will not be shown again after you dismiss this notice.</p>
+              <p className="mt-3 text-sm"><span className="font-semibold">Login email:</span> {createdCredentials.email}</p>
+              <p className="mt-1 break-all text-sm"><span className="font-semibold">Temporary password:</span> <code>{createdCredentials.password}</code></p>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <button type="button" onClick={() => void copyCreatedCredentials()} className="rounded-lg bg-amber-900 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-800">Copy details</button>
+              <button type="button" onClick={() => setCreatedCredentials(null)} className="rounded-lg border border-amber-300 px-3 py-2 text-sm font-semibold text-amber-950 hover:bg-amber-100">Dismiss</button>
+            </div>
+          </div>
+        </section>
+      )}
       {/* Animated Toast Notifications */}
       <div
         className="pointer-events-none fixed right-4 top-4 z-100 flex w-[calc(100%-2rem)] max-w-sm flex-col gap-3 sm:right-6 sm:top-6"
@@ -555,7 +585,7 @@ function MembersPage() {
 
                     <div className="mt-4 rounded-lg border border-red-100 bg-red-50/70 px-3 py-3">
                       <p className="mt-1 text-xs text-red-600">
-                        This member will be removed from your records.
+                        This member will be removed from your records, and the linked development login account will also be permanently deleted. This cannot be undone.
                       </p>
                     </div>
                   </div>
