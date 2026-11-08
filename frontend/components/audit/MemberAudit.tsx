@@ -7,9 +7,9 @@ import { formatCurrency } from "@/lib/utils/loans";
 import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
 import TableLoading from "@/components/ui/TableLoading";
 import { Activity, ShieldCheck } from "lucide-react";
+import type { LoanAudit, PaymentAudit } from "@/lib/types";
 
-type LoanAudit = { id: number; borrower_name: string; amount: number | string; total: number | string; action: string; remarks?: string; created_date: string };
-type PaymentAudit = { id: number; week_start?: string; amount: number | string; action: string; remarks?: string; created_date: string };
+
 export default function MemberAudit() {
   const [loans, setLoans] = useState<LoanAudit[]>([]);
   const [payments, setPayments] = useState<PaymentAudit[]>([]);
