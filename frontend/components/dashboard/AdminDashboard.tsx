@@ -479,7 +479,7 @@ function AdminDashboard() {
           Monthly loan repayment targets and actual collections.
         </p>
 
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="dlmsf-card overflow-x-auto">
           <div className="max-h-[26rem] overflow-y-auto">
             <DataTable
               data={MONTHS}
