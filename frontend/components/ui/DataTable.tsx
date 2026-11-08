@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { Inbox } from "lucide-react";
 
 export type DataTableColumn<T> = {
   key: string;
@@ -42,7 +43,8 @@ export default function DataTable<T>({
   getRowKey,
 }: DataTableProps<T>) {
   return (
-    <div className="dlmsf-table-responsive"><table className={`${tableClassName} dlmsf-table dlmsf-table-striped relative`} style={{ width: "100%" }}>
+    <div className="dlmsf-table-responsive">
+      <table className={`${tableClassName} dlmsf-table dlmsf-table-striped relative`} style={{ width: "100%" }}>
       <thead className="bg-slate-50">
         <tr>
           {columns.map((column) => (
@@ -71,7 +73,7 @@ export default function DataTable<T>({
                 colSpan={columns.length}
                 className={`${tdClassName} text-center`}
               >
-                <div className="flex flex-col items-center justify-center gap-3 py-6">
+                <div className="flex flex-col items-center justify-center gap-3 py-8" aria-live="polite">
                   <span
                     className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600"
                     role="status"
@@ -90,7 +92,12 @@ export default function DataTable<T>({
               colSpan={columns.length}
               className={`${tdClassName} text-center`}
             >
-              {emptyContent ?? emptyMessage}
+              {emptyContent ?? (
+                <div className="flex flex-col items-center justify-center gap-2 py-8">
+                  <Inbox size={30} className="text-slate-300" aria-hidden="true" />
+                  <span className="text-sm font-medium text-slate-500">{emptyMessage}</span>
+                </div>
+              )}
             </td>
           </tr>
         ) : (
@@ -132,6 +139,7 @@ export default function DataTable<T>({
           </AnimatePresence>
         )}
       </tbody>
-    </table>
+      </table>
+    </div>
   );
 }
