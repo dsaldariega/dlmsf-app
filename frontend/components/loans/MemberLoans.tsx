@@ -6,8 +6,9 @@ import { apiRequest } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils/loans";
 import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
 import { HandCoins, Info } from "lucide-react";
+import type { Loan, DataTableColumn } from "@/lib/types";
 
-type Loan = { id: number; borrower_id: number; amount: number | string | null; interest: number; total: number; monthly: number; months: number; status: string | null };
+
 export default function MemberLoans() {
   const [loans, setLoans] = useState<Loan[]>([]);
   const [loading, setLoading] = useState(true);
