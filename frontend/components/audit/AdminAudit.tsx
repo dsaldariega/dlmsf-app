@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api";
-import type { AuditToast, LoanAudit, PaymentAudit } from "@/lib/types";
+import type { AuditToast, DataTableColumn, LoanAudit, PaymentAudit } from "@/lib/types";
 import { motion, AnimatePresence } from "motion/react";
 import { formatCurrency } from "@/lib/utils/loans";
 import { getStatusStyle } from "@/lib/utils/audit";
-import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
+import DataTable from "@/components/ui/DataTable";
 import TableLoading from "@/components/ui/TableLoading";
 
 export default function AuditPage() {
