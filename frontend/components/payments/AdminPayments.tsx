@@ -36,7 +36,7 @@ export default function AdminPayments() {
 
   return <div className="space-y-6">
     <header><h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">Payment records</h1><p className="mt-1 text-sm text-slate-500">Review recorded weekly contributions and loan repayments.</p></header>
-    {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+    {error && <p role="alert" className="dlmsf-alert dlmsf-alert-danger">{error}</p>}
     <section className="grid gap-4 sm:grid-cols-2">
       <article className="dlmsf-card p-5"><p className="text-sm font-medium text-slate-500">Total weekly contributions</p><p className="mt-2 text-2xl font-bold tabular-nums text-emerald-700">{loading ? "—" : formatCurrency(total)}</p></article>
       <article className="dlmsf-card p-5"><p className="text-sm font-medium text-slate-500">Weekly collection weeks</p><p className="mt-2 text-2xl font-bold tabular-nums text-blue-700">{loading ? "—" : payments.length.toLocaleString("en-PH")}</p></article>
