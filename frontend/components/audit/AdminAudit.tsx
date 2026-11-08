@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api";
-import { AuditToast, LoanAudit, PaymentAudit } from "@/lib/types/audit";
+import type { AuditToast, LoanAudit, PaymentAudit } from "@/lib/types";
 import { motion, AnimatePresence } from "motion/react";
 import { formatCurrency } from "@/lib/utils/loans";
 import { getStatusStyle } from "@/lib/utils/audit";
