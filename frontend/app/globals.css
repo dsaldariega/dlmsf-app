@@ -698,3 +698,137 @@ select.dlmsf-control option {
     width: min(17rem, calc(100vw - 3rem));
   }
 }
+
+
+/* AdminLTE-style dark skin. Activated by the persisted .dark class on <html>. */
+html.dark {
+  color-scheme: dark;
+  --dlmsf-surface: #1f2937;
+  --dlmsf-page: #111827;
+  --dlmsf-border: #374151;
+  --dlmsf-text: #e5e7eb;
+  --dlmsf-muted: #9ca3af;
+  --background: #111827;
+  --foreground: #e5e7eb;
+}
+html.dark body,
+html.dark .min-h-screen.bg-\[\#f4f6f9\] {
+  background: #111827 !important;
+  color: #e5e7eb !important;
+}
+html.dark .dlmsf-navbar,
+html.dark footer,
+html.dark .dlmsf-card,
+html.dark .dlmsf-modal,
+html.dark .bg-white,
+html.dark .rounded-xl.border.border-slate-200.bg-white {
+  background-color: #1f2937 !important;
+  border-color: #374151 !important;
+  color: #e5e7eb;
+}
+html.dark .dlmsf-card-header,
+html.dark .border-slate-100,
+html.dark .border-slate-200,
+html.dark .border-b,
+html.dark .border-t {
+  border-color: #374151 !important;
+}
+html.dark .text-slate-900,
+html.dark .text-slate-800,
+html.dark .text-slate-700,
+html.dark .text-slate-600,
+html.dark .text-gray-900,
+html.dark .text-gray-800 {
+  color: #e5e7eb !important;
+}
+html.dark .text-slate-500,
+html.dark .text-slate-400,
+html.dark .text-gray-500,
+html.dark .text-gray-400,
+html.dark .dlmsf-page-subtitle,
+html.dark .dlmsf-breadcrumbs {
+  color: #9ca3af !important;
+}
+html.dark .bg-slate-50,
+html.dark .bg-slate-100,
+html.dark .bg-gray-50,
+html.dark .hover\:bg-slate-50:hover,
+html.dark .hover\:bg-slate-100:hover {
+  background-color: #273449 !important;
+}
+html.dark .dlmsf-control,
+html.dark input:not([type="checkbox"]):not([type="radio"]),
+html.dark textarea,
+html.dark select {
+  background-color: #111827 !important;
+  border-color: #4b5563 !important;
+  color: #e5e7eb !important;
+}
+html.dark select.dlmsf-control {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none' stroke='%23cbd5e1' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+}
+html.dark select option {
+  background: #1f2937;
+  color: #e5e7eb;
+}
+html.dark .dlmsf-table thead th {
+  background: #273449 !important;
+  color: #cbd5e1 !important;
+  border-color: #374151 !important;
+}
+html.dark .dlmsf-table tbody tr,
+html.dark .dlmsf-table tbody td {
+  border-color: #374151 !important;
+}
+html.dark .dlmsf-table tbody tr:hover {
+  background: #273449 !important;
+}
+html.dark .dlmsf-btn-outline,
+html.dark .dlmsf-btn-secondary {
+  color: #d1d5db;
+  border-color: #4b5563;
+}
+html.dark .dlmsf-btn-outline:hover,
+html.dark .dlmsf-btn-secondary:hover {
+  background: #374151;
+}
+html.dark .dlmsf-modal-backdrop {
+  background: rgba(0,0,0,.72);
+}
+html.dark .react-datepicker {
+  background: #1f2937 !important;
+  border-color: #4b5563 !important;
+  color: #e5e7eb !important;
+}
+html.dark .react-datepicker__header {
+  background: #273449 !important;
+  border-color: #374151 !important;
+}
+html.dark .react-datepicker__current-month,
+html.dark .react-datepicker__day-name,
+html.dark .react-datepicker__day {
+  color: #e5e7eb !important;
+}
+html.dark .react-datepicker__day:hover {
+  background: #374151 !important;
+}
+html.dark .dlmsf-alert-success {
+  background: #123b2b !important;
+  border-color: #166534 !important;
+  color: #bbf7d0 !important;
+}
+html.dark .dlmsf-alert-danger {
+  background: #451a22 !important;
+  border-color: #7f1d1d !important;
+  color: #fecaca !important;
+}
+html.dark .dlmsf-alert-warning {
+  background: #422d0a !important;
+  border-color: #854d0e !important;
+  color: #fde68a !important;
+}
+html.dark .dlmsf-alert-info {
+  background: #172f49 !important;
+  border-color: #1e40af !important;
+  color: #bfdbfe !important;
+}
