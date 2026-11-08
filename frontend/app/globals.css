@@ -669,3 +669,32 @@ body {
   .dlmsf-modal-backdrop { align-items: flex-start; padding: .75rem; }
   .dlmsf-modal { max-height: calc(100vh - 1.5rem); }
 }
+
+
+/* Consistent native selects and keyboard focus treatment. */
+select.dlmsf-control {
+  appearance: none;
+  padding-right: 2.5rem;
+  background-color: #fff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none' stroke='%236c757d' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right .75rem center;
+  background-size: 1rem;
+}
+select.dlmsf-control option {
+  color: #212529;
+  background: #fff;
+}
+:where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid #0d6efd;
+  outline-offset: 2px;
+}
+.dlmsf-sidebar a:focus-visible {
+  outline-color: #fff;
+  outline-offset: -2px;
+}
+@media (max-width: 1023px) {
+  .dlmsf-sidebar {
+    width: min(17rem, calc(100vw - 3rem));
+  }
+}
