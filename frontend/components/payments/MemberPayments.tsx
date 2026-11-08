@@ -5,15 +5,15 @@ import { supabase } from "@/lib/supabase";
 import { apiRequest } from "@/lib/api";
 import { RATE } from "@/lib/constants/member";
 import { formatCurrency } from "@/lib/utils/loans";
-import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
+import DataTable from "@/components/ui/DataTable";
 import TableLoading from "@/components/ui/TableLoading";
 import { CreditCard, Info } from "lucide-react";
-import type { Payment, LoanPayment, MemberMemberPaymentData, DataTableColumn } from "@/lib/types";
+import type { Payment, LoanPayment, MemberPaymentData, DataTableColumn } from "@/lib/types";
 
 
 export default function MemberPayments() {
   const [rows, setRows] = useState<LoanPayment[]>([]);
-  const [weekly, setPayment] = useState<Payment[]>([]);
+  const [weekly, setWeekly] = useState<Payment[]>([]);
   const [heads, setHeads] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -27,7 +27,7 @@ export default function MemberPayments() {
         if (memberError) throw memberError;
         if (!member) throw new Error("Your member profile could not be found.");
         const data = await apiRequest<MemberPaymentData>("/api/payments");
-        if (active) { setRows(data.loanPayments.filter(x => x.member_id === member.id)); setPayment(data.payments); setHeads(Number(member.heads || 0)); }
+        if (active) { setRows(data.loanPayments.filter(x => x.member_id === member.id)); setWeekly(data.payments); setHeads(Number(member.heads || 0)); }
       } catch (e) { if (active) setError(e instanceof Error ? e.message : "Unable to load payment history."); }
       finally { if (active) setLoading(false); }
     })();
