@@ -47,6 +47,7 @@ export default function DashboardShell({
   children: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -254,7 +255,7 @@ export default function DashboardShell({
           "lg:w-65"
         } ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
-        } lg:translate-x-0`}
+        } ${desktopSidebarOpen ? "lg:translate-x-0" : "lg:-translate-x-full"}` }
       >
         {/* Brand */}
         <div className="dlmsf-brand flex h-16 shrink-0 items-center justify-between border-b border-slate-200 px-4">
@@ -320,7 +321,7 @@ export default function DashboardShell({
 
       {/* Main content */}
       <div
-        className="min-h-screen transition-[margin] duration-200 lg:ml-65"
+        className={`min-h-screen transition-[margin] duration-200 ${desktopSidebarOpen ? "lg:ml-65" : "lg:ml-0"}`}
       >
         {/* Navbar */}
 
@@ -330,11 +331,17 @@ export default function DashboardShell({
             {/* Mobile menu */}
             <button
               type="button"
-              onClick={() => setMobileOpen(true)}
-              aria-label="Open navigation"
-              aria-expanded={mobileOpen}
+              onClick={() => {
+                if (window.matchMedia("(min-width: 1024px)").matches) {
+                  setDesktopSidebarOpen((open) => !open);
+                } else {
+                  setMobileOpen(true);
+                }
+              }}
+              aria-label="Toggle navigation"
+              aria-expanded={desktopSidebarOpen || mobileOpen}
               aria-controls="dlmsf-sidebar"
-              className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm !min-h-0 !border-0 !p-2 lg:hidden"
+              className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm !min-h-0 !border-0 !p-2"
             >
               <Menu size={21} />
             </button>
