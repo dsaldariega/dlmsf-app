@@ -2,11 +2,16 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api";
-import { AuditToast, LoanAudit, PaymentAudit } from "@/lib/types/audit";
+import type {
+  AuditToast,
+  DataTableColumn,
+  LoanAudit,
+  PaymentAudit,
+} from "@/lib/types";
 import { motion, AnimatePresence } from "motion/react";
 import { formatCurrency } from "@/lib/utils/loans";
 import { getStatusStyle } from "@/lib/utils/audit";
-import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
+import DataTable from "@/components/ui/DataTable";
 import TableLoading from "@/components/ui/TableLoading";
 
 export default function AuditPage() {
@@ -36,13 +41,19 @@ export default function AuditPage() {
   const load = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
     try {
-      const data = await apiRequest<{ loans: LoanAudit[]; payments: PaymentAudit[] }>("/api/audit");
+      const data = await apiRequest<{
+        loans: LoanAudit[];
+        payments: PaymentAudit[];
+      }>("/api/audit");
       setLoanAudits(data.loans);
       setPaymentAudits(data.payments);
       setErrorMessage("");
     } catch (error) {
       console.error("Error loading audit records:", error);
-      const message = error instanceof Error ? error.message : "Please refresh the page and try again.";
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Please refresh the page and try again.";
       setErrorMessage(message);
       showToast("error", "Unable to load audit records", message);
     } finally {
@@ -58,30 +69,60 @@ export default function AuditPage() {
     if (deletingLoanId !== null || deletingPaymentId !== null) return;
     setDeletingLoanId(id);
     try {
-      await apiRequest<{ id: number }>(`/api/audit/loans/${id}`, { method: "DELETE" });
+      await apiRequest<{ id: number }>(`/api/audit/loans/${id}`, {
+        method: "DELETE",
+      });
       setLoanAudits((current) => current.filter((audit) => audit.id !== id));
       setIsDeleteLoanModalOpen(false);
       setLoanToDelete(null);
-      showToast("success", "Audit record deleted", "The loan audit record was successfully removed.");
+      showToast(
+        "success",
+        "Audit record deleted",
+        "The loan audit record was successfully removed.",
+      );
     } catch (error) {
       console.error("Error deleting loan audit:", error);
-      showToast("error", "Deletion failed", error instanceof Error ? error.message : "Failed to delete loan audit record.");
-    } finally { setDeletingLoanId(null); }
+      showToast(
+        "error",
+        "Deletion failed",
+        error instanceof Error
+          ? error.message
+          : "Failed to delete loan audit record.",
+      );
+    } finally {
+      setDeletingLoanId(null);
+    }
   };
 
   const deletePaymentAudit = async (id: number) => {
     if (deletingLoanId !== null || deletingPaymentId !== null) return;
     setDeletingPaymentId(id);
     try {
-      await apiRequest<{ id: number }>(`/api/audit/payments/${id}`, { method: "DELETE" });
-      setPaymentAudits((current) => current.filter((payment) => payment.id !== id));
+      await apiRequest<{ id: number }>(`/api/audit/payments/${id}`, {
+        method: "DELETE",
+      });
+      setPaymentAudits((current) =>
+        current.filter((payment) => payment.id !== id),
+      );
       setIsDeletePaymentModalOpen(false);
       setPaymentToDelete(null);
-      showToast("success", "Audit record deleted", "The payment audit record was successfully removed.");
+      showToast(
+        "success",
+        "Audit record deleted",
+        "The payment audit record was successfully removed.",
+      );
     } catch (error) {
       console.error("Error deleting payment audit:", error);
-      showToast("error", "Deletion failed", error instanceof Error ? error.message : "Failed to delete payment audit record.");
-    } finally { setDeletingPaymentId(null); }
+      showToast(
+        "error",
+        "Deletion failed",
+        error instanceof Error
+          ? error.message
+          : "Failed to delete payment audit record.",
+      );
+    } finally {
+      setDeletingPaymentId(null);
+    }
   };
 
   const thClass =
@@ -94,13 +135,14 @@ export default function AuditPage() {
       key: "ref_id",
       header: "Reference ID",
       headerClassName: "w-40",
-      render: (audit) => audit.synthetic ? (
-        <span className="text-xs text-slate-400">Workflow record</span>
-      ) : (
-        <span className="font-mono text-xs font-semibold text-blue-700">
-          {audit.ref_id || "Not assigned"}
-        </span>
-      ),
+      render: (audit) =>
+        audit.synthetic ? (
+          <span className="text-xs text-slate-400">Workflow record</span>
+        ) : (
+          <span className="font-mono text-xs font-semibold text-blue-700">
+            {audit.ref_id || "Not assigned"}
+          </span>
+        ),
     },
     {
       key: "borrower_name",
@@ -121,7 +163,7 @@ export default function AuditPage() {
       header: "Principal",
       render: (audit) => (
         <span className="tabular-nums text-slate-600">
-          {formatCurrency(audit.amount)}
+          {formatCurrency(Number(audit.amount) || 0)}
         </span>
       ),
     },
@@ -130,7 +172,7 @@ export default function AuditPage() {
       header: "Interest",
       render: (audit) => (
         <span className="tabular-nums text-violet-700">
-          {formatCurrency(audit.interest)}
+          {formatCurrency(Number(audit.interest) || 0)}
         </span>
       ),
     },
@@ -139,7 +181,7 @@ export default function AuditPage() {
       header: "Total",
       render: (audit) => (
         <span className="font-semibold tabular-nums text-emerald-700">
-          {formatCurrency(audit.total)}
+          {formatCurrency(Number(audit.total) || 0)}
         </span>
       ),
     },
@@ -148,7 +190,7 @@ export default function AuditPage() {
       header: "Monthly",
       render: (audit) => (
         <span className="tabular-nums text-slate-600">
-          {formatCurrency(audit.monthly)}
+          {formatCurrency(Number(audit.monthly) || 0)}
         </span>
       ),
     },
@@ -195,7 +237,7 @@ export default function AuditPage() {
             setIsDeleteLoanModalOpen(true);
           }}
           disabled={deletingLoanId !== null || deletingPaymentId !== null}
-          className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg border border-red-200 bg-white px-3 text-xs font-semibold text-red-600 shadow-sm transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+          className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm shrink-0 border-red-200! text-red-600! hover:bg-red-50! disabled:cursor-not-allowed disabled:opacity-50"
         >
           Delete
         </button>
@@ -207,13 +249,14 @@ export default function AuditPage() {
     {
       key: "ref_id",
       header: "Reference ID",
-      render: (payment) => payment.synthetic ? (
-        <span className="text-xs text-slate-400">Workflow record</span>
-      ) : (
-        <span className="font-mono text-xs font-semibold text-blue-700">
-          {payment.ref_id || "Not assigned"}
-        </span>
-      ),
+      render: (payment) =>
+        payment.synthetic ? (
+          <span className="text-xs text-slate-400">Workflow record</span>
+        ) : (
+          <span className="font-mono text-xs font-semibold text-blue-700">
+            {payment.ref_id || "Not assigned"}
+          </span>
+        ),
     },
     {
       key: "week_start",
@@ -232,7 +275,7 @@ export default function AuditPage() {
       header: "Amount",
       render: (payment) => (
         <span className="font-semibold tabular-nums text-emerald-700">
-          {formatCurrency(payment.amount)}
+          {formatCurrency(Number(payment.amount) || 0)}
         </span>
       ),
     },
@@ -256,7 +299,7 @@ export default function AuditPage() {
             setIsDeletePaymentModalOpen(true);
           }}
           disabled={deletingLoanId !== null || deletingPaymentId !== null}
-          className="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+          className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm border-red-200! text-red-600! hover:bg-red-50! disabled:cursor-not-allowed disabled:opacity-50"
         >
           Delete
         </button>
@@ -385,34 +428,31 @@ export default function AuditPage() {
         </AnimatePresence>
       </div>
       {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="dlmsf-page-header">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
-            Audit
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="dlmsf-page-title">Audit</h1>
+          <p className="dlmsf-page-subtitle">
             Review and manage loan and payment audit records.
           </p>
         </div>
       </div>
       {errorMessage && (
-        <div
-          role="alert"
-          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-        >
+        <div role="alert" className="dlmsf-alert dlmsf-alert-danger">
           {errorMessage}
         </div>
       )}
       {/* Loan Audit Log - static card, independently scrollable table */}
-      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-200 px-5 py-4">
-          <h2 className="font-semibold text-slate-900">Loans Audit Log</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Review loan amounts, repayment status, and audit remarks.
-          </p>
+      <section className="dlmsf-card">
+        <div className="dlmsf-card-header">
+          <div>
+            <h2 className="font-semibold text-slate-900">Loans Audit Log</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Review loan amounts, repayment status, and audit remarks.
+            </p>
+          </div>
         </div>
 
-        <div className="h-105 overflow-y-auto overflow-x-auto">
+        <div className="max-h-128 overflow-y-auto overflow-x-auto">
           <DataTable
             data={loanAudits}
             columns={loanAuditColumns}
@@ -518,7 +558,7 @@ export default function AuditPage() {
               aria-modal="true"
               aria-labelledby="delete-loan-audit-title"
               aria-describedby="delete-loan-audit-description"
-              className="my-auto w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+              className="dlmsf-modal my-auto w-full max-w-md"
             >
               <div className="px-6 py-6">
                 <div className="flex items-start gap-4">

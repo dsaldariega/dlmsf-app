@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Construction, ArrowLeft, Clock3 } from "lucide-react";
-import { UnderDevelopmentProps } from "@/lib/types/underdevelopment";
+import type { UnderDevelopmentProps } from "@/lib/types";
 
 export default function UnderDevelopment({
   title = "Page Under Development",

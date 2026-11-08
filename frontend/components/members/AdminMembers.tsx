@@ -5,9 +5,9 @@ import { apiRequest } from "@/lib/api";
 import { withAuth } from "@/lib/withAuth";
 import { motion, AnimatePresence } from "motion/react";
 import { RATE } from "@/lib/constants/member";
-import { Member, Toast } from "@/lib/types/member";
+import type { DataTableColumn, Member, Toast } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils/members";
-import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
+import DataTable from "@/components/ui/DataTable";
 import { tableClass, tdClass, thClass } from "@/components/ui/table-styles";
 import TableLoading from "@/components/ui/TableLoading";
 
@@ -25,7 +25,10 @@ function MembersPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Member | null>(null);
-  const [createdCredentials, setCreatedCredentials] = useState<{ email: string; password: string } | null>(null);
+  const [createdCredentials, setCreatedCredentials] = useState<{
+    email: string;
+    password: string;
+  } | null>(null);
 
   useEffect(() => {
     void fetchMembers();
@@ -73,14 +76,21 @@ function MembersPage() {
     setAdding(true);
 
     try {
-      const result = await apiRequest<{ member: Member; loginEmail: string; temporaryPassword: string }>("/api/members", {
+      const result = await apiRequest<{
+        member: Member;
+        loginEmail: string;
+        temporaryPassword: string;
+      }>("/api/members", {
         method: "POST",
         body: JSON.stringify({ name: trimmedName, heads }),
       });
 
       // Add only the newly created member to the existing list.
       setMembers((currentMembers) => [result.member, ...currentMembers]);
-      setCreatedCredentials({ email: result.loginEmail, password: result.temporaryPassword });
+      setCreatedCredentials({
+        email: result.loginEmail,
+        password: result.temporaryPassword,
+      });
 
       // Reset and close the add-member modal.
       setName("");
@@ -189,9 +199,7 @@ function MembersPage() {
 
       // Update only the edited member in local state.
       setMembers((currentMembers) =>
-        currentMembers.map((member) =>
-          member.id === id ? updated : member,
-        ),
+        currentMembers.map((member) => (member.id === id ? updated : member)),
       );
 
       setEditingId(null);
@@ -244,9 +252,17 @@ function MembersPage() {
       await navigator.clipboard.writeText(
         `Email: ${createdCredentials.email}\nTemporary password: ${createdCredentials.password}`,
       );
-      showToast("success", "Credentials copied", "Share them with the member through a secure channel.");
+      showToast(
+        "success",
+        "Credentials copied",
+        "Share them with the member through a secure channel.",
+      );
     } catch {
-      showToast("warning", "Copy unavailable", "Select and copy the login details manually.");
+      showToast(
+        "warning",
+        "Copy unavailable",
+        "Select and copy the login details manually.",
+      );
     }
   };
 
@@ -314,7 +330,7 @@ function MembersPage() {
             type="button"
             onClick={() => startEdit(member)}
             disabled={saving || deletingId !== null}
-            className="inline-flex h-9 items-center justify-center rounded-lg border border-blue-200 bg-white px-3 text-xs font-semibold text-blue-700 shadow-sm transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm text-blue-700! disabled:cursor-not-allowed disabled:opacity-50"
           >
             Edit
           </button>
@@ -323,7 +339,7 @@ function MembersPage() {
             type="button"
             onClick={() => setDeleteTarget(member)}
             disabled={deletingId !== null || saving}
-            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3 text-xs font-semibold text-red-600 shadow-sm transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm text-red-600! disabled:cursor-not-allowed disabled:opacity-50"
           >
             Delete
           </button>
@@ -335,17 +351,42 @@ function MembersPage() {
   return (
     <div className="space-y-6">
       {createdCredentials && (
-        <section aria-live="polite" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-950">
+        <section
+          aria-live="polite"
+          className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-950"
+        >
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               <h2 className="font-semibold">One-time member login details</h2>
-              <p className="mt-1 text-sm">Copy these details and share them with the member through a secure channel. The temporary password will not be shown again after you dismiss this notice.</p>
-              <p className="mt-3 text-sm"><span className="font-semibold">Login email:</span> {createdCredentials.email}</p>
-              <p className="mt-1 break-all text-sm"><span className="font-semibold">Temporary password:</span> <code>{createdCredentials.password}</code></p>
+              <p className="mt-1 text-sm">
+                Copy these details and share them with the member through a
+                secure channel. The temporary password will not be shown again
+                after you dismiss this notice.
+              </p>
+              <p className="mt-3 text-sm">
+                <span className="font-semibold">Login email:</span>{" "}
+                {createdCredentials.email}
+              </p>
+              <p className="mt-1 break-all text-sm">
+                <span className="font-semibold">Temporary password:</span>{" "}
+                <code>{createdCredentials.password}</code>
+              </p>
             </div>
             <div className="flex shrink-0 gap-2">
-              <button type="button" onClick={() => void copyCreatedCredentials()} className="rounded-lg bg-amber-900 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-800">Copy details</button>
-              <button type="button" onClick={() => setCreatedCredentials(null)} className="rounded-lg border border-amber-300 px-3 py-2 text-sm font-semibold text-amber-950 hover:bg-amber-100">Dismiss</button>
+              <button
+                type="button"
+                onClick={() => void copyCreatedCredentials()}
+                className="dlmsf-btn dlmsf-btn-warning"
+              >
+                Copy details
+              </button>
+              <button
+                type="button"
+                onClick={() => setCreatedCredentials(null)}
+                className="dlmsf-btn dlmsf-btn-outline"
+              >
+                Dismiss
+              </button>
             </div>
           </div>
         </section>
@@ -522,7 +563,7 @@ function MembersPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-60 flex items-center justify-center overflow-y-auto bg-slate-950/50 p-4 backdrop-blur-sm"
+            className="fixed inset-0 z-60 flex items-center justify-center overflow-y-auto dlmsf-modal-backdrop p-4"
             onMouseDown={(event) => {
               if (event.target === event.currentTarget && deletingId === null) {
                 setDeleteTarget(null);
@@ -585,7 +626,9 @@ function MembersPage() {
 
                     <div className="mt-4 rounded-lg border border-red-100 bg-red-50/70 px-3 py-3">
                       <p className="mt-1 text-xs text-red-600">
-                        This member will be removed from your records, and the linked development login account will also be permanently deleted. This cannot be undone.
+                        This member will be removed from your records, and the
+                        linked development login account will also be
+                        permanently deleted. This cannot be undone.
                       </p>
                     </div>
                   </div>
@@ -606,7 +649,7 @@ function MembersPage() {
                   type="button"
                   onClick={() => void deleteMember()}
                   disabled={deletingId !== null}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-red-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="dlmsf-btn dlmsf-btn-danger disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {deletingId !== null ? (
                     <>
@@ -685,7 +728,7 @@ function MembersPage() {
           type="button"
           onClick={() => setIsAddModalOpen(true)}
           disabled={loading}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+          className="dlmsf-btn dlmsf-btn-primary disabled:cursor-not-allowed disabled:opacity-50"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -715,7 +758,7 @@ function MembersPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/50 p-4 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto dlmsf-modal-backdrop p-4"
             onMouseDown={(event) => {
               if (event.target === event.currentTarget) {
                 closeAddModal();
@@ -820,7 +863,7 @@ function MembersPage() {
                       required
                       maxLength={150}
                       autoFocus
-                      className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-sm text-slate-800 shadow-sm outline-none transition placeholder:text-slate-400 hover:border-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                      className="dlmsf-control"
                     />
                   </div>
 
@@ -847,7 +890,7 @@ function MembersPage() {
                         )
                       }
                       required
-                      className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-sm text-slate-800 shadow-sm outline-none transition hover:border-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                      className="dlmsf-control"
                     />
                     <p className="mt-2 text-xs text-slate-500">
                       Each head contributes ₱50.00 per week.
@@ -888,7 +931,7 @@ function MembersPage() {
                   <button
                     type="submit"
                     disabled={adding || loading}
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="dlmsf-btn dlmsf-btn-primary disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {adding ? (
                       <>
@@ -940,7 +983,7 @@ function MembersPage() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
-                className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/50 p-4 backdrop-blur-sm"
+                className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto dlmsf-modal-backdrop p-4"
                 onMouseDown={(event) => {
                   if (event.target === event.currentTarget && !saving) {
                     cancelEdit();
@@ -1038,7 +1081,7 @@ function MembersPage() {
                           type="text"
                           value={editingMember.name}
                           readOnly
-                          className="h-12 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm text-slate-600 outline-none"
+                          className="dlmsf-control"
                         />
 
                         <p className="mt-2 text-xs text-slate-500">
@@ -1072,7 +1115,7 @@ function MembersPage() {
                           required
                           autoFocus
                           disabled={saving}
-                          className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-sm text-slate-800 shadow-sm outline-none transition hover:border-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 disabled:opacity-60"
+                          className="dlmsf-control disabled:opacity-60"
                         />
 
                         <p className="mt-2 text-xs text-slate-500">
@@ -1114,7 +1157,7 @@ function MembersPage() {
                       <button
                         type="submit"
                         disabled={saving}
-                        className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="dlmsf-btn dlmsf-btn-primary disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {saving ? (
                           <>

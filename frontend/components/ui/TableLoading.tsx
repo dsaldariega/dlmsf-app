@@ -1,7 +1,4 @@
-type TableLoadingProps = {
-  message: string;
-  colSpan?: number;
-};
+import type { TableLoadingProps } from "@/lib/types";
 
 export default function TableLoading({
   message,

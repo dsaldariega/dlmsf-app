@@ -13,13 +13,17 @@ import {
 } from "lucide-react";
 import { apiRequest } from "@/lib/api";
 import { withAuth } from "@/lib/withAuth";
-import { Member } from "@/lib/types/member";
-import { LoanPayment, Payment } from "@/lib/types/payment";
-import { Loan } from "@/lib/types/loan";
+import type {
+  DataTableColumn,
+  Loan,
+  LoanPayment,
+  Member,
+  Payment,
+} from "@/lib/types";
 import { CUTOFF_MONTHS, MONTHS } from "@/lib/constants/dashboard";
 import { motion, AnimatePresence } from "motion/react";
 import { tableClass, tdClass, thClass } from "@/components/ui/table-styles";
-import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
+import DataTable from "@/components/ui/DataTable";
 import TableLoading from "@/components/ui/TableLoading";
 
 function amount(value: number | string | null | undefined): number {
@@ -54,8 +58,12 @@ function AdminDashboard() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loans, setLoans] = useState<Loan[]>([]);
   const [loanPayments, setLoanPayments] = useState<LoanPayment[]>([]);
-  const [loanRequests, setLoanRequests] = useState<Array<{id:number;status:string}>>([]);
-  const [paymentSubmissions, setPaymentSubmissions] = useState<Array<{id:number;payment_type:string;status:string}>>([]);
+  const [loanRequests, setLoanRequests] = useState<
+    Array<{ id: number; status: string }>
+  >([]);
+  const [paymentSubmissions, setPaymentSubmissions] = useState<
+    Array<{ id: number; payment_type: string; status: string }>
+  >([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
@@ -64,9 +72,18 @@ function AdminDashboard() {
     setLoadError("");
     try {
       const [data, requests, submissions] = await Promise.all([
-        apiRequest<{members:Member[];payments:Payment[];loans:Loan[];loanPayments:LoanPayment[]}>("/api/dashboard"),
-        apiRequest<Array<{id:number;status:string}>>("/api/loans/requests"),
-        apiRequest<Array<{id:number;payment_type:string;status:string}>>("/api/payments/submissions"),
+        apiRequest<{
+          members: Member[];
+          payments: Payment[];
+          loans: Loan[];
+          loanPayments: LoanPayment[];
+        }>("/api/dashboard"),
+        apiRequest<Array<{ id: number; status: string }>>(
+          "/api/loans/requests",
+        ),
+        apiRequest<Array<{ id: number; payment_type: string; status: string }>>(
+          "/api/payments/submissions",
+        ),
       ]);
       setMembers(data.members);
       setPayments(data.payments);
@@ -76,7 +93,11 @@ function AdminDashboard() {
       setPaymentSubmissions(submissions);
     } catch (error) {
       console.error("Dashboard API error:", error);
-      setLoadError(error instanceof Error ? error.message : "Unable to load dashboard data. Please try again.");
+      setLoadError(
+        error instanceof Error
+          ? error.message
+          : "Unable to load dashboard data. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -105,7 +126,9 @@ function AdminDashboard() {
 
   // Loan repayments return principal and interest to the available fund.
   const availableFunds =
-    totalSinkingCollected + totalLoanRepaymentsCollected - totalLoanPrincipalDisbursed;
+    totalSinkingCollected +
+    totalLoanRepaymentsCollected -
+    totalLoanPrincipalDisbursed;
 
   const getMonthlySinkingTarget = (month: string): number => {
     const [monthName, yearString] = month.split(" ");
@@ -187,8 +210,7 @@ function AdminDashboard() {
       .filter((payment) => monthOf(payment.paid_at) === month)
       .reduce((sum, payment) => sum + amount(payment.amount), 0);
 
-  const cardClass =
-    "rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md";
+  const cardClass = "dlmsf-card p-5 transition-shadow hover:shadow-md";
 
   const sinkingCollectionColumns: DataTableColumn<string>[] = [
     {
@@ -229,7 +251,9 @@ function AdminDashboard() {
               : "bg-amber-50 text-amber-700";
 
         return (
-          <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${statusClass}`}>
+          <span
+            className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${statusClass}`}
+          >
             {status}
           </span>
         );
@@ -292,12 +316,10 @@ function AdminDashboard() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+      <div className="dlmsf-page-header">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-            Dashboard Overview
-          </h2>
-          <p className="mt-2 text-sm text-slate-500">
+          <h2 className="dlmsf-page-title">Dashboard Overview</h2>
+          <p className="dlmsf-page-subtitle">
             Monitor members, sinking fund contributions, and loan collections.
           </p>
         </div>
@@ -306,7 +328,7 @@ function AdminDashboard() {
           type="button"
           onClick={() => void loadData()}
           disabled={loading}
-          className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+          className="dlmsf-btn dlmsf-btn-secondary disabled:cursor-not-allowed disabled:opacity-50"
         >
           <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
           {loading ? "Refreshing..." : "Refresh"}
@@ -434,15 +456,96 @@ function AdminDashboard() {
         </div>
       </section>
       <section>
-        <h3 className="mb-1 text-lg font-semibold text-slate-900">Request monitoring</h3>
-        <p className="mb-4 text-sm text-slate-500">Track member loan requests and payment submissions separately.</p>
+        <h3 className="mb-1 text-lg font-semibold text-slate-900">
+          Request monitoring
+        </h3>
+        <p className="mb-4 text-sm text-slate-500">
+          Track member loan requests and payment submissions separately.
+        </p>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {[
-            {title:"Loan requests",total:loanRequests.length,approved:loanRequests.filter(x=>x.status==="Approved").length,pending:loanRequests.filter(x=>x.status==="Pending").length,href:"/loans",Icon:ClipboardList},
-            {title:"Weekly payment requests",total:paymentSubmissions.filter(x=>x.payment_type==="Weekly").length,approved:paymentSubmissions.filter(x=>x.payment_type==="Weekly"&&x.status==="Confirmed").length,pending:paymentSubmissions.filter(x=>x.payment_type==="Weekly"&&x.status==="Pending").length,href:"/payments",Icon:Receipt},
-            {title:"Loan repayment requests",total:paymentSubmissions.filter(x=>x.payment_type==="Loan").length,approved:paymentSubmissions.filter(x=>x.payment_type==="Loan"&&x.status==="Confirmed").length,pending:paymentSubmissions.filter(x=>x.payment_type==="Loan"&&x.status==="Pending").length,href:"/payments",Icon:HandCoins},
-          ].map(item=><a key={item.title} href={item.href} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-200 hover:shadow-md"><div className="flex items-center justify-between"><p className="text-sm font-medium text-slate-600">{item.title}</p><item.Icon className="text-blue-600" size={21}/></div><p className="mt-3 text-3xl font-bold tabular-nums text-slate-900">{loading?"—":item.total}</p><div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs"><span className="font-medium text-emerald-700">{item.approved} approved</span><span className="font-medium text-amber-700">{item.pending} pending</span></div></a>)}
-          <article className="rounded-xl border border-slate-200 bg-slate-50 p-5"><p className="text-sm font-medium text-slate-600">All requests</p><p className="mt-3 text-3xl font-bold tabular-nums text-slate-900">{loading?"—":loanRequests.length+paymentSubmissions.length}</p><div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs"><span className="font-medium text-emerald-700">{loanRequests.filter(x=>x.status==="Approved").length+paymentSubmissions.filter(x=>x.status==="Confirmed").length} approved</span><span className="font-medium text-amber-700">{loanRequests.filter(x=>x.status==="Pending").length+paymentSubmissions.filter(x=>x.status==="Pending").length} pending</span></div></article>
+            {
+              title: "Loan requests",
+              total: loanRequests.length,
+              approved: loanRequests.filter((x) => x.status === "Approved")
+                .length,
+              pending: loanRequests.filter((x) => x.status === "Pending")
+                .length,
+              href: "/loans",
+              Icon: ClipboardList,
+            },
+            {
+              title: "Weekly payment requests",
+              total: paymentSubmissions.filter(
+                (x) => x.payment_type === "Weekly",
+              ).length,
+              approved: paymentSubmissions.filter(
+                (x) => x.payment_type === "Weekly" && x.status === "Confirmed",
+              ).length,
+              pending: paymentSubmissions.filter(
+                (x) => x.payment_type === "Weekly" && x.status === "Pending",
+              ).length,
+              href: "/payments",
+              Icon: Receipt,
+            },
+            {
+              title: "Loan repayment requests",
+              total: paymentSubmissions.filter((x) => x.payment_type === "Loan")
+                .length,
+              approved: paymentSubmissions.filter(
+                (x) => x.payment_type === "Loan" && x.status === "Confirmed",
+              ).length,
+              pending: paymentSubmissions.filter(
+                (x) => x.payment_type === "Loan" && x.status === "Pending",
+              ).length,
+              href: "/payments",
+              Icon: HandCoins,
+            },
+          ].map((item) => (
+            <a
+              key={item.title}
+              href={item.href}
+              className="dlmsf-card p-5 transition hover:border-blue-200 hover:shadow-md"
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-slate-600">
+                  {item.title}
+                </p>
+                <item.Icon className="text-blue-600" size={21} />
+              </div>
+              <p className="mt-3 text-3xl font-bold tabular-nums text-slate-900">
+                {loading ? "—" : item.total}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                <span className="font-medium text-emerald-700">
+                  {item.approved} approved
+                </span>
+                <span className="font-medium text-amber-700">
+                  {item.pending} pending
+                </span>
+              </div>
+            </a>
+          ))}
+          <article className="dlmsf-card bg-slate-50 p-5">
+            <p className="text-sm font-medium text-slate-600">All requests</p>
+            <p className="mt-3 text-3xl font-bold tabular-nums text-slate-900">
+              {loading ? "—" : loanRequests.length + paymentSubmissions.length}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+              <span className="font-medium text-emerald-700">
+                {loanRequests.filter((x) => x.status === "Approved").length +
+                  paymentSubmissions.filter((x) => x.status === "Confirmed")
+                    .length}{" "}
+                approved
+              </span>
+              <span className="font-medium text-amber-700">
+                {loanRequests.filter((x) => x.status === "Pending").length +
+                  paymentSubmissions.filter((x) => x.status === "Pending")
+                    .length}{" "}
+                pending
+              </span>
+            </div>
+          </article>
         </div>
       </section>
       <section>
@@ -453,7 +556,7 @@ function AdminDashboard() {
           Monthly contribution targets and actual collections.
         </p>
 
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="dlmsf-card overflow-x-auto">
           <div className="max-h-[26rem] overflow-y-auto">
             <DataTable
               data={MONTHS}
@@ -479,7 +582,7 @@ function AdminDashboard() {
           Monthly loan repayment targets and actual collections.
         </p>
 
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="dlmsf-card overflow-x-auto">
           <div className="max-h-[26rem] overflow-y-auto">
             <DataTable
               data={MONTHS}

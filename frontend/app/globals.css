@@ -86,3 +86,950 @@ div:has(> [role="dialog"]) {
 [data-toast="true"] {
   animation: dlmsf-toast-pop 260ms cubic-bezier(.16, 1, .3, 1) both;
 }
+
+
+/* AdminLTE-inspired visual system: cards, surfaces, controls, tables and badges. */
+:root {
+  --dlmsf-primary: #0d6efd;
+  --dlmsf-sidebar: #212529;
+  --dlmsf-sidebar-muted: #adb5bd;
+  --dlmsf-surface: #ffffff;
+  --dlmsf-page: #f4f6f9;
+  --dlmsf-border: #dee2e6;
+  --dlmsf-text: #212529;
+  --dlmsf-muted: #6c757d;
+  --dlmsf-radius: 0.375rem;
+  --dlmsf-shadow: 0 0.125rem 0.25rem rgba(0,0,0,.075);
+}
+
+body {
+  background: var(--dlmsf-page);
+  color: var(--dlmsf-text);
+}
+
+.dlmsf-card {
+  border: 1px solid var(--dlmsf-border);
+  border-radius: var(--dlmsf-radius);
+  background: var(--dlmsf-surface);
+  box-shadow: var(--dlmsf-shadow);
+}
+
+.dlmsf-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: .75rem;
+  border-bottom: 1px solid var(--dlmsf-border);
+  padding: .875rem 1rem;
+}
+
+.dlmsf-card-body {
+  padding: 1rem;
+}
+
+.dlmsf-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.dlmsf-page-title {
+  margin: 0;
+  font-size: 1.25rem;
+  line-height: 1.4;
+  font-weight: 600;
+  color: #212529;
+}
+
+.dlmsf-page-subtitle {
+  margin: .25rem 0 0;
+  color: #6c757d;
+  font-size: .875rem;
+}
+
+.dlmsf-breadcrumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .4rem;
+  margin-top: .35rem;
+  color: #6c757d;
+  font-size: .8125rem;
+}
+
+.dlmsf-breadcrumbs a {
+  color: #6c757d;
+  text-decoration: none;
+}
+.dlmsf-breadcrumbs a:hover { color: var(--dlmsf-primary); }
+
+.dlmsf-form-label {
+  display: block;
+  margin-bottom: .35rem;
+  color: #495057;
+  font-size: .8125rem;
+  font-weight: 600;
+}
+
+.dlmsf-control {
+  min-height: 38px;
+  width: 100%;
+  border: 1px solid #ced4da;
+  border-radius: .25rem;
+  background: #fff;
+  color: #212529;
+  padding: .4375rem .75rem;
+  font-size: .875rem;
+  line-height: 1.5;
+  outline: none;
+  box-shadow: inset 0 1px 1px rgba(0,0,0,.025);
+}
+.dlmsf-control:focus {
+  border-color: #80bdff;
+  box-shadow: 0 0 0 .2rem rgba(0,123,255,.12);
+}
+.dlmsf-control:disabled { background: #e9ecef; cursor: not-allowed; }
+
+.dlmsf-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  min-height: 38px;
+  border: 1px solid transparent;
+  border-radius: .25rem;
+  padding: .4375rem .875rem;
+  font-size: .875rem;
+  font-weight: 500;
+  line-height: 1.5;
+  transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.dlmsf-btn-primary {
+  background: var(--dlmsf-primary);
+  border-color: var(--dlmsf-primary);
+  color: #fff;
+}
+.dlmsf-btn-primary:hover { background: #0b5ed7; border-color: #0a58ca; }
+.dlmsf-btn-secondary {
+  background: #fff;
+  border-color: #ced4da;
+  color: #495057;
+}
+.dlmsf-btn-secondary:hover { background: #f8f9fa; }
+
+.dlmsf-datepicker-wrap { position: relative; width: 100%; }
+.dlmsf-datepicker-input {
+  min-height: 42px !important;
+  width: 100% !important;
+  border: 1px solid #ced4da !important;
+  border-radius: .375rem !important;
+  background: #fff !important;
+  color: #212529 !important;
+  padding: .5rem .75rem .5rem 2.65rem !important;
+  font-size: .875rem !important;
+  font-weight: 500 !important;
+  box-shadow: none !important;
+}
+.dlmsf-datepicker-input:focus {
+  border-color: #80bdff !important;
+  box-shadow: 0 0 0 .2rem rgba(13,110,253,.12) !important;
+}
+.dlmsf-datepicker-wrap::before {
+  content: "▣";
+  position: absolute;
+  z-index: 2;
+  left: .85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6c757d;
+  font-size: .9rem;
+  pointer-events: none;
+}
+.react-datepicker-popper { z-index: 9999 !important; }
+.react-datepicker {
+  border: 1px solid #dee2e6 !important;
+  border-radius: .5rem !important;
+  box-shadow: 0 .5rem 1rem rgba(0,0,0,.15) !important;
+  font-family: inherit !important;
+}
+.react-datepicker__header {
+  background: #f8f9fa !important;
+  border-bottom: 1px solid #dee2e6 !important;
+}
+.react-datepicker__day--selected,
+.react-datepicker__day--keyboard-selected {
+  background: #0d6efd !important;
+}
+.react-datepicker__day:hover { background: #e9f2ff !important; }
+.react-datepicker__day--disabled { color: #ced4da !important; cursor: not-allowed !important; }
+
+.dlmsf-sidebar {
+  background: var(--dlmsf-sidebar) !important;
+  border-right: 0 !important;
+}
+.dlmsf-sidebar .dlmsf-brand {
+  border-bottom-color: rgba(255,255,255,.08) !important;
+}
+.dlmsf-sidebar .dlmsf-nav-link {
+  color: #c2c7d0 !important;
+  border-radius: .25rem !important;
+}
+.dlmsf-sidebar .dlmsf-nav-link:hover {
+  background: rgba(255,255,255,.08) !important;
+  color: #fff !important;
+}
+.dlmsf-sidebar .dlmsf-nav-link[data-active="true"] {
+  background: #0d6efd !important;
+  color: #fff !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,.18);
+}
+.dlmsf-sidebar .dlmsf-brand-text { color: #fff !important; }
+.dlmsf-sidebar .dlmsf-muted { color: #adb5bd !important; }
+
+.dlmsf-navbar {
+  box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+
+.dlmsf-table thead th {
+  background: #f8f9fa !important;
+  color: #495057 !important;
+  border-bottom: 1px solid #dee2e6 !important;
+  font-size: .75rem !important;
+  letter-spacing: .04em !important;
+}
+.dlmsf-table tbody tr:hover { background: #f8f9fa !important; }
+
+.dlmsf-stat {
+  border-left: 4px solid var(--dlmsf-primary);
+}
+.dlmsf-stat-success { border-left-color: #198754; }
+.dlmsf-stat-warning { border-left-color: #ffc107; }
+.dlmsf-stat-danger { border-left-color: #dc3545; }
+
+@media (max-width: 640px) {
+  .dlmsf-page-title { font-size: 1.1rem; }
+  .dlmsf-card-header { padding: .75rem; }
+  .dlmsf-card-body { padding: .75rem; }
+}
+
+
+/* Harmonize existing Tailwind surfaces with the AdminLTE card treatment. */
+.rounded-xl.border.border-slate-200.bg-white {
+  border-radius: .375rem !important;
+  box-shadow: var(--dlmsf-shadow) !important;
+}
+.rounded-xl.border.border-slate-200.bg-white:hover {
+  box-shadow: 0 .25rem .75rem rgba(0,0,0,.08) !important;
+}
+
+
+/* AdminLTE 4-inspired refinements for DLMSF. Keep the existing Tailwind layout,
+   but use the same compact cards, page headers, controls and table rhythm. */
+.dlmsf-page-header {
+  margin-bottom: 1.25rem;
+}
+.dlmsf-page-title {
+  font-size: 1.35rem;
+  letter-spacing: -0.01em;
+}
+.dlmsf-page-subtitle {
+  line-height: 1.5;
+}
+.dlmsf-breadcrumbs {
+  margin-top: .55rem;
+}
+.dlmsf-card {
+  overflow: hidden;
+}
+.dlmsf-card-body {
+  padding: 1.125rem 1.25rem;
+}
+.dlmsf-stat {
+  border-left-width: 3px;
+  border-left-style: solid;
+  border-left-color: var(--dlmsf-primary);
+}
+.dlmsf-stat-success { border-left-color: #198754; }
+.dlmsf-stat-warning { border-left-color: #ffc107; }
+.dlmsf-stat-danger { border-left-color: #dc3545; }
+
+/* AdminLTE-like form rhythm: label, hint, control. */
+.dlmsf-form-label {
+  letter-spacing: .01em;
+}
+.dlmsf-datepicker-input {
+  min-height: 44px !important;
+  border-radius: .375rem !important;
+  font-size: .9rem !important;
+}
+.dlmsf-datepicker-input::placeholder {
+  color: #98a0a8;
+}
+.react-datepicker {
+  overflow: hidden;
+  border-radius: .5rem !important;
+  background: #fff !important;
+}
+.react-datepicker__header {
+  padding-top: .75rem !important;
+}
+.react-datepicker__current-month,
+.react-datepicker-time__header,
+.react-datepicker-year-header {
+  color: #212529 !important;
+  font-size: .875rem !important;
+  font-weight: 600 !important;
+}
+.react-datepicker__day-name {
+  color: #6c757d !important;
+  font-size: .7rem !important;
+  font-weight: 600 !important;
+}
+.react-datepicker__day {
+  border-radius: .25rem !important;
+  margin: .2rem !important;
+}
+.react-datepicker__day--selected,
+.react-datepicker__day--keyboard-selected {
+  background: #0d6efd !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+}
+.react-datepicker__day--disabled {
+  color: #d6d9dc !important;
+  background: transparent !important;
+}
+.react-datepicker__day--disabled:hover {
+  background: transparent !important;
+}
+.react-datepicker__navigation {
+  top: .65rem !important;
+}
+
+/* AdminLTE-style table density and readable row separators. */
+.dlmsf-table thead th {
+  padding-top: .75rem !important;
+  padding-bottom: .75rem !important;
+}
+.dlmsf-table tbody td {
+  vertical-align: middle;
+}
+.dlmsf-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* Small, consistent status badges used throughout the app. */
+.dlmsf-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+  padding: .2rem .55rem;
+  border-radius: 999px;
+  font-size: .7rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* Make common action controls feel like Bootstrap/AdminLTE buttons. */
+.dlmsf-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .375rem;
+  min-height: 36px;
+  border-radius: .375rem;
+  padding: .375rem .75rem;
+  font-size: .8125rem;
+  font-weight: 600;
+}
+
+
+/* AdminLTE-inspired component primitives. These stay framework-neutral so the existing
+   Tailwind/Next.js architecture can adopt the visual language without replacing it. */
+.dlmsf-btn-success {
+  background: #198754;
+  border-color: #198754;
+  color: #fff;
+}
+.dlmsf-btn-success:hover { background: #157347; border-color: #146c43; }
+.dlmsf-btn-danger {
+  background: #dc3545;
+  border-color: #dc3545;
+  color: #fff;
+}
+.dlmsf-btn-danger:hover { background: #bb2d3b; border-color: #b02a37; }
+.dlmsf-btn-warning {
+  background: #ffc107;
+  border-color: #ffc107;
+  color: #212529;
+}
+.dlmsf-btn-warning:hover { background: #ffca2c; border-color: #ffc720; }
+.dlmsf-btn-outline {
+  background: transparent;
+  border-color: #ced4da;
+  color: #495057;
+}
+.dlmsf-btn-outline:hover { background: #f8f9fa; border-color: #adb5bd; }
+.dlmsf-btn-sm { min-height: 32px; padding: .3rem .65rem; font-size: .8125rem; }
+.dlmsf-btn-lg { min-height: 46px; padding: .55rem 1rem; font-size: .9375rem; }
+
+.dlmsf-form-group { display: flex; flex-direction: column; gap: .35rem; }
+.dlmsf-form-hint { color: #6c757d; font-size: .75rem; line-height: 1.5; }
+.dlmsf-form-error { color: #dc3545; font-size: .75rem; line-height: 1.5; }
+.dlmsf-form-required::after { content: " *"; color: #dc3545; }
+
+.dlmsf-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: .75rem;
+  border: 1px solid transparent;
+  border-radius: .375rem;
+  padding: .75rem 1rem;
+  font-size: .875rem;
+}
+.dlmsf-alert-info { color: #055160; background: #cff4fc; border-color: #b6effb; }
+.dlmsf-alert-success { color: #0f5132; background: #d1e7dd; border-color: #badbcc; }
+.dlmsf-alert-warning { color: #664d03; background: #fff3cd; border-color: #ffecb5; }
+.dlmsf-alert-danger { color: #842029; background: #f8d7da; border-color: #f5c2c7; }
+
+.dlmsf-callout {
+  border-left: 4px solid var(--dlmsf-primary);
+  border-radius: .25rem;
+  background: #fff;
+  box-shadow: var(--dlmsf-shadow);
+  padding: .875rem 1rem;
+}
+.dlmsf-callout-success { border-left-color: #198754; }
+.dlmsf-callout-warning { border-left-color: #ffc107; }
+.dlmsf-callout-danger { border-left-color: #dc3545; }
+
+.dlmsf-progress {
+  width: 100%;
+  height: .625rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e9ecef;
+}
+.dlmsf-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--dlmsf-primary);
+  transition: width .2s ease;
+}
+.dlmsf-progress-success > span { background: #198754; }
+.dlmsf-progress-warning > span { background: #ffc107; }
+.dlmsf-progress-danger > span { background: #dc3545; }
+
+.dlmsf-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem;
+  border-bottom: 1px solid var(--dlmsf-border);
+}
+.dlmsf-tab {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #6c757d;
+  padding: .65rem .9rem;
+  font-size: .875rem;
+  font-weight: 600;
+}
+.dlmsf-tab:hover { color: #212529; background: #f8f9fa; }
+.dlmsf-tab[data-active="true"] {
+  color: var(--dlmsf-primary);
+  border-bottom-color: var(--dlmsf-primary);
+}
+
+.dlmsf-datepicker-portal {
+  position: relative;
+  z-index: 99999;
+}
+.dlmsf-datepicker-portal .react-datepicker-popper {
+  z-index: 99999 !important;
+}
+.dlmsf-datepicker-portal .react-datepicker {
+  margin-top: .25rem;
+}
+
+
+.dlmsf-table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.dlmsf-table-striped tbody tr:nth-child(even) {
+  background: rgba(0, 0, 0, .018);
+}
+.dlmsf-table-striped tbody tr:hover {
+  background: rgba(13, 110, 253, .045);
+}
+
+
+/* Final AdminLTE shell refinements: responsive navigation, breadcrumbs and table states. */
+.dlmsf-breadcrumbs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .35rem;
+  min-height: 1.25rem;
+  color: #6c757d;
+  font-size: .75rem;
+}
+.dlmsf-breadcrumbs a {
+  transition: color .15s ease;
+}
+.dlmsf-sidebar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.18) transparent;
+}
+.dlmsf-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+.dlmsf-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.dlmsf-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,.18);
+  border-radius: 999px;
+}
+.dlmsf-table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: inherit;
+}
+.dlmsf-table-responsive table {
+  min-width: 640px;
+}
+@media (max-width: 640px) {
+  .dlmsf-page-header {
+    gap: .75rem;
+  }
+  .dlmsf-page-header > :last-child {
+    width: 100%;
+  }
+  .dlmsf-page-header > :last-child .dlmsf-btn {
+    width: 100%;
+  }
+  .dlmsf-breadcrumbs {
+    margin-bottom: .75rem !important;
+  }
+  .dlmsf-table-responsive {
+    margin-inline: -.25rem;
+    width: calc(100% + .5rem);
+  }
+}
+
+
+/* AdminLTE modal and control primitives. */
+.dlmsf-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  background: rgba(33,37,41,.55);
+  padding: 1rem;
+  backdrop-filter: blur(2px);
+}
+.dlmsf-modal {
+  width: 100%;
+  max-width: 32rem;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  border: 1px solid #dee2e6;
+  border-radius: .5rem;
+  background: #fff;
+  box-shadow: 0 1rem 3rem rgba(0,0,0,.18);
+}
+.dlmsf-control {
+  min-height: 40px;
+  border-radius: .375rem;
+  border-color: #ced4da;
+  font-size: .875rem;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.dlmsf-control:focus {
+  border-color: #86b7fe;
+  outline: 0;
+  box-shadow: 0 0 0 .2rem rgba(13,110,253,.12);
+}
+.dlmsf-control:disabled {
+  background: #e9ecef;
+  cursor: not-allowed;
+}
+@media (max-width: 640px) {
+  .dlmsf-modal-backdrop { align-items: flex-start; padding: .75rem; }
+  .dlmsf-modal { max-height: calc(100vh - 1.5rem); }
+}
+
+
+/* Consistent native selects and keyboard focus treatment. */
+select.dlmsf-control {
+  appearance: none;
+  padding-right: 2.5rem;
+  background-color: #fff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none' stroke='%236c757d' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right .75rem center;
+  background-size: 1rem;
+}
+select.dlmsf-control option {
+  color: #212529;
+  background: #fff;
+}
+:where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid #0d6efd;
+  outline-offset: 2px;
+}
+.dlmsf-sidebar a:focus-visible {
+  outline-color: #fff;
+  outline-offset: -2px;
+}
+@media (max-width: 1023px) {
+  .dlmsf-sidebar {
+    width: min(17rem, calc(100vw - 3rem));
+  }
+}
+
+
+/* AdminLTE-style dark skin. Activated by the persisted .dark class on <html>. */
+html.dark {
+  color-scheme: dark;
+  --dlmsf-surface: #1f2937;
+  --dlmsf-page: #111827;
+  --dlmsf-border: #374151;
+  --dlmsf-text: #e5e7eb;
+  --dlmsf-muted: #9ca3af;
+  --background: #111827;
+  --foreground: #e5e7eb;
+}
+html.dark body,
+html.dark .min-h-screen.bg-\[\#f4f6f9\] {
+  background: #111827 !important;
+  color: #e5e7eb !important;
+}
+html.dark .dlmsf-navbar,
+html.dark footer,
+html.dark .dlmsf-card,
+html.dark .dlmsf-modal,
+html.dark .bg-white,
+html.dark .rounded-xl.border.border-slate-200.bg-white {
+  background-color: #1f2937 !important;
+  border-color: #374151 !important;
+  color: #e5e7eb;
+}
+html.dark .dlmsf-card-header,
+html.dark .border-slate-100,
+html.dark .border-slate-200,
+html.dark .border-b,
+html.dark .border-t {
+  border-color: #374151 !important;
+}
+html.dark .text-slate-900,
+html.dark .text-slate-800,
+html.dark .text-slate-700,
+html.dark .text-slate-600,
+html.dark .text-gray-900,
+html.dark .text-gray-800 {
+  color: #e5e7eb !important;
+}
+html.dark .text-slate-500,
+html.dark .text-slate-400,
+html.dark .text-gray-500,
+html.dark .text-gray-400,
+html.dark .dlmsf-page-subtitle,
+html.dark .dlmsf-breadcrumbs {
+  color: #9ca3af !important;
+}
+html.dark .bg-slate-50,
+html.dark .bg-slate-100,
+html.dark .bg-gray-50,
+html.dark .hover\:bg-slate-50:hover,
+html.dark .hover\:bg-slate-100:hover {
+  background-color: #273449 !important;
+}
+html.dark .dlmsf-control,
+html.dark input:not([type="checkbox"]):not([type="radio"]),
+html.dark textarea,
+html.dark select {
+  background-color: #111827 !important;
+  border-color: #4b5563 !important;
+  color: #e5e7eb !important;
+}
+html.dark select.dlmsf-control {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none' stroke='%23cbd5e1' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+}
+html.dark select option {
+  background: #1f2937;
+  color: #e5e7eb;
+}
+html.dark .dlmsf-table thead th {
+  background: #273449 !important;
+  color: #cbd5e1 !important;
+  border-color: #374151 !important;
+}
+html.dark .dlmsf-table tbody tr,
+html.dark .dlmsf-table tbody td {
+  border-color: #374151 !important;
+}
+html.dark .dlmsf-table tbody tr:hover {
+  background: #273449 !important;
+}
+html.dark .dlmsf-btn-outline,
+html.dark .dlmsf-btn-secondary {
+  color: #d1d5db;
+  border-color: #4b5563;
+}
+html.dark .dlmsf-btn-outline:hover,
+html.dark .dlmsf-btn-secondary:hover {
+  background: #374151;
+}
+html.dark .dlmsf-modal-backdrop {
+  background: rgba(0,0,0,.72);
+}
+html.dark .react-datepicker {
+  background: #1f2937 !important;
+  border-color: #4b5563 !important;
+  color: #e5e7eb !important;
+}
+html.dark .react-datepicker__header {
+  background: #273449 !important;
+  border-color: #374151 !important;
+}
+html.dark .react-datepicker__current-month,
+html.dark .react-datepicker__day-name,
+html.dark .react-datepicker__day {
+  color: #e5e7eb !important;
+}
+html.dark .react-datepicker__day:hover {
+  background: #374151 !important;
+}
+html.dark .dlmsf-alert-success {
+  background: #123b2b !important;
+  border-color: #166534 !important;
+  color: #bbf7d0 !important;
+}
+html.dark .dlmsf-alert-danger {
+  background: #451a22 !important;
+  border-color: #7f1d1d !important;
+  color: #fecaca !important;
+}
+html.dark .dlmsf-alert-warning {
+  background: #422d0a !important;
+  border-color: #854d0e !important;
+  color: #fde68a !important;
+}
+html.dark .dlmsf-alert-info {
+  background: #172f49 !important;
+  border-color: #1e40af !important;
+  color: #bfdbfe !important;
+}
+
+
+/* Complete dark palette for the existing Tailwind-based screens. */
+html.dark body,
+html.dark #main-content,
+html.dark #main-content > div,
+html.dark .min-h-screen {
+  background-color: var(--dlmsf-page) !important;
+  color: var(--dlmsf-text) !important;
+}
+html.dark .bg-white,
+html.dark [class*="bg-[#f4f6f9]"],
+html.dark [class*="bg-[#f1f5f9]"] {
+  background-color: var(--dlmsf-surface) !important;
+}
+html.dark .bg-slate-50,
+html.dark .bg-gray-50,
+html.dark .bg-slate-100,
+html.dark .bg-gray-100,
+html.dark .bg-slate-200,
+html.dark .bg-gray-200 {
+  background-color: #273449 !important;
+}
+html.dark .bg-blue-50,
+html.dark .bg-indigo-50,
+html.dark .bg-emerald-50,
+html.dark .bg-green-50,
+html.dark .bg-amber-50,
+html.dark .bg-yellow-50,
+html.dark .bg-red-50,
+html.dark .bg-rose-50,
+html.dark .bg-purple-50,
+html.dark .bg-orange-50,
+html.dark .bg-cyan-50 {
+  background-color: #26364a !important;
+}
+html.dark .text-slate-950,
+html.dark .text-slate-900,
+html.dark .text-slate-800,
+html.dark .text-slate-700,
+html.dark .text-slate-600,
+html.dark .text-gray-950,
+html.dark .text-gray-900,
+html.dark .text-gray-800,
+html.dark .text-gray-700,
+html.dark .text-gray-600,
+html.dark .text-neutral-900,
+html.dark .text-neutral-800,
+html.dark .text-neutral-700,
+html.dark .text-neutral-600,
+html.dark .dlmsf-page-title,
+html.dark .dlmsf-form-label {
+  color: #e5e7eb !important;
+}
+html.dark .text-slate-500,
+html.dark .text-slate-400,
+html.dark .text-gray-500,
+html.dark .text-gray-400,
+html.dark .text-neutral-500,
+html.dark .text-neutral-400 {
+  color: #aebaca !important;
+}
+html.dark .border-slate-100,
+html.dark .border-slate-200,
+html.dark .border-slate-300,
+html.dark .border-gray-100,
+html.dark .border-gray-200,
+html.dark .border-gray-300,
+html.dark .border-neutral-200 {
+  border-color: #374151 !important;
+}
+html.dark [class*="hover:bg-slate-50"]:hover,
+html.dark [class*="hover:bg-slate-100"]:hover,
+html.dark [class*="hover:bg-gray-50"]:hover,
+html.dark [class*="hover:bg-gray-100"]:hover {
+  background-color: #334155 !important;
+}
+html.dark .dlmsf-callout,
+html.dark .dlmsf-progress {
+  background-color: #1f2937 !important;
+}
+html.dark .dlmsf-control::placeholder,
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #8291a5 !important;
+}
+html.dark input[type="checkbox"],
+html.dark input[type="radio"] {
+  accent-color: #60a5fa;
+}
+html.dark .react-datepicker__day--disabled,
+html.dark .react-datepicker__day--outside-month {
+  color: #64748b !important;
+}
+html.dark .dlmsf-tab:hover {
+  color: #e5e7eb !important;
+  background: #273449 !important;
+}
+html.dark .dlmsf-table tbody tr:nth-child(even) {
+  background-color: rgba(255,255,255,.025);
+}
+html.dark .dlmsf-table tbody tr:hover {
+  background-color: #273449 !important;
+}
+
+/* Dark-mode contrast pass: preserve semantic colors while ensuring readable text.
+   Tailwind status utilities are used across cards, badges, alerts and action links. */
+html.dark {
+  --dlmsf-text: #f1f5f9;
+  --dlmsf-muted: #cbd5e1;
+  --dlmsf-surface: #1e293b;
+  --dlmsf-page: #0f172a;
+  --dlmsf-border: #475569;
+}
+html.dark body,
+html.dark #main-content,
+html.dark #main-content > div {
+  color: #f1f5f9 !important;
+}
+
+/* Semantic foreground colors: convert light-theme dark text shades to
+   their accessible light-theme counterparts without affecting text-white. */
+html.dark .text-blue-600, html.dark .text-blue-700, html.dark .text-blue-800, html.dark .text-blue-900,
+html.dark .text-indigo-600, html.dark .text-indigo-700, html.dark .text-indigo-800, html.dark .text-indigo-900,
+html.dark .text-sky-600, html.dark .text-sky-700, html.dark .text-sky-800, html.dark .text-sky-900,
+html.dark .text-cyan-600, html.dark .text-cyan-700, html.dark .text-cyan-800, html.dark .text-cyan-900 {
+  color: #93c5fd !important;
+}
+html.dark .text-green-600, html.dark .text-green-700, html.dark .text-green-800, html.dark .text-green-900,
+html.dark .text-emerald-600, html.dark .text-emerald-700, html.dark .text-emerald-800, html.dark .text-emerald-900,
+html.dark .text-teal-600, html.dark .text-teal-700, html.dark .text-teal-800, html.dark .text-teal-900 {
+  color: #86efac !important;
+}
+html.dark .text-red-600, html.dark .text-red-700, html.dark .text-red-800, html.dark .text-red-900,
+html.dark .text-rose-600, html.dark .text-rose-700, html.dark .text-rose-800, html.dark .text-rose-900,
+html.dark .text-pink-600, html.dark .text-pink-700, html.dark .text-pink-800, html.dark .text-pink-900 {
+  color: #fda4af !important;
+}
+html.dark .text-amber-600, html.dark .text-amber-700, html.dark .text-amber-800, html.dark .text-amber-900,
+html.dark .text-yellow-600, html.dark .text-yellow-700, html.dark .text-yellow-800, html.dark .text-yellow-900,
+html.dark .text-orange-600, html.dark .text-orange-700, html.dark .text-orange-800, html.dark .text-orange-900 {
+  color: #fcd34d !important;
+}
+html.dark .text-purple-600, html.dark .text-purple-700, html.dark .text-purple-800, html.dark .text-purple-900,
+html.dark .text-violet-600, html.dark .text-violet-700, html.dark .text-violet-800, html.dark .text-violet-900,
+html.dark .text-fuchsia-600, html.dark .text-fuchsia-700, html.dark .text-fuchsia-800, html.dark .text-fuchsia-900 {
+  color: #d8b4fe !important;
+}
+html.dark .text-slate-300, html.dark .text-gray-300, html.dark .text-neutral-300 {
+  color: #cbd5e1 !important;
+}
+
+/* Darken tinted surfaces behind semantic text instead of leaving pale badges
+   with insufficient contrast in dark mode. */
+html.dark .bg-blue-50, html.dark .bg-indigo-50, html.dark .bg-sky-50, html.dark .bg-cyan-50 {
+  background-color: #172f4d !important;
+}
+html.dark .bg-green-50, html.dark .bg-emerald-50, html.dark .bg-teal-50 {
+  background-color: #143b30 !important;
+}
+html.dark .bg-red-50, html.dark .bg-rose-50, html.dark .bg-pink-50 {
+  background-color: #451f2a !important;
+}
+html.dark .bg-amber-50, html.dark .bg-yellow-50, html.dark .bg-orange-50 {
+  background-color: #453516 !important;
+}
+html.dark .bg-purple-50, html.dark .bg-violet-50, html.dark .bg-fuchsia-50 {
+  background-color: #35234f !important;
+}
+
+/* Ensure secondary text, table content and native controls remain legible. */
+html.dark .dlmsf-muted,
+html.dark .dlmsf-form-hint,
+html.dark .dlmsf-breadcrumbs,
+html.dark .dlmsf-page-subtitle {
+  color: #cbd5e1 !important;
+}
+html.dark .dlmsf-table tbody td,
+html.dark .dlmsf-table tbody th {
+  color: #e2e8f0;
+}
+html.dark .dlmsf-control:disabled {
+  background-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+html.dark .dlmsf-tab {
+  color: #cbd5e1;
+}
+html.dark .dlmsf-tab[data-active="true"] {
+  color: #93c5fd !important;
+}
+html.dark .dlmsf-callout {
+  color: #e2e8f0;
+  border-color: #475569;
+}
+html.dark .dlmsf-datepicker-input {
+  background: #111827 !important;
+  color: #f1f5f9 !important;
+  border-color: #475569 !important;
+}
+
