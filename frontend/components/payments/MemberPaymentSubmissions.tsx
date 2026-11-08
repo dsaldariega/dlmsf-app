@@ -7,15 +7,15 @@ import { formatCurrency } from "@/lib/utils/loans";
 import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
 import TableLoading from "@/components/ui/TableLoading";
 import { tableClass, tdClass, thClass } from "@/components/ui/table-styles";
+import type { Loan, PaymentPaymentSubmission, DataTableColumn } from "@/lib/types";
 
-type Loan = { id: number; total: number | string; monthly: number | string; status: string };
-type Submission = { id: number; payment_type: string; amount: number | string; paid_on: string; loan_id?: number | null; reference?: string | null; status: string; admin_remarks?: string | null };
+
 const inputClass = "dlmsf-control mt-1";
 const today = () => { const d = new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
 
-export default function MemberPaymentSubmissions() {
+export default function MemberPaymentPaymentSubmissions() {
   const [loans, setLoans] = useState<Loan[]>([]);
-  const [rows, setRows] = useState<Submission[]>([]);
+  const [rows, setRows] = useState<PaymentSubmission[]>([]);
   const [loanId, setLoanId] = useState("");
   const [amount, setAmount] = useState("");
   const [paidOn, setPaidOn] = useState(today());
@@ -32,7 +32,7 @@ export default function MemberPaymentSubmissions() {
     try {
       const [loanRows, submissions] = await Promise.all([
         apiRequest<Loan[]>("/api/loans"),
-        apiRequest<Submission[]>("/api/payments/submissions"),
+        apiRequest<PaymentSubmission[]>("/api/payments/submissions"),
       ]);
       setLoans(loanRows.filter(row => row.status !== "Paid"));
       setRows(submissions.filter(row => row.payment_type === "Loan"));
@@ -63,7 +63,7 @@ export default function MemberPaymentSubmissions() {
     } finally { setBusy(false); }
   }
 
-  const columns: DataTableColumn<Submission>[] = [
+  const columns: DataTableColumn<PaymentSubmission>[] = [
     { key: "amount", header: "Amount", render: row => formatCurrency(Number(row.amount)) },
     { key: "loan", header: "Loan", render: row => row.loan_id ? "Loan #" + row.loan_id : "—" },
     { key: "date", header: "Date paid", render: row => row.paid_on ? new Date(row.paid_on + "T00:00:00").toLocaleDateString("en-PH") : "—" },
