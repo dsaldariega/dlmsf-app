@@ -121,7 +121,7 @@ export default function AuditPage() {
       header: "Principal",
       render: (audit) => (
         <span className="tabular-nums text-slate-600">
-          {formatCurrency(audit.amount)}
+          {formatCurrency(Number(audit.amount) || 0)}
         </span>
       ),
     },
@@ -130,7 +130,7 @@ export default function AuditPage() {
       header: "Interest",
       render: (audit) => (
         <span className="tabular-nums text-violet-700">
-          {formatCurrency(audit.interest)}
+          {formatCurrency(Number(audit.interest) || 0)}
         </span>
       ),
     },
@@ -139,7 +139,7 @@ export default function AuditPage() {
       header: "Total",
       render: (audit) => (
         <span className="font-semibold tabular-nums text-emerald-700">
-          {formatCurrency(audit.total)}
+          {formatCurrency(Number(audit.total) || 0)}
         </span>
       ),
     },
@@ -148,7 +148,7 @@ export default function AuditPage() {
       header: "Monthly",
       render: (audit) => (
         <span className="tabular-nums text-slate-600">
-          {formatCurrency(audit.monthly)}
+          {formatCurrency(Number(audit.monthly) || 0)}
         </span>
       ),
     },
@@ -232,7 +232,7 @@ export default function AuditPage() {
       header: "Amount",
       render: (payment) => (
         <span className="font-semibold tabular-nums text-emerald-700">
-          {formatCurrency(payment.amount)}
+          {formatCurrency(Number(payment.amount) || 0)}
         </span>
       ),
     },
