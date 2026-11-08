@@ -188,7 +188,7 @@ function AdminDashboard() {
       .reduce((sum, payment) => sum + amount(payment.amount), 0);
 
   const cardClass =
-    "rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md";
+    "dlmsf-card p-5 transition-shadow hover:shadow-md";
 
   const sinkingCollectionColumns: DataTableColumn<string>[] = [
     {
@@ -292,12 +292,12 @@ function AdminDashboard() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+      <div className="dlmsf-page-header">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+          <h2 className="dlmsf-page-title">
             Dashboard Overview
           </h2>
-          <p className="mt-2 text-sm text-slate-500">
+          <p className="dlmsf-page-subtitle">
             Monitor members, sinking fund contributions, and loan collections.
           </p>
         </div>
@@ -306,7 +306,7 @@ function AdminDashboard() {
           type="button"
           onClick={() => void loadData()}
           disabled={loading}
-          className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+          className="dlmsf-btn dlmsf-btn-secondary disabled:cursor-not-allowed disabled:opacity-50"
         >
           <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
           {loading ? "Refreshing..." : "Refresh"}
@@ -441,8 +441,8 @@ function AdminDashboard() {
             {title:"Loan requests",total:loanRequests.length,approved:loanRequests.filter(x=>x.status==="Approved").length,pending:loanRequests.filter(x=>x.status==="Pending").length,href:"/loans",Icon:ClipboardList},
             {title:"Weekly payment requests",total:paymentSubmissions.filter(x=>x.payment_type==="Weekly").length,approved:paymentSubmissions.filter(x=>x.payment_type==="Weekly"&&x.status==="Confirmed").length,pending:paymentSubmissions.filter(x=>x.payment_type==="Weekly"&&x.status==="Pending").length,href:"/payments",Icon:Receipt},
             {title:"Loan repayment requests",total:paymentSubmissions.filter(x=>x.payment_type==="Loan").length,approved:paymentSubmissions.filter(x=>x.payment_type==="Loan"&&x.status==="Confirmed").length,pending:paymentSubmissions.filter(x=>x.payment_type==="Loan"&&x.status==="Pending").length,href:"/payments",Icon:HandCoins},
-          ].map(item=><a key={item.title} href={item.href} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-200 hover:shadow-md"><div className="flex items-center justify-between"><p className="text-sm font-medium text-slate-600">{item.title}</p><item.Icon className="text-blue-600" size={21}/></div><p className="mt-3 text-3xl font-bold tabular-nums text-slate-900">{loading?"—":item.total}</p><div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs"><span className="font-medium text-emerald-700">{item.approved} approved</span><span className="font-medium text-amber-700">{item.pending} pending</span></div></a>)}
-          <article className="rounded-xl border border-slate-200 bg-slate-50 p-5"><p className="text-sm font-medium text-slate-600">All requests</p><p className="mt-3 text-3xl font-bold tabular-nums text-slate-900">{loading?"—":loanRequests.length+paymentSubmissions.length}</p><div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs"><span className="font-medium text-emerald-700">{loanRequests.filter(x=>x.status==="Approved").length+paymentSubmissions.filter(x=>x.status==="Confirmed").length} approved</span><span className="font-medium text-amber-700">{loanRequests.filter(x=>x.status==="Pending").length+paymentSubmissions.filter(x=>x.status==="Pending").length} pending</span></div></article>
+          ].map(item=><a key={item.title} href={item.href} className="dlmsf-card p-5 transition hover:border-blue-200 hover:shadow-md"><div className="flex items-center justify-between"><p className="text-sm font-medium text-slate-600">{item.title}</p><item.Icon className="text-blue-600" size={21}/></div><p className="mt-3 text-3xl font-bold tabular-nums text-slate-900">{loading?"—":item.total}</p><div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs"><span className="font-medium text-emerald-700">{item.approved} approved</span><span className="font-medium text-amber-700">{item.pending} pending</span></div></a>)}
+          <article className="dlmsf-card bg-slate-50 p-5"><p className="text-sm font-medium text-slate-600">All requests</p><p className="mt-3 text-3xl font-bold tabular-nums text-slate-900">{loading?"—":loanRequests.length+paymentSubmissions.length}</p><div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs"><span className="font-medium text-emerald-700">{loanRequests.filter(x=>x.status==="Approved").length+paymentSubmissions.filter(x=>x.status==="Confirmed").length} approved</span><span className="font-medium text-amber-700">{loanRequests.filter(x=>x.status==="Pending").length+paymentSubmissions.filter(x=>x.status==="Pending").length} pending</span></div></article>
         </div>
       </section>
       <section>
@@ -453,7 +453,7 @@ function AdminDashboard() {
           Monthly contribution targets and actual collections.
         </p>
 
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="dlmsf-card overflow-x-auto">
           <div className="max-h-[26rem] overflow-y-auto">
             <DataTable
               data={MONTHS}
