@@ -493,7 +493,7 @@ export default function LoansPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/50 p-4 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto dlmsf-modal-backdrop p-4"
             onMouseDown={(event) => {
               if (event.target === event.currentTarget) closeAddModal();
             }}
@@ -781,7 +781,7 @@ export default function LoansPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-60 flex items-center justify-center overflow-y-auto bg-slate-950/50 p-4 backdrop-blur-sm"
+            className="fixed inset-0 z-60 flex items-center justify-center overflow-y-auto dlmsf-modal-backdrop p-4"
             onMouseDown={(event) => {
               if (
                 event.target === event.currentTarget &&
