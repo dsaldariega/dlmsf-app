@@ -195,7 +195,7 @@ export default function AuditPage() {
             setIsDeleteLoanModalOpen(true);
           }}
           disabled={deletingLoanId !== null || deletingPaymentId !== null}
-          className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg border border-red-200 bg-white px-3 text-xs font-semibold text-red-600 shadow-sm transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+          className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm shrink-0 !border-red-200 !text-red-600 hover:!bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Delete
         </button>
@@ -256,7 +256,7 @@ export default function AuditPage() {
             setIsDeletePaymentModalOpen(true);
           }}
           disabled={deletingLoanId !== null || deletingPaymentId !== null}
-          className="rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+          className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm !border-red-200 !text-red-600 hover:!bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Delete
         </button>
@@ -385,9 +385,9 @@ export default function AuditPage() {
         </AnimatePresence>
       </div>
       {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="dlmsf-page-header">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+          <h1 className="dlmsf-page-title">
             Audit
           </h1>
           <p className="mt-1 text-sm text-slate-500">
@@ -398,21 +398,21 @@ export default function AuditPage() {
       {errorMessage && (
         <div
           role="alert"
-          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          className="dlmsf-alert dlmsf-alert-danger"
         >
           {errorMessage}
         </div>
       )}
       {/* Loan Audit Log - static card, independently scrollable table */}
-      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-200 px-5 py-4">
+      <section className="dlmsf-card">
+        <div className="dlmsf-card-header">
           <h2 className="font-semibold text-slate-900">Loans Audit Log</h2>
           <p className="mt-1 text-sm text-slate-500">
             Review loan amounts, repayment status, and audit remarks.
           </p>
         </div>
 
-        <div className="h-105 overflow-y-auto overflow-x-auto">
+        <div className="max-h-[32rem] overflow-y-auto overflow-x-auto">
           <DataTable
             data={loanAudits}
             columns={loanAuditColumns}
@@ -518,7 +518,7 @@ export default function AuditPage() {
               aria-modal="true"
               aria-labelledby="delete-loan-audit-title"
               aria-describedby="delete-loan-audit-description"
-              className="my-auto w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+              className="dlmsf-modal my-auto w-full max-w-md"
             >
               <div className="px-6 py-6">
                 <div className="flex items-start gap-4">
