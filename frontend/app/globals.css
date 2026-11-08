@@ -936,3 +936,100 @@ html.dark .dlmsf-table tbody tr:nth-child(even) {
 html.dark .dlmsf-table tbody tr:hover {
   background-color: #273449 !important;
 }
+
+/* Dark-mode contrast pass: preserve semantic colors while ensuring readable text.
+   Tailwind status utilities are used across cards, badges, alerts and action links. */
+html.dark {
+  --dlmsf-text: #f1f5f9;
+  --dlmsf-muted: #cbd5e1;
+  --dlmsf-surface: #1e293b;
+  --dlmsf-page: #0f172a;
+  --dlmsf-border: #475569;
+}
+html.dark body,
+html.dark #main-content,
+html.dark #main-content > div {
+  color: #f1f5f9 !important;
+}
+
+/* Semantic foreground colors: convert light-theme dark text shades to
+   their accessible light-theme counterparts without affecting text-white. */
+html.dark .text-blue-600, html.dark .text-blue-700, html.dark .text-blue-800, html.dark .text-blue-900,
+html.dark .text-indigo-600, html.dark .text-indigo-700, html.dark .text-indigo-800, html.dark .text-indigo-900,
+html.dark .text-sky-600, html.dark .text-sky-700, html.dark .text-sky-800, html.dark .text-sky-900,
+html.dark .text-cyan-600, html.dark .text-cyan-700, html.dark .text-cyan-800, html.dark .text-cyan-900 {
+  color: #93c5fd !important;
+}
+html.dark .text-green-600, html.dark .text-green-700, html.dark .text-green-800, html.dark .text-green-900,
+html.dark .text-emerald-600, html.dark .text-emerald-700, html.dark .text-emerald-800, html.dark .text-emerald-900,
+html.dark .text-teal-600, html.dark .text-teal-700, html.dark .text-teal-800, html.dark .text-teal-900 {
+  color: #86efac !important;
+}
+html.dark .text-red-600, html.dark .text-red-700, html.dark .text-red-800, html.dark .text-red-900,
+html.dark .text-rose-600, html.dark .text-rose-700, html.dark .text-rose-800, html.dark .text-rose-900,
+html.dark .text-pink-600, html.dark .text-pink-700, html.dark .text-pink-800, html.dark .text-pink-900 {
+  color: #fda4af !important;
+}
+html.dark .text-amber-600, html.dark .text-amber-700, html.dark .text-amber-800, html.dark .text-amber-900,
+html.dark .text-yellow-600, html.dark .text-yellow-700, html.dark .text-yellow-800, html.dark .text-yellow-900,
+html.dark .text-orange-600, html.dark .text-orange-700, html.dark .text-orange-800, html.dark .text-orange-900 {
+  color: #fcd34d !important;
+}
+html.dark .text-purple-600, html.dark .text-purple-700, html.dark .text-purple-800, html.dark .text-purple-900,
+html.dark .text-violet-600, html.dark .text-violet-700, html.dark .text-violet-800, html.dark .text-violet-900,
+html.dark .text-fuchsia-600, html.dark .text-fuchsia-700, html.dark .text-fuchsia-800, html.dark .text-fuchsia-900 {
+  color: #d8b4fe !important;
+}
+html.dark .text-slate-300, html.dark .text-gray-300, html.dark .text-neutral-300 {
+  color: #cbd5e1 !important;
+}
+
+/* Darken tinted surfaces behind semantic text instead of leaving pale badges
+   with insufficient contrast in dark mode. */
+html.dark .bg-blue-50, html.dark .bg-indigo-50, html.dark .bg-sky-50, html.dark .bg-cyan-50 {
+  background-color: #172f4d !important;
+}
+html.dark .bg-green-50, html.dark .bg-emerald-50, html.dark .bg-teal-50 {
+  background-color: #143b30 !important;
+}
+html.dark .bg-red-50, html.dark .bg-rose-50, html.dark .bg-pink-50 {
+  background-color: #451f2a !important;
+}
+html.dark .bg-amber-50, html.dark .bg-yellow-50, html.dark .bg-orange-50 {
+  background-color: #453516 !important;
+}
+html.dark .bg-purple-50, html.dark .bg-violet-50, html.dark .bg-fuchsia-50 {
+  background-color: #35234f !important;
+}
+
+/* Ensure secondary text, table content and native controls remain legible. */
+html.dark .dlmsf-muted,
+html.dark .dlmsf-form-hint,
+html.dark .dlmsf-breadcrumbs,
+html.dark .dlmsf-page-subtitle {
+  color: #cbd5e1 !important;
+}
+html.dark .dlmsf-table tbody td,
+html.dark .dlmsf-table tbody th {
+  color: #e2e8f0;
+}
+html.dark .dlmsf-control:disabled {
+  background-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+html.dark .dlmsf-tab {
+  color: #cbd5e1;
+}
+html.dark .dlmsf-tab[data-active="true"] {
+  color: #93c5fd !important;
+}
+html.dark .dlmsf-callout {
+  color: #e2e8f0;
+  border-color: #475569;
+}
+html.dark .dlmsf-datepicker-input {
+  background: #111827 !important;
+  color: #f1f5f9 !important;
+  border-color: #475569 !important;
+}
+
