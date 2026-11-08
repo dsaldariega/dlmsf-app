@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api";
-import { Loan, LoanAction, Toast } from "@/lib/types/loan";
-import { MemberOption } from "@/lib/types/member";
+import type { Loan, LoanAction, Toast } from "@/lib/types";
+import type { MemberOption } from "@/lib/types";
 import {
   INTEREST_RATE,
   LOAN_DURATIONS,
