@@ -8,8 +8,6 @@ import {
   Banknote,
   Bell,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   CreditCard,
   LayoutDashboard,
   LogOut,
@@ -49,7 +47,6 @@ export default function DashboardShell({
   children: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -254,7 +251,7 @@ export default function DashboardShell({
         id="dlmsf-sidebar"
         aria-label="Main sidebar"
         className={`dlmsf-sidebar fixed inset-y-0 left-0 z-50 flex w-65 flex-col transition-all duration-200 ${
-          collapsed ? "lg:w-19" : "lg:w-65"
+          "lg:w-65"
         } ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         } lg:translate-x-0`}
@@ -271,22 +268,7 @@ export default function DashboardShell({
               DL
             </span>
 
-            {!collapsed && (
-              <span className="dlmsf-brand-text truncate text-lg font-bold tracking-tight">
-                DLMSF
-              </span>
-            )}
-          </Link>
-
-        </div>
-
-        {/* Navigation */}
-        <div className="flex-1 overflow-y-auto px-3 py-5">
-          {!collapsed && (
-            <p className="dlmsf-muted mb-3 px-3 text-xs font-semibold uppercase tracking-wider">
-              Main menu
-            </p>
-          )}
+            <p className="dlmsf-muted mb-3 px-3 text-xs font-semibold uppercase tracking-wider">Main menu</p>
 
           <nav aria-label="Main navigation" className="space-y-1">
             {navigation.map((item) => {
@@ -301,7 +283,6 @@ export default function DashboardShell({
                 <Link
                   key={item.href}
                   href={item.href}
-                  title={collapsed ? item.label : undefined}
                   onClick={() => setMobileOpen(false)}
                   aria-current={active ? "page" : undefined}
                   data-active={active ? "true" : "false"}
@@ -313,9 +294,9 @@ export default function DashboardShell({
                 >
                   <Icon size={19} className="shrink-0" />
 
-                  {!collapsed && <span>{item.label}</span>}
+                  <span>{item.label}</span>
 
-                  {active && !collapsed && (
+                  {active && (
                     <span className="ml-auto size-1.5 rounded-full bg-blue-600" />
                   )}
                 </Link>
@@ -326,31 +307,13 @@ export default function DashboardShell({
 
         {/* Sidebar footer */}
         <div className="border-t border-white/10 p-3">
-          {!collapsed ? (
-            <div className="rounded-lg bg-white/5 px-3 py-3">
-              <p className="dlmsf-brand-text text-xs font-semibold">
-                DLMSF Monitoring
-              </p>
-              <p className="dlmsf-muted mt-1 text-xs">
-                Loan Management System
-              </p>
-            </div>
-          ) : (
-            <div
-              className="dlmsf-muted flex justify-center py-2 text-xs font-semibold"
-              title="DLMSF Monitoring"
-            >
-              DL
-            </div>
-          )}
+          <div className="rounded-lg bg-white/5 px-3 py-3"><p className="dlmsf-brand-text text-xs font-semibold">DLMSF Monitoring</p><p className="dlmsf-muted mt-1 text-xs">Loan Management System</p></div>
         </div>
       </aside>
 
       {/* Main content */}
       <div
-        className={`min-h-screen transition-[margin] duration-200 ${
-          collapsed ? "lg:ml-19" : "lg:ml-65"
-        }`}
+        className="min-h-screen transition-[margin] duration-200 lg:ml-65"
       >
         {/* Navbar */}
 
@@ -367,21 +330,6 @@ export default function DashboardShell({
               className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm !min-h-0 !border-0 !p-2 lg:hidden"
             >
               <Menu size={21} />
-            </button>
-
-            {/* Desktop sidebar toggle */}
-            <button
-              type="button"
-              onClick={() => setCollapsed((previous) => !previous)}
-              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-              className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm hidden !min-h-0 !border-0 !p-2 lg:inline-flex"
-            >
-              {collapsed ? (
-                <ChevronRight size={20} />
-              ) : (
-                <ChevronLeft size={20} />
-              )}
             </button>
 
             {/* Current page */}
