@@ -4,10 +4,10 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { apiRequest } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils/loans";
-import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
+import DataTable from "@/components/ui/DataTable";
 import TableLoading from "@/components/ui/TableLoading";
 import { Activity, ShieldCheck } from "lucide-react";
-import type { LoanAudit, PaymentAudit } from "@/lib/types";
+import type { DataTableColumn, LoanAudit, PaymentAudit } from "@/lib/types";
 
 
 export default function MemberAudit() {
