@@ -5,9 +5,9 @@ import { apiRequest } from "@/lib/api";
 import { withAuth } from "@/lib/withAuth";
 import { motion, AnimatePresence } from "motion/react";
 import { RATE } from "@/lib/constants/member";
-import type { Member, Toast } from "@/lib/types";
+import type { DataTableColumn, Member, Toast } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils/members";
-import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
+import DataTable from "@/components/ui/DataTable";
 import { tableClass, tdClass, thClass } from "@/components/ui/table-styles";
 import TableLoading from "@/components/ui/TableLoading";
 
