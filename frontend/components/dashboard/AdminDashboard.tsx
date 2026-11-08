@@ -557,7 +557,7 @@ function AdminDashboard() {
         </p>
 
         <div className="dlmsf-card overflow-x-auto">
-          <div className="max-h-[26rem] overflow-y-auto">
+          <div className="max-h-104 overflow-y-auto">
             <DataTable
               data={MONTHS}
               columns={sinkingCollectionColumns}
@@ -583,7 +583,7 @@ function AdminDashboard() {
         </p>
 
         <div className="dlmsf-card overflow-x-auto">
-          <div className="max-h-[26rem] overflow-y-auto">
+          <div className="max-h-104 overflow-y-auto">
             <DataTable
               data={MONTHS}
               columns={loanCollectionColumns}
