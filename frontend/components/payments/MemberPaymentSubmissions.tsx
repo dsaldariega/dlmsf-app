@@ -4,16 +4,16 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Receipt, X } from "lucide-react";
 import { apiRequest } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils/loans";
-import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
+import DataTable from "@/components/ui/DataTable";
 import TableLoading from "@/components/ui/TableLoading";
 import { tableClass, tdClass, thClass } from "@/components/ui/table-styles";
-import type { Loan, PaymentPaymentSubmission, DataTableColumn } from "@/lib/types";
+import type { Loan, PaymentSubmission, DataTableColumn } from "@/lib/types";
 
 
 const inputClass = "dlmsf-control mt-1";
 const today = () => { const d = new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
 
-export default function MemberPaymentPaymentSubmissions() {
+export default function MemberPaymentSubmissions() {
   const [loans, setLoans] = useState<Loan[]>([]);
   const [rows, setRows] = useState<PaymentSubmission[]>([]);
   const [loanId, setLoanId] = useState("");
