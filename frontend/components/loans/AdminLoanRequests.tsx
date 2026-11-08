@@ -3,7 +3,7 @@ import {useCallback,useEffect,useState} from "react";
 import {Eye,X,CheckCircle2,XCircle} from "lucide-react";
 import {apiRequest} from "@/lib/api";
 import {formatCurrency} from "@/lib/utils/loans";
-import DataTable,{type DataTableColumn} from "@/components/ui/DataTable";
+import DataTable from "@/components/ui/DataTable";
 import TableLoading from "@/components/ui/TableLoading";
 import {tableClass,tdClass,thClass} from "@/components/ui/table-styles";
 import type { AdminLoanRequest, DataTableColumn } from "@/lib/types";
