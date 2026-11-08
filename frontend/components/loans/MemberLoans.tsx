@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { apiRequest } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils/loans";
-import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
+import DataTable from "@/components/ui/DataTable";
 import { HandCoins, Info } from "lucide-react";
-import type { Loan, DataTableColumn } from "@/lib/types";
+import type { DataTableColumn, Loan } from "@/lib/types";
 
 
 export default function MemberLoans() {
