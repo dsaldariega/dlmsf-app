@@ -13,13 +13,11 @@ import {
 } from "lucide-react";
 import { apiRequest } from "@/lib/api";
 import { withAuth } from "@/lib/withAuth";
-import type { Member } from "@/lib/types";
-import type { LoanPayment, Payment } from "@/lib/types";
-import type { Loan } from "@/lib/types";
+import type { DataTableColumn, Loan, LoanPayment, Member, Payment } from "@/lib/types";
 import { CUTOFF_MONTHS, MONTHS } from "@/lib/constants/dashboard";
 import { motion, AnimatePresence } from "motion/react";
 import { tableClass, tdClass, thClass } from "@/components/ui/table-styles";
-import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
+import DataTable from "@/components/ui/DataTable";
 import TableLoading from "@/components/ui/TableLoading";
 
 function amount(value: number | string | null | undefined): number {
