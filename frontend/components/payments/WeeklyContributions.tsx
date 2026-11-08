@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
-import { CheckCircle2, CircleDollarSign, Eye, Plus, X } from "lucide-react";
+import { CalendarDays, CheckCircle2, CircleDollarSign, Eye, Plus, X } from "lucide-react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { apiRequest } from "@/lib/api";
@@ -112,32 +112,62 @@ export default function WeeklyContributions() {
           <span>Payments</span><span aria-hidden="true">/</span><span className="font-medium text-slate-900">Weekly contributions</span>
         </nav>
       </div>
-      <div className="w-full sm:w-80">
-        <label className="dlmsf-form-label" htmlFor="collection-week">Collection week</label>
-        <p className="mb-2 text-xs text-slate-500">Sunday only · select the week you are recording.</p>
-        <div className="dlmsf-datepicker-wrap">
-          <DatePicker
-            id="collection-week"
-            selected={new Date(weekStart + "T00:00:00")}
-            onChange={(date: Date | null) => { if (date && date.getDay() === 0) setWeekStart(localDate(date)); }}
-            filterDate={(date: Date) => date.getDay() === 0}
-            dateFormat="MMMM d, yyyy"
-            popperClassName="!z-[9999]"
-            className="dlmsf-datepicker-input"
-            wrapperClassName="w-full"
-            placeholderText="Select Sunday"
-            aria-label="Collection week, Sunday only"
-          />
+    </header>
+
+    <section className="dlmsf-card overflow-visible">
+      <div className="dlmsf-card-body">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0">
+            <div className="flex items-start gap-3">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                <CalendarDays size={20} aria-hidden="true" />
+              </span>
+              <div>
+                <label className="dlmsf-form-label mb-0 text-sm text-slate-800" htmlFor="collection-week">
+                  Collection week
+                </label>
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  Choose the Sunday that starts the contribution week.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="w-full lg:w-80">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Week start</span>
+              <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
+                Sundays only
+              </span>
+            </div>
+            <div className="dlmsf-datepicker-wrap mt-2">
+              <DatePicker
+                id="collection-week"
+                selected={new Date(weekStart + "T00:00:00")}
+                onChange={(date: Date | null) => { if (date && date.getDay() === 0) setWeekStart(localDate(date)); }}
+                filterDate={(date: Date) => date.getDay() === 0}
+                dateFormat="MMMM d, yyyy"
+                popperClassName="!z-[9999]"
+                className="dlmsf-datepicker-input"
+                wrapperClassName="w-full"
+                placeholderText="Select a Sunday"
+                aria-label="Collection week, Sundays only"
+              />
+            </div>
+            <p className="mt-2 text-xs text-slate-400">
+              Monday–Saturday are unavailable because weekly contributions are anchored to Sunday.
+            </p>
+          </div>
         </div>
       </div>
-    </header>
+    </section>
     {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
     {notice && <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">{notice}</p>}
-    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"><p className="text-sm text-slate-500">Expected this week</p><p className="mt-2 text-xl font-bold text-slate-900">{formatCurrency(summary.due)}</p></article>
-      <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"><p className="text-sm text-slate-500">Recorded so far</p><p className="mt-2 text-xl font-bold text-emerald-700">{formatCurrency(summary.paid)}</p></article>
-      <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"><p className="text-sm text-slate-500">Fully paid</p><p className="mt-2 text-xl font-bold text-slate-900">{summary.paidCount} / {members.length}</p></article>
-      <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"><p className="text-sm text-slate-500">Partially paid</p><p className="mt-2 text-xl font-bold text-amber-700">{summary.partialCount}</p></article>
+    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Weekly contribution summary">
+      <article className="dlmsf-card dlmsf-stat p-4"><p className="text-sm text-slate-500">Expected this week</p><p className="mt-2 text-xl font-bold text-slate-900">{formatCurrency(summary.due)}</p></article>
+      <article className="dlmsf-card dlmsf-stat dlmsf-stat-success p-4"><p className="text-sm text-slate-500">Recorded so far</p><p className="mt-2 text-xl font-bold text-emerald-700">{formatCurrency(summary.paid)}</p></article>
+      <article className="dlmsf-card dlmsf-stat dlmsf-stat-success p-4"><p className="text-sm text-slate-500">Fully paid</p><p className="mt-2 text-xl font-bold text-slate-900">{summary.paidCount} / {members.length}</p></article>
+      <article className="dlmsf-card dlmsf-stat dlmsf-stat-warning p-4"><p className="text-sm text-slate-500">Partially paid</p><p className="mt-2 text-xl font-bold text-amber-700">{summary.partialCount}</p></article>
     </section>
     <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4"><div><h3 className="font-semibold text-slate-900">Member payment status</h3><p className="mt-1 text-sm text-slate-500">₱50 per head · Week starting {weekStart}</p></div><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{members.length} members</span></div>
