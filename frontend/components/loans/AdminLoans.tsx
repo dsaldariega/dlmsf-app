@@ -260,7 +260,7 @@ export default function LoansPage() {
               type="button"
               onClick={() => setLoanAction({ type: "paid", loan })}
               disabled={processingId !== null}
-              className="shrink-0 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm !text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Mark Paid
             </button>
@@ -270,7 +270,7 @@ export default function LoansPage() {
             type="button"
             onClick={() => setLoanAction({ type: "delete", loan })}
             disabled={processingId !== null}
-            className="shrink-0 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm !text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Delete
           </button>
@@ -466,7 +466,7 @@ export default function LoansPage() {
           type="button"
           onClick={() => setIsAddModalOpen(true)}
           disabled={loading || loadingMembers || members.length === 0}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+          className="dlmsf-btn dlmsf-btn-primary disabled:cursor-not-allowed disabled:opacity-50"
         >
           <svg
             width="18"
@@ -580,7 +580,7 @@ export default function LoansPage() {
                         }
                         disabled={adding}
                         required
-                        className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 disabled:opacity-60"
+                        className="dlmsf-control disabled:opacity-60"
                       >
                         <option value="">Choose a borrower</option>
                         {members.map((member) => (
@@ -643,7 +643,7 @@ export default function LoansPage() {
                           setLoanMonths(Number(event.target.value))
                         }
                         disabled={adding}
-                        className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 disabled:opacity-60"
+                        className="dlmsf-control disabled:opacity-60"
                       >
                         {LOAN_DURATIONS.map((months) => (
                           <option key={months} value={months}>
@@ -743,7 +743,7 @@ export default function LoansPage() {
                     type="button"
                     onClick={closeAddModal}
                     disabled={adding}
-                    className="inline-flex h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:opacity-50"
+                    className="dlmsf-btn dlmsf-btn-outline disabled:opacity-50"
                   >
                     Cancel
                   </button>
