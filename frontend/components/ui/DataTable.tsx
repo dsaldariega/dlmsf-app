@@ -1,34 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { ReactNode } from "react";
+import type { DataTableColumn, DataTableProps } from "@/lib/types";
+export type { DataTableColumn } from "@/lib/types";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Inbox } from "lucide-react";
-
-export type DataTableColumn<T> = {
-  key: string;
-  header: string;
-  render: (row: T, index: number) => ReactNode;
-  headerClassName?: string;
-  cellClassName?: string;
-};
-
-type DataTableProps<T> = {
-  data: T[];
-  columns: DataTableColumn<T>[];
-  tableClassName?: string;
-  thClassName?: string;
-  tdClassName?: string;
-  loading?: boolean;
-  loadingMessage?: string;
-  emptyMessage?: string;
-  tbodyClassName?: string;
-  loadingContent?: ReactNode;
-  emptyContent?: ReactNode;
-  loadingRow?: ReactNode;
-  getRowKey: (row: T) => string | number;
-  pageSize?: number;
-};
 
 export default function DataTable<T>({
   data,
