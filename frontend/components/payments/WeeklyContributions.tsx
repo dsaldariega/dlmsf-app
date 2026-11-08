@@ -147,7 +147,10 @@ export default function WeeklyContributions() {
                 onChange={(date: Date | null) => { if (date && date.getDay() === 0) setWeekStart(localDate(date)); }}
                 filterDate={(date: Date) => date.getDay() === 0}
                 dateFormat="MMMM d, yyyy"
-                popperClassName="!z-[99999]"\n                portalId="dlmsf-datepicker-portal"\n                popperPlacement="bottom-start"\n                showPopperArrow={false}
+                popperClassName="!z-[99999]"
+                portalId="dlmsf-datepicker-portal"
+                popperPlacement="bottom-start"
+                showPopperArrow={false}
                 className="dlmsf-datepicker-input"
                 wrapperClassName="w-full"
                 placeholderText="Select a Sunday"
