@@ -14,10 +14,11 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Moon,
+  Sun,
   Search,
   Users,
   UserRound,
-  X,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { apiRequest } from "@/lib/api";
@@ -49,6 +50,7 @@ export default function DashboardShell({
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [profile, setProfile] = useState<MemberProfile | null>(null);
@@ -59,6 +61,23 @@ export default function DashboardShell({
 
   const pathname = usePathname();
   const router = useRouter();
+
+  useEffect(() => {
+    const savedTheme = window.localStorage.getItem("dlmsf-theme");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const enabled = savedTheme ? savedTheme === "dark" : prefersDark;
+    setDarkMode(enabled);
+    document.documentElement.classList.toggle("dark", enabled);
+  }, []);
+
+  function toggleDarkMode() {
+    setDarkMode((current) => {
+      const next = !current;
+      document.documentElement.classList.toggle("dark", next);
+      window.localStorage.setItem("dlmsf-theme", next ? "dark" : "light");
+      return next;
+    });
+  }
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -259,15 +278,6 @@ export default function DashboardShell({
             )}
           </Link>
 
-          {/* Mobile close button */}
-          <button
-            type="button"
-            aria-label="Close sidebar"
-            onClick={() => setMobileOpen(false)}
-            className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm !min-h-0 !border-0 !p-2 lg:hidden"
-          >
-            <X size={19} />
-          </button>
         </div>
 
         {/* Navigation */}
@@ -387,6 +397,16 @@ export default function DashboardShell({
 
           {/* Navbar right */}
           <div className="flex shrink-0 items-center gap-1 sm:gap-3">
+            <button
+              type="button"
+              onClick={toggleDarkMode}
+              aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+              aria-pressed={darkMode}
+              title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+              className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm !min-h-0 !border-0 !p-2.5"
+            >
+              {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
             {isAdmin && (
               <div className="relative">
                 <button type="button" onClick={() => { const next=!notificationsOpen; setNotificationsOpen(next); if(next) void loadPendingNotifications(); }} aria-label={`Pending approvals: ${pendingLoanRequests+pendingLoanPayments}`} aria-expanded={notificationsOpen} className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm relative !min-h-0 !border-0 !p-2.5">
