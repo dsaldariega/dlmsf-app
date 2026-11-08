@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api";
-import { LoanPayment, Payment } from "@/lib/types/payment";
+import type { LoanPayment, Payment } from "@/lib/types";
 import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
 import TableLoading from "@/components/ui/TableLoading";
 import { formatCurrency } from "@/lib/utils/loans";
