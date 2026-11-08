@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { CheckCircle2, CircleDollarSign, Eye, Plus, X } from "lucide-react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import { apiRequest } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils/loans";
 import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
@@ -104,7 +106,7 @@ export default function WeeklyContributions() {
   return <div className="space-y-6">
     <header className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
       <div><h2 className="text-xl font-bold text-slate-900">Weekly member contributions</h2><p className="mt-1 text-sm text-slate-500">Record payments received by the administrator for each member.</p></div>
-      <label className="text-sm font-semibold text-slate-700">Collection week (Sunday)<input type="date" value={weekStart} onChange={event => { if (event.target.value) setWeekStart(sundayOf(event.target.value)); }} className="mt-1 block h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm font-normal shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"/></label>
+      <label className="text-sm font-semibold text-slate-700">Collection week (Sunday)<DatePicker selected={new Date(weekStart + "T00:00:00")} onChange={(date: Date | null) => { if (date && date.getDay() === 0) setWeekStart(localDate(date)); }} filterDate={(date: Date) => date.getDay() === 0} dateFormat="MMMM d, yyyy" popperClassName="!z-[9999]" className="mt-1 block h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-normal shadow-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" wrapperClassName="block" /></label>
     </header>
     {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
     {notice && <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">{notice}</p>}
