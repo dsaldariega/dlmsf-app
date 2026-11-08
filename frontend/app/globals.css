@@ -1067,7 +1067,7 @@ html:not(.dark) .dlmsf-sidebar .dlmsf-nav-link[data-active="true"] {
 html:not(.dark) .dlmsf-sidebar .border-t {
   border-color: #dee2e6 !important;
 }
-html:not(.dark) .dlmsf-sidebar .bg-white\\/5 {
+html:not(.dark) .dlmsf-sidebar [class~="bg-white/5"] {
   background: #f8f9fa !important;
 }
 html.dark {
