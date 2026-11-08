@@ -314,3 +314,13 @@ body {
   .dlmsf-card-header { padding: .75rem; }
   .dlmsf-card-body { padding: .75rem; }
 }
+
+
+/* Harmonize existing Tailwind surfaces with the AdminLTE card treatment. */
+.rounded-xl.border.border-slate-200.bg-white {
+  border-radius: .375rem !important;
+  box-shadow: var(--dlmsf-shadow) !important;
+}
+.rounded-xl.border.border-slate-200.bg-white:hover {
+  box-shadow: 0 .25rem .75rem rgba(0,0,0,.08) !important;
+}
