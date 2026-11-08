@@ -314,7 +314,7 @@ function MembersPage() {
             type="button"
             onClick={() => startEdit(member)}
             disabled={saving || deletingId !== null}
-            className="inline-flex h-9 items-center justify-center rounded-lg border border-blue-200 bg-white px-3 text-xs font-semibold text-blue-700 shadow-sm transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm !text-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Edit
           </button>
@@ -323,7 +323,7 @@ function MembersPage() {
             type="button"
             onClick={() => setDeleteTarget(member)}
             disabled={deletingId !== null || saving}
-            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3 text-xs font-semibold text-red-600 shadow-sm transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm !text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Delete
           </button>
@@ -344,8 +344,8 @@ function MembersPage() {
               <p className="mt-1 break-all text-sm"><span className="font-semibold">Temporary password:</span> <code>{createdCredentials.password}</code></p>
             </div>
             <div className="flex shrink-0 gap-2">
-              <button type="button" onClick={() => void copyCreatedCredentials()} className="rounded-lg bg-amber-900 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-800">Copy details</button>
-              <button type="button" onClick={() => setCreatedCredentials(null)} className="rounded-lg border border-amber-300 px-3 py-2 text-sm font-semibold text-amber-950 hover:bg-amber-100">Dismiss</button>
+              <button type="button" onClick={() => void copyCreatedCredentials()} className="dlmsf-btn dlmsf-btn-warning">Copy details</button>
+              <button type="button" onClick={() => setCreatedCredentials(null)} className="dlmsf-btn dlmsf-btn-outline">Dismiss</button>
             </div>
           </div>
         </section>
@@ -606,7 +606,7 @@ function MembersPage() {
                   type="button"
                   onClick={() => void deleteMember()}
                   disabled={deletingId !== null}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-red-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 focus:outline-none focus:ring-4 focus:ring-red-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="dlmsf-btn dlmsf-btn-danger disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {deletingId !== null ? (
                     <>
@@ -685,7 +685,7 @@ function MembersPage() {
           type="button"
           onClick={() => setIsAddModalOpen(true)}
           disabled={loading}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+          className="dlmsf-btn dlmsf-btn-primary disabled:cursor-not-allowed disabled:opacity-50"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -820,7 +820,7 @@ function MembersPage() {
                       required
                       maxLength={150}
                       autoFocus
-                      className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-sm text-slate-800 shadow-sm outline-none transition placeholder:text-slate-400 hover:border-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                      className="dlmsf-control"
                     />
                   </div>
 
@@ -847,7 +847,7 @@ function MembersPage() {
                         )
                       }
                       required
-                      className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-sm text-slate-800 shadow-sm outline-none transition hover:border-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                      className="dlmsf-control"
                     />
                     <p className="mt-2 text-xs text-slate-500">
                       Each head contributes ₱50.00 per week.
@@ -888,7 +888,7 @@ function MembersPage() {
                   <button
                     type="submit"
                     disabled={adding || loading}
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="dlmsf-btn dlmsf-btn-primary disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {adding ? (
                       <>
@@ -1038,7 +1038,7 @@ function MembersPage() {
                           type="text"
                           value={editingMember.name}
                           readOnly
-                          className="h-12 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm text-slate-600 outline-none"
+                          className="dlmsf-control"
                         />
 
                         <p className="mt-2 text-xs text-slate-500">
@@ -1072,7 +1072,7 @@ function MembersPage() {
                           required
                           autoFocus
                           disabled={saving}
-                          className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-sm text-slate-800 shadow-sm outline-none transition hover:border-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 disabled:opacity-60"
+                          className="dlmsf-control disabled:opacity-60"
                         />
 
                         <p className="mt-2 text-xs text-slate-500">
@@ -1114,7 +1114,7 @@ function MembersPage() {
                       <button
                         type="submit"
                         disabled={saving}
-                        className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="dlmsf-btn dlmsf-btn-primary disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {saving ? (
                           <>
