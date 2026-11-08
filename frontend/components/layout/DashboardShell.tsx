@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { apiRequest } from "@/lib/api";
+import type { MemberProfile, DashboardShellProps } from "@/lib/types";
 
 const adminNavigation = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -36,16 +37,7 @@ const memberNavigation = [
   { label: "Audit", href: "/audit", icon: Activity },
 ];
 
-type MemberProfile = {
-  name: string;
-  role: string;
-};
-
-export default function DashboardShell({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function DashboardShell({ children }: DashboardShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
