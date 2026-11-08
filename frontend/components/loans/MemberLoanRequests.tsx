@@ -4,10 +4,10 @@ import {X,Plus,FileText} from "lucide-react";
 import {createPortal} from "react-dom";
 import {apiRequest} from "@/lib/api";
 import {formatCurrency} from "@/lib/utils/loans";
-import DataTable,{type DataTableColumn} from "@/components/ui/DataTable";
+import DataTable from "@/components/ui/DataTable";
 import TableLoading from "@/components/ui/TableLoading";
 import {tableClass,tdClass,thClass} from "@/components/ui/table-styles";
-import type { Loan, LoanRequest, DataTableColumn } from "@/lib/types";
+import type { DataTableColumn, Loan, LoanRequest } from "@/lib/types";
 
 const terms=[1,2,3,4,5,6,9,12,18,24];
 const inputClass="dlmsf-control mt-1";
