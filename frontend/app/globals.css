@@ -624,3 +624,48 @@ body {
     width: calc(100% + .5rem);
   }
 }
+
+
+/* AdminLTE modal and control primitives. */
+.dlmsf-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  background: rgba(33,37,41,.55);
+  padding: 1rem;
+  backdrop-filter: blur(2px);
+}
+.dlmsf-modal {
+  width: 100%;
+  max-width: 32rem;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  border: 1px solid #dee2e6;
+  border-radius: .5rem;
+  background: #fff;
+  box-shadow: 0 1rem 3rem rgba(0,0,0,.18);
+}
+.dlmsf-control {
+  min-height: 40px;
+  border-radius: .375rem;
+  border-color: #ced4da;
+  font-size: .875rem;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.dlmsf-control:focus {
+  border-color: #86b7fe;
+  outline: 0;
+  box-shadow: 0 0 0 .2rem rgba(13,110,253,.12);
+}
+.dlmsf-control:disabled {
+  background: #e9ecef;
+  cursor: not-allowed;
+}
+@media (max-width: 640px) {
+  .dlmsf-modal-backdrop { align-items: flex-start; padding: .75rem; }
+  .dlmsf-modal { max-height: calc(100vh - 1.5rem); }
+}
