@@ -555,3 +555,16 @@ body {
 .dlmsf-datepicker-portal .react-datepicker {
   margin-top: .25rem;
 }
+
+
+.dlmsf-table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.dlmsf-table-striped tbody tr:nth-child(even) {
+  background: rgba(0, 0, 0, .018);
+}
+.dlmsf-table-striped tbody tr:hover {
+  background: rgba(13, 110, 253, .045);
+}
