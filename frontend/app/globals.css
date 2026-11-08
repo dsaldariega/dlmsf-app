@@ -445,3 +445,113 @@ body {
   font-size: .8125rem;
   font-weight: 600;
 }
+
+
+/* AdminLTE-inspired component primitives. These stay framework-neutral so the existing
+   Tailwind/Next.js architecture can adopt the visual language without replacing it. */
+.dlmsf-btn-success {
+  background: #198754;
+  border-color: #198754;
+  color: #fff;
+}
+.dlmsf-btn-success:hover { background: #157347; border-color: #146c43; }
+.dlmsf-btn-danger {
+  background: #dc3545;
+  border-color: #dc3545;
+  color: #fff;
+}
+.dlmsf-btn-danger:hover { background: #bb2d3b; border-color: #b02a37; }
+.dlmsf-btn-warning {
+  background: #ffc107;
+  border-color: #ffc107;
+  color: #212529;
+}
+.dlmsf-btn-warning:hover { background: #ffca2c; border-color: #ffc720; }
+.dlmsf-btn-outline {
+  background: transparent;
+  border-color: #ced4da;
+  color: #495057;
+}
+.dlmsf-btn-outline:hover { background: #f8f9fa; border-color: #adb5bd; }
+.dlmsf-btn-sm { min-height: 32px; padding: .3rem .65rem; font-size: .8125rem; }
+.dlmsf-btn-lg { min-height: 46px; padding: .55rem 1rem; font-size: .9375rem; }
+
+.dlmsf-form-group { display: flex; flex-direction: column; gap: .35rem; }
+.dlmsf-form-hint { color: #6c757d; font-size: .75rem; line-height: 1.5; }
+.dlmsf-form-error { color: #dc3545; font-size: .75rem; line-height: 1.5; }
+.dlmsf-form-required::after { content: " *"; color: #dc3545; }
+
+.dlmsf-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: .75rem;
+  border: 1px solid transparent;
+  border-radius: .375rem;
+  padding: .75rem 1rem;
+  font-size: .875rem;
+}
+.dlmsf-alert-info { color: #055160; background: #cff4fc; border-color: #b6effb; }
+.dlmsf-alert-success { color: #0f5132; background: #d1e7dd; border-color: #badbcc; }
+.dlmsf-alert-warning { color: #664d03; background: #fff3cd; border-color: #ffecb5; }
+.dlmsf-alert-danger { color: #842029; background: #f8d7da; border-color: #f5c2c7; }
+
+.dlmsf-callout {
+  border-left: 4px solid var(--dlmsf-primary);
+  border-radius: .25rem;
+  background: #fff;
+  box-shadow: var(--dlmsf-shadow);
+  padding: .875rem 1rem;
+}
+.dlmsf-callout-success { border-left-color: #198754; }
+.dlmsf-callout-warning { border-left-color: #ffc107; }
+.dlmsf-callout-danger { border-left-color: #dc3545; }
+
+.dlmsf-progress {
+  width: 100%;
+  height: .625rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e9ecef;
+}
+.dlmsf-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--dlmsf-primary);
+  transition: width .2s ease;
+}
+.dlmsf-progress-success > span { background: #198754; }
+.dlmsf-progress-warning > span { background: #ffc107; }
+.dlmsf-progress-danger > span { background: #dc3545; }
+
+.dlmsf-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem;
+  border-bottom: 1px solid var(--dlmsf-border);
+}
+.dlmsf-tab {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #6c757d;
+  padding: .65rem .9rem;
+  font-size: .875rem;
+  font-weight: 600;
+}
+.dlmsf-tab:hover { color: #212529; background: #f8f9fa; }
+.dlmsf-tab[data-active="true"] {
+  color: var(--dlmsf-primary);
+  border-bottom-color: var(--dlmsf-primary);
+}
+
+.dlmsf-datepicker-portal {
+  position: relative;
+  z-index: 99999;
+}
+.dlmsf-datepicker-portal .react-datepicker-popper {
+  z-index: 99999 !important;
+}
+.dlmsf-datepicker-portal .react-datepicker {
+  margin-top: .25rem;
+}
