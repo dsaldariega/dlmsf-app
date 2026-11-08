@@ -13,9 +13,9 @@ import {
 } from "lucide-react";
 import { apiRequest } from "@/lib/api";
 import { withAuth } from "@/lib/withAuth";
-import { Member } from "@/lib/types/member";
-import { LoanPayment, Payment } from "@/lib/types/payment";
-import { Loan } from "@/lib/types/loan";
+import type { Member } from "@/lib/types";
+import type { LoanPayment, Payment } from "@/lib/types";
+import type { Loan } from "@/lib/types";
 import { CUTOFF_MONTHS, MONTHS } from "@/lib/constants/dashboard";
 import { motion, AnimatePresence } from "motion/react";
 import { tableClass, tdClass, thClass } from "@/components/ui/table-styles";
