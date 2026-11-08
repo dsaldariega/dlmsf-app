@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api";
-import type { Loan, LoanAction, Toast } from "@/lib/types";
-import type { MemberOption } from "@/lib/types";
+import type { Loan, LoanAction, MemberOption, Toast, DataTableColumn } from "@/lib/types";
 import {
   INTEREST_RATE,
   LOAN_DURATIONS,
@@ -18,7 +17,7 @@ import {
   formatCurrency,
 } from "@/lib/utils/loans";
 
-import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
+import DataTable from "@/components/ui/DataTable";
 import { tableClass, tdClass, thClass } from "@/components/ui/table-styles";
 import TableLoading from "@/components/ui/TableLoading";
 
