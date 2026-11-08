@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import type { DataTableColumn, DataTableProps } from "@/lib/types";
 export type { DataTableColumn } from "@/lib/types";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion } from "motion/react";
 import { ChevronLeft, ChevronRight, Inbox } from "lucide-react";
 
 export default function DataTable<T>({
