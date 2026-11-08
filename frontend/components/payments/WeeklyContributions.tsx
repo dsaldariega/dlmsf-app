@@ -9,9 +9,9 @@ import { formatCurrency } from "@/lib/utils/loans";
 import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
 import TableLoading from "@/components/ui/TableLoading";
 import { tableClass, tdClass, thClass } from "@/components/ui/table-styles";
+import type { WeeklyContributionMember, WeeklyContributionResponse, DataTableColumn } from "@/lib/types";
 
-type MemberWeek = { id: number; name: string; heads: number; due: number; paid: number; remaining: number };
-type WeeklyResponse = { weekStart: string; members: MemberWeek[] };
+
 const localDate = (date: Date) => {
   const y = date.getFullYear(), m = String(date.getMonth() + 1).padStart(2, "0"), d = String(date.getDate()).padStart(2, "0");
   return y + "-" + m + "-" + d;
@@ -26,9 +26,9 @@ const initialWeek = sundayOf(today);
 
 export default function WeeklyContributions() {
   const [weekStart, setWeekStart] = useState(initialWeek);
-  const [members, setMembers] = useState<MemberWeek[]>([]);
+  const [members, setMembers] = useState<WeeklyContributionMember[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<MemberWeek | null>(null);
+  const [selected, setSelected] = useState<WeeklyContributionMember | null>(null);
   const [amount, setAmount] = useState("");
   const [paidOn, setPaidOn] = useState(today);
   const [reference, setReference] = useState("");
@@ -40,7 +40,7 @@ export default function WeeklyContributions() {
     setLoading(true);
     setError("");
     try {
-      const result = await apiRequest<WeeklyResponse>("/api/payments/weekly?weekStart=" + weekStart);
+      const result = await apiRequest<WeeklyContributionResponse>("/api/payments/weekly?weekStart=" + weekStart);
       setMembers(result.members);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to load weekly contributions.");
@@ -58,7 +58,7 @@ export default function WeeklyContributions() {
     partialCount: total.partialCount + (member.paid > 0 && member.remaining > 0 ? 1 : 0),
   }), { due: 0, paid: 0, paidCount: 0, partialCount: 0 }), [members]);
 
-  function openMember(member: MemberWeek) {
+  function openMember(member: WeeklyContributionMember) {
     setSelected(member);
     setAmount(member.remaining > 0 ? member.remaining.toFixed(2) : "");
     setPaidOn(today);
@@ -93,7 +93,7 @@ export default function WeeklyContributions() {
     }
   }
 
-  const columns: DataTableColumn<MemberWeek>[] = [
+  const columns: DataTableColumn<WeeklyContributionMember>[] = [
     { key: "member", header: "Member", render: member => <span className="font-semibold text-slate-800">{member.name}</span> },
     { key: "heads", header: "Heads", render: member => member.heads },
     { key: "due", header: "Weekly due", render: member => formatCurrency(member.due) },
