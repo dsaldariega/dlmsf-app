@@ -568,3 +568,59 @@ body {
 .dlmsf-table-striped tbody tr:hover {
   background: rgba(13, 110, 253, .045);
 }
+
+
+/* Final AdminLTE shell refinements: responsive navigation, breadcrumbs and table states. */
+.dlmsf-breadcrumbs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .35rem;
+  min-height: 1.25rem;
+  color: #6c757d;
+  font-size: .75rem;
+}
+.dlmsf-breadcrumbs a {
+  transition: color .15s ease;
+}
+.dlmsf-sidebar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.18) transparent;
+}
+.dlmsf-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+.dlmsf-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.dlmsf-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,.18);
+  border-radius: 999px;
+}
+.dlmsf-table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: inherit;
+}
+.dlmsf-table-responsive table {
+  min-width: 640px;
+}
+@media (max-width: 640px) {
+  .dlmsf-page-header {
+    gap: .75rem;
+  }
+  .dlmsf-page-header > :last-child {
+    width: 100%;
+  }
+  .dlmsf-page-header > :last-child .dlmsf-btn {
+    width: 100%;
+  }
+  .dlmsf-breadcrumbs {
+    margin-bottom: .75rem !important;
+  }
+  .dlmsf-table-responsive {
+    margin-inline: -.25rem;
+    width: calc(100% + .5rem);
+  }
+}
