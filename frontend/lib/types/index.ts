@@ -169,3 +169,17 @@ export type DataTableProps<T> = {
   getRowKey: (row: T) => string | number;
   pageSize?: number;
 };
+
+export type MemberProfile = {
+  name: string;
+  role: string;
+};
+
+export type DashboardShellProps = {
+  children: ReactNode;
+};
+
+export type TableLoadingProps = {
+  message: string;
+  colSpan?: number;
+};
