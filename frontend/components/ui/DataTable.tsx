@@ -1,8 +1,9 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Inbox } from "lucide-react";
+import { ChevronLeft, ChevronRight, Inbox } from "lucide-react";
 
 export type DataTableColumn<T> = {
   key: string;
@@ -26,6 +27,7 @@ type DataTableProps<T> = {
   emptyContent?: ReactNode;
   loadingRow?: ReactNode;
   getRowKey: (row: T) => string | number;
+  pageSize?: number;
 };
 
 export default function DataTable<T>({
@@ -41,7 +43,18 @@ export default function DataTable<T>({
   emptyContent,
   loadingRow,
   getRowKey,
+  pageSize = 10,
 }: DataTableProps<T>) {
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(data.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const paginatedData = useMemo(
+    () => data.slice((safePage - 1) * pageSize, safePage * pageSize),
+    [data, pageSize, safePage],
+  );
+  const showPagination = !loading && data.length > pageSize;
+  const firstItem = data.length === 0 ? 0 : (safePage - 1) * pageSize + 1;
+  const lastItem = Math.min(safePage * pageSize, data.length);
   return (
     <div className="dlmsf-table-responsive">
       <table className={`${tableClassName} dlmsf-table dlmsf-table-striped relative`} style={{ width: "100%" }}>
@@ -102,7 +115,7 @@ export default function DataTable<T>({
           </tr>
         ) : (
           <AnimatePresence mode="sync">
-            {data.map((row, index) => (
+            {paginatedData.map((row, index) => (
               <motion.tr
                 key={getRowKey(row)}
                 layout
@@ -140,6 +153,49 @@ export default function DataTable<T>({
         )}
       </tbody>
       </table>
+      {showPagination && (
+        <div className="flex flex-col gap-3 border-t border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-slate-500" aria-live="polite">
+            Showing <span className="font-semibold text-slate-700">{firstItem}</span>–<span className="font-semibold text-slate-700">{lastItem}</span> of <span className="font-semibold text-slate-700">{data.length}</span>
+          </p>
+          <div className="flex items-center gap-1" role="navigation" aria-label="Table pagination">
+            <button
+              type="button"
+              onClick={() => setPage((currentPage) => Math.max(1, currentPage - 1))}
+              disabled={safePage === 1}
+              className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm !min-h-0 !px-2.5 disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label="Previous page"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            {Array.from({ length: totalPages }, (_, index) => index + 1).slice(
+              Math.max(0, safePage - 3),
+              Math.min(totalPages, safePage + 2),
+            ).map((pageNumber) => (
+              <button
+                key={pageNumber}
+                type="button"
+                onClick={() => setPage(pageNumber)}
+                aria-current={safePage === pageNumber ? "page" : undefined}
+                className={safePage === pageNumber
+                  ? "dlmsf-btn dlmsf-btn-primary dlmsf-btn-sm !min-h-0 !min-w-8 !px-2"
+                  : "dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm !min-h-0 !min-w-8 !px-2"}
+              >
+                {pageNumber}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setPage((currentPage) => Math.min(totalPages, currentPage + 1))}
+              disabled={safePage === totalPages}
+              className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm !min-h-0 !px-2.5 disabled:cursor-not-allowed disabled:opacity-50"
+              aria-label="Next page"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
