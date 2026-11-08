@@ -832,3 +832,107 @@ html.dark .dlmsf-alert-info {
   border-color: #1e40af !important;
   color: #bfdbfe !important;
 }
+
+
+/* Complete dark palette for the existing Tailwind-based screens. */
+html.dark body,
+html.dark #main-content,
+html.dark #main-content > div,
+html.dark .min-h-screen {
+  background-color: var(--dlmsf-page) !important;
+  color: var(--dlmsf-text) !important;
+}
+html.dark .bg-white,
+html.dark [class*="bg-[#f4f6f9]"],
+html.dark [class*="bg-[#f1f5f9]"] {
+  background-color: var(--dlmsf-surface) !important;
+}
+html.dark .bg-slate-50,
+html.dark .bg-gray-50,
+html.dark .bg-slate-100,
+html.dark .bg-gray-100,
+html.dark .bg-slate-200,
+html.dark .bg-gray-200 {
+  background-color: #273449 !important;
+}
+html.dark .bg-blue-50,
+html.dark .bg-indigo-50,
+html.dark .bg-emerald-50,
+html.dark .bg-green-50,
+html.dark .bg-amber-50,
+html.dark .bg-yellow-50,
+html.dark .bg-red-50,
+html.dark .bg-rose-50,
+html.dark .bg-purple-50,
+html.dark .bg-orange-50,
+html.dark .bg-cyan-50 {
+  background-color: #26364a !important;
+}
+html.dark .text-slate-950,
+html.dark .text-slate-900,
+html.dark .text-slate-800,
+html.dark .text-slate-700,
+html.dark .text-slate-600,
+html.dark .text-gray-950,
+html.dark .text-gray-900,
+html.dark .text-gray-800,
+html.dark .text-gray-700,
+html.dark .text-gray-600,
+html.dark .text-neutral-900,
+html.dark .text-neutral-800,
+html.dark .text-neutral-700,
+html.dark .text-neutral-600,
+html.dark .dlmsf-page-title,
+html.dark .dlmsf-form-label {
+  color: #e5e7eb !important;
+}
+html.dark .text-slate-500,
+html.dark .text-slate-400,
+html.dark .text-gray-500,
+html.dark .text-gray-400,
+html.dark .text-neutral-500,
+html.dark .text-neutral-400 {
+  color: #aebaca !important;
+}
+html.dark .border-slate-100,
+html.dark .border-slate-200,
+html.dark .border-slate-300,
+html.dark .border-gray-100,
+html.dark .border-gray-200,
+html.dark .border-gray-300,
+html.dark .border-neutral-200 {
+  border-color: #374151 !important;
+}
+html.dark [class*="hover:bg-slate-50"]:hover,
+html.dark [class*="hover:bg-slate-100"]:hover,
+html.dark [class*="hover:bg-gray-50"]:hover,
+html.dark [class*="hover:bg-gray-100"]:hover {
+  background-color: #334155 !important;
+}
+html.dark .dlmsf-callout,
+html.dark .dlmsf-progress {
+  background-color: #1f2937 !important;
+}
+html.dark .dlmsf-control::placeholder,
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #8291a5 !important;
+}
+html.dark input[type="checkbox"],
+html.dark input[type="radio"] {
+  accent-color: #60a5fa;
+}
+html.dark .react-datepicker__day--disabled,
+html.dark .react-datepicker__day--outside-month {
+  color: #64748b !important;
+}
+html.dark .dlmsf-tab:hover {
+  color: #e5e7eb !important;
+  background: #273449 !important;
+}
+html.dark .dlmsf-table tbody tr:nth-child(even) {
+  background-color: rgba(255,255,255,.025);
+}
+html.dark .dlmsf-table tbody tr:hover {
+  background-color: #273449 !important;
+}
