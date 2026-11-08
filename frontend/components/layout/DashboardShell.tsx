@@ -257,11 +257,222 @@ export default function DashboardShell({
         } lg:translate-x-0`}
       >
         {/* Brand */}
-        <div className="dlmsf-brand flex h-16 shrink-0 items-center border-b border-slate-200 px-4">
-          <Link href="/" onClick={() => setMobileOpen(false)} title="DLMSF Home" className="flex min-w-0 items-center gap-3">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-sm font-bold text-white">DL</span>
+        <div className="dlmsf-brand flex h-16 shrink-0 items-center justify-between border-b border-slate-200 px-4">
+          <Link
+            href="/"
+            onClick={() => setMobileOpen(false)}
+            title="DLMSF Home"
+            className="flex min-w-0 items-center gap-3"
+          >
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-sm font-bold text-white">
+              DL
+            </span>
+
             <span className="dlmsf-brand-text truncate text-lg font-bold tracking-tight">DLMSF</span>
           </Link>
+
         </div>
 
+        {/* Navigation */}
+        <div className="flex-1 overflow-y-auto px-3 py-5">
+          <p className="dlmsf-muted mb-3 px-3 text-xs font-semibold uppercase tracking-wider">Main menu</p>
 
+          <nav aria-label="Main navigation" className="space-y-1">
+            {navigation.map((item) => {
+              const Icon = item.icon;
+
+              const active =
+                pathname === item.href ||
+                pathname.startsWith(`${item.href}/`) ||
+                (item.href === "/dashboard" && pathname === "/");
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  aria-current={active ? "page" : undefined}
+                  data-active={active ? "true" : "false"}
+                  className={`dlmsf-nav-link flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                    active
+                      ? "bg-blue-50 text-blue-700"
+                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                  }`}
+                >
+                  <Icon size={19} className="shrink-0" />
+
+                  <span>{item.label}</span>
+
+                  {active && (
+                    <span className="ml-auto size-1.5 rounded-full bg-blue-600" />
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Sidebar footer */}
+        <div className="border-t border-white/10 p-3">
+          <div className="rounded-lg bg-white/5 px-3 py-3"><p className="dlmsf-brand-text text-xs font-semibold">DLMSF Monitoring</p><p className="dlmsf-muted mt-1 text-xs">Loan Management System</p></div>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <div
+        className="min-h-screen transition-[margin] duration-200 lg:ml-65"
+      >
+        {/* Navbar */}
+
+        <header className="dlmsf-navbar sticky top-0 z-30 flex h-16 w-full items-center justify-between gap-3 border-b border-slate-200 bg-white px-2 sm:px-3">
+          {/* Navbar left */}
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            {/* Mobile menu */}
+            <button
+              type="button"
+              onClick={() => setMobileOpen(true)}
+              aria-label="Open navigation"
+              aria-expanded={mobileOpen}
+              aria-controls="dlmsf-sidebar"
+              className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm !min-h-0 !border-0 !p-2 lg:hidden"
+            >
+              <Menu size={21} />
+            </button>
+
+            {/* Current page */}
+            <div className="min-w-0">
+              <h1 className="truncate text-lg font-semibold text-slate-900">
+                {currentPage}
+              </h1>
+              <p className="hidden text-xs text-slate-500 sm:block">
+                DLMSF Monitoring System
+              </p>
+            </div>
+          </div>
+
+          {/* Navbar right */}
+          <div className="flex shrink-0 items-center gap-1 sm:gap-3">
+            <button
+              type="button"
+              onClick={toggleDarkMode}
+              aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+              aria-pressed={darkMode}
+              title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+              className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm !min-h-0 !border-0 !p-2.5"
+            >
+              {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
+            {isAdmin && (
+              <div className="relative">
+                <button type="button" onClick={() => { const next=!notificationsOpen; setNotificationsOpen(next); if(next) void loadPendingNotifications(); }} aria-label={`Pending approvals: ${pendingLoanRequests+pendingLoanPayments}`} aria-expanded={notificationsOpen} className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm relative !min-h-0 !border-0 !p-2.5">
+                  <Bell size={20}/>
+                  {(pendingLoanRequests+pendingLoanPayments)>0&&<span className="absolute right-1 top-1 flex min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-4 text-white">{pendingLoanRequests+pendingLoanPayments>99?"99+":pendingLoanRequests+pendingLoanPayments}</span>}
+                </button>
+                {notificationsOpen&&<><button type="button" aria-label="Close notifications" onClick={()=>setNotificationsOpen(false)} className="fixed inset-0 z-40 cursor-default"/><div className="dlmsf-card absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] p-3 shadow-xl"><div className="flex items-center justify-between border-b border-slate-100 px-2 pb-3"><div><p className="text-sm font-semibold text-slate-900">Pending approvals</p><p className="mt-0.5 text-xs text-slate-500">Items waiting for your review</p></div><button type="button" onClick={()=>void loadPendingNotifications()} disabled={notificationLoading} className="text-xs font-medium text-blue-700 hover:text-blue-800">{notificationLoading?"Refreshing...":"Refresh"}</button></div><div className="space-y-1 py-2"><Link onClick={()=>setNotificationsOpen(false)} href="/loans" className="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm hover:bg-slate-50"><span className="text-slate-700">Loan requests</span><span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">{pendingLoanRequests}</span></Link><Link onClick={()=>setNotificationsOpen(false)} href="/payments" className="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm hover:bg-slate-50"><span className="text-slate-700">Loan repayment requests</span><span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">{pendingLoanPayments}</span></Link></div><p className="border-t border-slate-100 px-2 pt-3 text-xs text-slate-400">Counts refresh when you open this panel.</p></div></>}
+              </div>
+            )}
+            {/* Profile dropdown */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setProfileOpen((previous) => !previous)}
+                aria-expanded={profileOpen}
+                aria-label="Open profile menu"
+                className="flex max-w-55 items-center gap-2 rounded-lg border border-transparent p-1.5 transition-colors hover:border-slate-200 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200"
+              >
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white shadow-sm">
+                  {initials}
+                </div>
+
+                <div className="hidden min-w-0 text-left sm:block">
+                  <p className="max-w-37.5 truncate text-sm font-medium text-slate-800">
+                    {displayName}
+                  </p>
+                  <p className="max-w-37.5 truncate text-xs text-slate-500">
+                    {displayRole}
+                  </p>
+                </div>
+
+                <ChevronDown
+                  size={16}
+                  className={`hidden shrink-0 text-slate-500 transition-transform sm:block ${
+                    profileOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {profileOpen && (
+                <>
+                  {/* Outside click target */}
+                  <button
+                    type="button"
+                    aria-label="Close profile menu"
+                    onClick={() => setProfileOpen(false)}
+                    className="fixed inset-0 z-40 cursor-default"
+                  />
+
+                  <div className="dlmsf-card absolute right-0 top-full z-50 mt-2 w-64 p-2 shadow-lg">
+                    <div className="border-b border-slate-100 px-3 py-3">
+                      <p className="truncate text-sm font-semibold text-slate-900">
+                        {displayName}
+                      </p>
+                      <p className="mt-1 truncate text-xs text-slate-500">
+                        {displayRole}
+                      </p>
+                    </div>
+
+                    <div className="py-1">
+                      <div className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-600">
+                        <UserRound size={17} />
+                        <span>Signed-in account</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        disabled={loggingOut}
+                        className="dlmsf-btn dlmsf-btn-danger w-full justify-start disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <LogOut size={17} />
+                        {loggingOut ? "Logging out..." : "Logout"}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </header>
+
+        {/* Page content */}
+        <main
+          id="main-content"
+          className="min-h-[calc(100vh-8rem)] p-4 sm:p-6 lg:p-8"
+        >
+          <div className="mx-auto w-full max-w-400">
+            <nav aria-label="Breadcrumb" className="dlmsf-breadcrumbs mb-4">
+              {breadcrumbItems.map((item, index) => (
+                <span key={item.label} className="flex items-center gap-1.5">
+                  {index > 0 && (
+                    <span aria-hidden="true" className="text-slate-300">/</span>
+                  )}
+                  {item.href ? (
+                    <Link href={item.href} className="hover:text-blue-600">{item.label}</Link>
+                  ) : (
+                    <span className="font-medium text-slate-500">{item.label}</span>
+                  )}
+                </span>
+              ))}
+            </nav>
+            {children}
+          </div>
+        </main>
+
+        {/* Footer */}
+        <footer className="border-t border-slate-200 bg-white px-6 py-4 text-center text-xs text-slate-500">
+          © {new Date().getFullYear()} DLMSF Monitoring System
+        </footer>
+      </div>
+    </div>
+  );
+}
