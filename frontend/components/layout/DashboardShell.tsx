@@ -240,7 +240,7 @@ export default function DashboardShell({
             type="button"
             aria-label="Close sidebar"
             onClick={() => setMobileOpen(false)}
-            className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden"
+            className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm !min-h-0 !border-0 !p-2 lg:hidden"
           >
             <X size={19} />
           </button>
@@ -328,7 +328,7 @@ export default function DashboardShell({
               type="button"
               onClick={() => setMobileOpen(true)}
               aria-label="Open navigation"
-              className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden"
+              className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm !min-h-0 !border-0 !p-2 lg:hidden"
             >
               <Menu size={21} />
             </button>
@@ -339,7 +339,7 @@ export default function DashboardShell({
               onClick={() => setCollapsed((previous) => !previous)}
               aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
               title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-              className="hidden rounded-lg p-2 text-slate-600 transition-colors hover:bg-slate-100 lg:inline-flex"
+              className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm hidden !min-h-0 !border-0 !p-2 lg:inline-flex"
             >
               {collapsed ? (
                 <ChevronRight size={20} />
@@ -363,7 +363,7 @@ export default function DashboardShell({
           <div className="flex shrink-0 items-center gap-1 sm:gap-3">
             {isAdmin && (
               <div className="relative">
-                <button type="button" onClick={() => { const next=!notificationsOpen; setNotificationsOpen(next); if(next) void loadPendingNotifications(); }} aria-label={`Pending approvals: ${pendingLoanRequests+pendingLoanPayments}`} aria-expanded={notificationsOpen} className="relative rounded-lg p-2.5 text-slate-600 transition-colors hover:bg-slate-100">
+                <button type="button" onClick={() => { const next=!notificationsOpen; setNotificationsOpen(next); if(next) void loadPendingNotifications(); }} aria-label={`Pending approvals: ${pendingLoanRequests+pendingLoanPayments}`} aria-expanded={notificationsOpen} className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm relative !min-h-0 !border-0 !p-2.5">
                   <Bell size={20}/>
                   {(pendingLoanRequests+pendingLoanPayments)>0&&<span className="absolute right-1 top-1 flex min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-4 text-white">{pendingLoanRequests+pendingLoanPayments>99?"99+":pendingLoanRequests+pendingLoanPayments}</span>}
                 </button>
@@ -377,7 +377,7 @@ export default function DashboardShell({
                 onClick={() => setProfileOpen((previous) => !previous)}
                 aria-expanded={profileOpen}
                 aria-label="Open profile menu"
-                className="flex max-w-55 items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-slate-100"
+                className="flex max-w-55 items-center gap-2 rounded-lg border border-transparent p-1.5 transition-colors hover:border-slate-200 hover:bg-slate-50"
               >
                 <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700">
                   {initials}
@@ -430,7 +430,7 @@ export default function DashboardShell({
                         type="button"
                         onClick={handleLogout}
                         disabled={loggingOut}
-                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="dlmsf-btn dlmsf-btn-danger w-full justify-start disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <LogOut size={17} />
                         {loggingOut ? "Logging out..." : "Logout"}
