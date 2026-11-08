@@ -60,6 +60,23 @@ export default function DashboardShell({
   const pathname = usePathname();
   const router = useRouter();
 
+  useEffect(() => {
+    if (!mobileOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileOpen(false);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [mobileOpen]);
+
   const isAdmin = profile?.role
     .toLowerCase()
     .split(",")
@@ -215,6 +232,8 @@ export default function DashboardShell({
 
       {/* Sidebar */}
       <aside
+        id="dlmsf-sidebar"
+        aria-label="Main sidebar"
         className={`dlmsf-sidebar fixed inset-y-0 left-0 z-50 flex w-65 flex-col transition-all duration-200 ${
           collapsed ? "lg:w-19" : "lg:w-65"
         } ${
@@ -333,6 +352,8 @@ export default function DashboardShell({
               type="button"
               onClick={() => setMobileOpen(true)}
               aria-label="Open navigation"
+              aria-expanded={mobileOpen}
+              aria-controls="dlmsf-sidebar"
               className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm !min-h-0 !border-0 !p-2 lg:hidden"
             >
               <Menu size={21} />
