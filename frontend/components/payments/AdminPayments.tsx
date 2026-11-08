@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api";
-import type { LoanPayment, Payment } from "@/lib/types";
-import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
+import type { DataTableColumn, LoanPayment, Payment } from "@/lib/types";
+import DataTable from "@/components/ui/DataTable";
 import TableLoading from "@/components/ui/TableLoading";
 import { formatCurrency } from "@/lib/utils/loans";
 import { tableClass, tdClass, thClass } from "@/components/ui/table-styles";
