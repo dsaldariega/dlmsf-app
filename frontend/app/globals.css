@@ -1035,7 +1035,41 @@ html.dark .dlmsf-datepicker-input {
 
 
 
-/* Dark-mode sidebar palette: keep navigation distinct from the page surface. */
+/* Sidebar palettes change with the selected theme. */
+html:not(.dark) .dlmsf-sidebar {
+  --dlmsf-sidebar: #ffffff;
+  background: #ffffff !important;
+  border-right: 1px solid #dee2e6 !important;
+  color: #212529;
+}
+html:not(.dark) .dlmsf-sidebar .dlmsf-brand {
+  background: #ffffff !important;
+  border-bottom-color: #dee2e6 !important;
+}
+html:not(.dark) .dlmsf-sidebar .dlmsf-brand-text {
+  color: #212529 !important;
+}
+html:not(.dark) .dlmsf-sidebar .dlmsf-muted {
+  color: #6c757d !important;
+}
+html:not(.dark) .dlmsf-sidebar .dlmsf-nav-link {
+  color: #495057 !important;
+}
+html:not(.dark) .dlmsf-sidebar .dlmsf-nav-link:hover {
+  background: #f1f5f9 !important;
+  color: #0d6efd !important;
+}
+html:not(.dark) .dlmsf-sidebar .dlmsf-nav-link[data-active="true"] {
+  background: #e7f1ff !important;
+  color: #0d6efd !important;
+  box-shadow: inset 3px 0 0 #0d6efd;
+}
+html:not(.dark) .dlmsf-sidebar .border-t {
+  border-color: #dee2e6 !important;
+}
+html:not(.dark) .dlmsf-sidebar .bg-white\\/5 {
+  background: #f8f9fa !important;
+}
 html.dark {
   --dlmsf-sidebar: #111827;
   --dlmsf-sidebar-muted: #9ca3af;
