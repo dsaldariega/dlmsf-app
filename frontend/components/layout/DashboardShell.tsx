@@ -54,7 +54,9 @@ export default function DashboardShell({ children }: DashboardShellProps) {
 
   useEffect(() => {
     const savedTheme = window.localStorage.getItem("dlmsf-theme");
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const prefersDark = window.matchMedia(
+      "(prefers-color-scheme: dark)",
+    ).matches;
     const enabled = savedTheme ? savedTheme === "dark" : prefersDark;
     setDarkMode(enabled);
     document.documentElement.classList.toggle("dark", enabled);
@@ -99,11 +101,19 @@ export default function DashboardShell({ children }: DashboardShellProps) {
     setNotificationLoading(true);
     try {
       const [loanRequests, paymentSubmissions] = await Promise.all([
-        apiRequest<Array<{status:string}>>("/api/loans/requests"),
-        apiRequest<Array<{status:string;payment_type:string}>>("/api/payments/submissions"),
+        apiRequest<Array<{ status: string }>>("/api/loans/requests"),
+        apiRequest<Array<{ status: string; payment_type: string }>>(
+          "/api/payments/submissions",
+        ),
       ]);
-      setPendingLoanRequests(loanRequests.filter(x => x.status === "Pending").length);
-      setPendingLoanPayments(paymentSubmissions.filter(x => x.status === "Pending" && x.payment_type === "Loan").length);
+      setPendingLoanRequests(
+        loanRequests.filter((x) => x.status === "Pending").length,
+      );
+      setPendingLoanPayments(
+        paymentSubmissions.filter(
+          (x) => x.status === "Pending" && x.payment_type === "Loan",
+        ).length,
+      );
     } catch (error) {
       console.error("Unable to load pending notifications:", error);
     } finally {
@@ -243,11 +253,9 @@ export default function DashboardShell({ children }: DashboardShellProps) {
       <aside
         id="dlmsf-sidebar"
         aria-label="Main sidebar"
-        className={`dlmsf-sidebar fixed inset-y-0 left-0 z-50 flex w-65 flex-col transition-all duration-200 ${
-          "lg:w-65"
-        } ${
+        className={`dlmsf-sidebar fixed inset-y-0 left-0 z-50 flex w-65 flex-col transition-all duration-200 ${"lg:w-65"} ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
-        } ${desktopSidebarOpen ? "lg:translate-x-0" : "lg:-translate-x-full"}` }
+        } ${desktopSidebarOpen ? "lg:translate-x-0" : "lg:-translate-x-full"}`}
       >
         {/* Brand */}
         <div className="dlmsf-brand flex h-16 shrink-0 items-center justify-between border-b border-slate-200 px-4">
@@ -261,14 +269,17 @@ export default function DashboardShell({ children }: DashboardShellProps) {
               DL
             </span>
 
-            <span className="dlmsf-brand-text truncate text-lg font-bold tracking-tight">DLMSF</span>
+            <span className="dlmsf-brand-text truncate text-lg font-bold tracking-tight">
+              DLMSF
+            </span>
           </Link>
-
         </div>
 
         {/* Navigation */}
         <div className="flex-1 overflow-y-auto px-3 py-5">
-          <p className="dlmsf-muted mb-3 px-3 text-xs font-semibold uppercase tracking-wider">Main menu</p>
+          <p className="dlmsf-muted mb-3 px-3 text-xs font-semibold uppercase tracking-wider">
+            Main menu
+          </p>
 
           <nav aria-label="Main navigation" className="space-y-1">
             {navigation.map((item) => {
@@ -307,7 +318,12 @@ export default function DashboardShell({ children }: DashboardShellProps) {
 
         {/* Sidebar footer */}
         <div className="border-t border-white/10 p-3">
-          <div className="rounded-lg bg-white/5 px-3 py-3"><p className="dlmsf-brand-text text-xs font-semibold">DLMSF Monitoring</p><p className="dlmsf-muted mt-1 text-xs">Loan Management System</p></div>
+          <div className="rounded-lg bg-white/5 px-3 py-3">
+            <p className="dlmsf-brand-text text-xs font-semibold">
+              DLMSF Monitoring
+            </p>
+            <p className="dlmsf-muted mt-1 text-xs">Loan Management System</p>
+          </div>
         </div>
       </aside>
 
@@ -333,7 +349,7 @@ export default function DashboardShell({ children }: DashboardShellProps) {
               aria-label="Toggle navigation"
               aria-expanded={desktopSidebarOpen || mobileOpen}
               aria-controls="dlmsf-sidebar"
-              className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm !min-h-0 !border-0 !p-2"
+              className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm min-h-0! border-0! p-2!"
             >
               <Menu size={21} />
             </button>
@@ -354,20 +370,94 @@ export default function DashboardShell({ children }: DashboardShellProps) {
             <button
               type="button"
               onClick={toggleDarkMode}
-              aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+              aria-label={
+                darkMode ? "Switch to light mode" : "Switch to dark mode"
+              }
               aria-pressed={darkMode}
               title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
-              className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm !min-h-0 !border-0 !p-2.5"
+              className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm min-h-0! border-0! p-2.5!"
             >
               {darkMode ? <Sun size={20} /> : <Moon size={20} />}
             </button>
             {isAdmin && (
               <div className="relative">
-                <button type="button" onClick={() => { const next=!notificationsOpen; setNotificationsOpen(next); if(next) void loadPendingNotifications(); }} aria-label={`Pending approvals: ${pendingLoanRequests+pendingLoanPayments}`} aria-expanded={notificationsOpen} className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm relative !min-h-0 !border-0 !p-2.5">
-                  <Bell size={20}/>
-                  {(pendingLoanRequests+pendingLoanPayments)>0&&<span className="absolute right-1 top-1 flex min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-4 text-white">{pendingLoanRequests+pendingLoanPayments>99?"99+":pendingLoanRequests+pendingLoanPayments}</span>}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !notificationsOpen;
+                    setNotificationsOpen(next);
+                    if (next) void loadPendingNotifications();
+                  }}
+                  aria-label={`Pending approvals: ${pendingLoanRequests + pendingLoanPayments}`}
+                  aria-expanded={notificationsOpen}
+                  className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm relative min-h-0! border-0! p-2.5!"
+                >
+                  <Bell size={20} />
+                  {pendingLoanRequests + pendingLoanPayments > 0 && (
+                    <span className="absolute right-1 top-1 flex min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-4 text-white">
+                      {pendingLoanRequests + pendingLoanPayments > 99
+                        ? "99+"
+                        : pendingLoanRequests + pendingLoanPayments}
+                    </span>
+                  )}
                 </button>
-                {notificationsOpen&&<><button type="button" aria-label="Close notifications" onClick={()=>setNotificationsOpen(false)} className="fixed inset-0 z-40 cursor-default"/><div className="dlmsf-card absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] p-3 shadow-xl"><div className="flex items-center justify-between border-b border-slate-100 px-2 pb-3"><div><p className="text-sm font-semibold text-slate-900">Pending approvals</p><p className="mt-0.5 text-xs text-slate-500">Items waiting for your review</p></div><button type="button" onClick={()=>void loadPendingNotifications()} disabled={notificationLoading} className="text-xs font-medium text-blue-700 hover:text-blue-800">{notificationLoading?"Refreshing...":"Refresh"}</button></div><div className="space-y-1 py-2"><Link onClick={()=>setNotificationsOpen(false)} href="/loans" className="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm hover:bg-slate-50"><span className="text-slate-700">Loan requests</span><span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">{pendingLoanRequests}</span></Link><Link onClick={()=>setNotificationsOpen(false)} href="/payments" className="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm hover:bg-slate-50"><span className="text-slate-700">Loan repayment requests</span><span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">{pendingLoanPayments}</span></Link></div><p className="border-t border-slate-100 px-2 pt-3 text-xs text-slate-400">Counts refresh when you open this panel.</p></div></>}
+                {notificationsOpen && (
+                  <>
+                    <button
+                      type="button"
+                      aria-label="Close notifications"
+                      onClick={() => setNotificationsOpen(false)}
+                      className="fixed inset-0 z-40 cursor-default"
+                    />
+                    <div className="dlmsf-card absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] p-3 shadow-xl">
+                      <div className="flex items-center justify-between border-b border-slate-100 px-2 pb-3">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">
+                            Pending approvals
+                          </p>
+                          <p className="mt-0.5 text-xs text-slate-500">
+                            Items waiting for your review
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => void loadPendingNotifications()}
+                          disabled={notificationLoading}
+                          className="text-xs font-medium text-blue-700 hover:text-blue-800"
+                        >
+                          {notificationLoading ? "Refreshing..." : "Refresh"}
+                        </button>
+                      </div>
+                      <div className="space-y-1 py-2">
+                        <Link
+                          onClick={() => setNotificationsOpen(false)}
+                          href="/loans"
+                          className="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm hover:bg-slate-50"
+                        >
+                          <span className="text-slate-700">Loan requests</span>
+                          <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                            {pendingLoanRequests}
+                          </span>
+                        </Link>
+                        <Link
+                          onClick={() => setNotificationsOpen(false)}
+                          href="/payments"
+                          className="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm hover:bg-slate-50"
+                        >
+                          <span className="text-slate-700">
+                            Loan repayment requests
+                          </span>
+                          <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                            {pendingLoanPayments}
+                          </span>
+                        </Link>
+                      </div>
+                      <p className="border-t border-slate-100 px-2 pt-3 text-xs text-slate-400">
+                        Counts refresh when you open this panel.
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
             )}
             {/* Profile dropdown */}
@@ -453,12 +543,18 @@ export default function DashboardShell({ children }: DashboardShellProps) {
               {breadcrumbItems.map((item, index) => (
                 <span key={item.label} className="flex items-center gap-1.5">
                   {index > 0 && (
-                    <span aria-hidden="true" className="text-slate-300">/</span>
+                    <span aria-hidden="true" className="text-slate-300">
+                      /
+                    </span>
                   )}
                   {item.href ? (
-                    <Link href={item.href} className="hover:text-blue-600">{item.label}</Link>
+                    <Link href={item.href} className="hover:text-blue-600">
+                      {item.label}
+                    </Link>
                   ) : (
-                    <span className="font-medium text-slate-500">{item.label}</span>
+                    <span className="font-medium text-slate-500">
+                      {item.label}
+                    </span>
                   )}
                 </span>
               ))}

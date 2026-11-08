@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api";
-import type { Loan, LoanAction, MemberOption, Toast, DataTableColumn } from "@/lib/types";
+import type {
+  Loan,
+  LoanAction,
+  MemberOption,
+  Toast,
+  DataTableColumn,
+} from "@/lib/types";
 import {
   INTEREST_RATE,
   LOAN_DURATIONS,
@@ -49,8 +55,14 @@ export default function LoansPage() {
       setMembers(data);
     } catch (error) {
       console.error("Error fetching members:", error);
-      showToast("error", "Unable to load members", error instanceof Error ? error.message : "Please try again.");
-    } finally { setLoadingMembers(false); }
+      showToast(
+        "error",
+        "Unable to load members",
+        error instanceof Error ? error.message : "Please try again.",
+      );
+    } finally {
+      setLoadingMembers(false);
+    }
   };
 
   const fetchLoans = async (showLoading = true) => {
@@ -60,28 +72,55 @@ export default function LoansPage() {
       setLoans(data);
     } catch (error) {
       console.error("Error fetching loans:", error);
-      showToast("error", "Unable to load loans", error instanceof Error ? error.message : "Please try again.");
-    } finally { if (showLoading) setLoading(false); }
+      showToast(
+        "error",
+        "Unable to load loans",
+        error instanceof Error ? error.message : "Please try again.",
+      );
+    } finally {
+      if (showLoading) setLoading(false);
+    }
   };
 
   // Create a loan through the Node API
   const addLoan = async () => {
     if (adding) return;
     if (borrowerId === null) {
-      showToast("warning", "Borrower required", "Please select a member before creating a loan.");
+      showToast(
+        "warning",
+        "Borrower required",
+        "Please select a member before creating a loan.",
+      );
       return;
     }
-    if (amount === "" || !Number.isFinite(amount) || amount < 500 || amount % 500 !== 0) {
-      showToast("warning", "Invalid loan amount", "Enter an amount of at least ₱500 in increments of ₱500.");
+    if (
+      amount === "" ||
+      !Number.isFinite(amount) ||
+      amount < 500 ||
+      amount % 500 !== 0
+    ) {
+      showToast(
+        "warning",
+        "Invalid loan amount",
+        "Enter an amount of at least ₱500 in increments of ₱500.",
+      );
       return;
     }
     if (!Number.isInteger(loanMonths) || !LOAN_DURATIONS.includes(loanMonths)) {
-      showToast("warning", "Invalid loan duration", "Please select a valid repayment duration.");
+      showToast(
+        "warning",
+        "Invalid loan duration",
+        "Please select a valid repayment duration.",
+      );
       return;
     }
     const memberExists = members.find((member) => member.id === borrowerId);
     if (!memberExists) {
-      showToast("warning", "Invalid borrower", "Please select a valid registered member.");
+      showToast(
+        "warning",
+        "Invalid borrower",
+        "Please select a valid registered member.",
+      );
       return;
     }
 
@@ -89,18 +128,32 @@ export default function LoansPage() {
     try {
       const newLoan = await apiRequest<Loan>("/api/loans", {
         method: "POST",
-        body: JSON.stringify({ borrowerId, amount: Number(amount.toFixed(2)), months: loanMonths }),
+        body: JSON.stringify({
+          borrowerId,
+          amount: Number(amount.toFixed(2)),
+          months: loanMonths,
+        }),
       });
       setLoans((current) => [newLoan, ...current]);
       setBorrowerId(null);
       setAmount("");
       setLoanMonths(2);
       setIsAddModalOpen(false);
-      showToast("success", "Loan created successfully", `${memberExists.name}'s loan has been added to your records.`);
+      showToast(
+        "success",
+        "Loan created successfully",
+        `${memberExists.name}'s loan has been added to your records.`,
+      );
     } catch (error) {
       console.error("Error adding loan:", error);
-      showToast("error", "Failed to create loan", error instanceof Error ? error.message : "Please try again.");
-    } finally { setAdding(false); }
+      showToast(
+        "error",
+        "Failed to create loan",
+        error instanceof Error ? error.message : "Please try again.",
+      );
+    } finally {
+      setAdding(false);
+    }
   };
 
   // Mark a loan as paid through the Node API
@@ -112,13 +165,25 @@ export default function LoansPage() {
         method: "PATCH",
         body: JSON.stringify({ status: "Paid" }),
       });
-      setLoans((current) => current.map((loan) => loan.id === id ? updated : loan));
+      setLoans((current) =>
+        current.map((loan) => (loan.id === id ? updated : loan)),
+      );
       setLoanAction(null);
-      showToast("success", "Loan marked as paid", "The loan status has been updated successfully.");
+      showToast(
+        "success",
+        "Loan marked as paid",
+        "The loan status has been updated successfully.",
+      );
     } catch (error) {
       console.error("Error marking loan as paid:", error);
-      showToast("error", "Update failed", error instanceof Error ? error.message : "Please try again.");
-    } finally { setProcessingId(null); }
+      showToast(
+        "error",
+        "Update failed",
+        error instanceof Error ? error.message : "Please try again.",
+      );
+    } finally {
+      setProcessingId(null);
+    }
   };
 
   // Delete a loan through the Node API
@@ -126,24 +191,46 @@ export default function LoansPage() {
     if (processingId !== null) return;
     const loanToDelete = loans.find((loan) => loan.id === id);
     if (!loanToDelete) {
-      showToast("error", "Loan not found", "Refresh the records and try again.");
+      showToast(
+        "error",
+        "Loan not found",
+        "Refresh the records and try again.",
+      );
       return;
     }
     setProcessingId(id);
     try {
-      const result = await apiRequest<{ id: number; auditWarning?: string | null }>(`/api/loans/${id}`, { method: "DELETE" });
+      const result = await apiRequest<{
+        id: number;
+        auditWarning?: string | null;
+      }>(`/api/loans/${id}`, { method: "DELETE" });
       setLoans((current) => current.filter((loan) => loan.id !== id));
       setLoanAction(null);
       if (result.auditWarning) {
-        showToast("warning", "Loan deleted with a warning", "The loan was deleted, but its audit record could not be saved. " + result.auditWarning);
+        showToast(
+          "warning",
+          "Loan deleted with a warning",
+          "The loan was deleted, but its audit record could not be saved. " +
+            result.auditWarning,
+        );
       } else {
-        showToast("success", "Loan deleted", "The loan was removed and its deletion was recorded in the audit log.");
+        showToast(
+          "success",
+          "Loan deleted",
+          "The loan was removed and its deletion was recorded in the audit log.",
+        );
       }
     } catch (error) {
       console.error("Error deleting loan:", error);
-      showToast("error", "Deletion failed", error instanceof Error ? error.message : "Please try again.");
+      showToast(
+        "error",
+        "Deletion failed",
+        error instanceof Error ? error.message : "Please try again.",
+      );
       await fetchLoans(false);
-    } finally { setProcessingId(null); }
+    } finally {
+      setProcessingId(null);
+    }
   };
 
   // Summary calculations
@@ -259,7 +346,7 @@ export default function LoansPage() {
               type="button"
               onClick={() => setLoanAction({ type: "paid", loan })}
               disabled={processingId !== null}
-              className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm !text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm text-emerald-700! disabled:cursor-not-allowed disabled:opacity-50"
             >
               Mark Paid
             </button>
@@ -269,7 +356,7 @@ export default function LoansPage() {
             type="button"
             onClick={() => setLoanAction({ type: "delete", loan })}
             disabled={processingId !== null}
-            className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm !text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+            className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm text-red-600! disabled:cursor-not-allowed disabled:opacity-50"
           >
             Delete
           </button>

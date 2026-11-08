@@ -25,7 +25,10 @@ function MembersPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Member | null>(null);
-  const [createdCredentials, setCreatedCredentials] = useState<{ email: string; password: string } | null>(null);
+  const [createdCredentials, setCreatedCredentials] = useState<{
+    email: string;
+    password: string;
+  } | null>(null);
 
   useEffect(() => {
     void fetchMembers();
@@ -73,14 +76,21 @@ function MembersPage() {
     setAdding(true);
 
     try {
-      const result = await apiRequest<{ member: Member; loginEmail: string; temporaryPassword: string }>("/api/members", {
+      const result = await apiRequest<{
+        member: Member;
+        loginEmail: string;
+        temporaryPassword: string;
+      }>("/api/members", {
         method: "POST",
         body: JSON.stringify({ name: trimmedName, heads }),
       });
 
       // Add only the newly created member to the existing list.
       setMembers((currentMembers) => [result.member, ...currentMembers]);
-      setCreatedCredentials({ email: result.loginEmail, password: result.temporaryPassword });
+      setCreatedCredentials({
+        email: result.loginEmail,
+        password: result.temporaryPassword,
+      });
 
       // Reset and close the add-member modal.
       setName("");
@@ -189,9 +199,7 @@ function MembersPage() {
 
       // Update only the edited member in local state.
       setMembers((currentMembers) =>
-        currentMembers.map((member) =>
-          member.id === id ? updated : member,
-        ),
+        currentMembers.map((member) => (member.id === id ? updated : member)),
       );
 
       setEditingId(null);
@@ -244,9 +252,17 @@ function MembersPage() {
       await navigator.clipboard.writeText(
         `Email: ${createdCredentials.email}\nTemporary password: ${createdCredentials.password}`,
       );
-      showToast("success", "Credentials copied", "Share them with the member through a secure channel.");
+      showToast(
+        "success",
+        "Credentials copied",
+        "Share them with the member through a secure channel.",
+      );
     } catch {
-      showToast("warning", "Copy unavailable", "Select and copy the login details manually.");
+      showToast(
+        "warning",
+        "Copy unavailable",
+        "Select and copy the login details manually.",
+      );
     }
   };
 
@@ -314,7 +330,7 @@ function MembersPage() {
             type="button"
             onClick={() => startEdit(member)}
             disabled={saving || deletingId !== null}
-            className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm !text-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm text-blue-700! disabled:cursor-not-allowed disabled:opacity-50"
           >
             Edit
           </button>
@@ -323,7 +339,7 @@ function MembersPage() {
             type="button"
             onClick={() => setDeleteTarget(member)}
             disabled={deletingId !== null || saving}
-            className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm !text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+            className="dlmsf-btn dlmsf-btn-outline dlmsf-btn-sm text-red-600! disabled:cursor-not-allowed disabled:opacity-50"
           >
             Delete
           </button>
@@ -335,17 +351,42 @@ function MembersPage() {
   return (
     <div className="space-y-6">
       {createdCredentials && (
-        <section aria-live="polite" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-950">
+        <section
+          aria-live="polite"
+          className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-950"
+        >
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               <h2 className="font-semibold">One-time member login details</h2>
-              <p className="mt-1 text-sm">Copy these details and share them with the member through a secure channel. The temporary password will not be shown again after you dismiss this notice.</p>
-              <p className="mt-3 text-sm"><span className="font-semibold">Login email:</span> {createdCredentials.email}</p>
-              <p className="mt-1 break-all text-sm"><span className="font-semibold">Temporary password:</span> <code>{createdCredentials.password}</code></p>
+              <p className="mt-1 text-sm">
+                Copy these details and share them with the member through a
+                secure channel. The temporary password will not be shown again
+                after you dismiss this notice.
+              </p>
+              <p className="mt-3 text-sm">
+                <span className="font-semibold">Login email:</span>{" "}
+                {createdCredentials.email}
+              </p>
+              <p className="mt-1 break-all text-sm">
+                <span className="font-semibold">Temporary password:</span>{" "}
+                <code>{createdCredentials.password}</code>
+              </p>
             </div>
             <div className="flex shrink-0 gap-2">
-              <button type="button" onClick={() => void copyCreatedCredentials()} className="dlmsf-btn dlmsf-btn-warning">Copy details</button>
-              <button type="button" onClick={() => setCreatedCredentials(null)} className="dlmsf-btn dlmsf-btn-outline">Dismiss</button>
+              <button
+                type="button"
+                onClick={() => void copyCreatedCredentials()}
+                className="dlmsf-btn dlmsf-btn-warning"
+              >
+                Copy details
+              </button>
+              <button
+                type="button"
+                onClick={() => setCreatedCredentials(null)}
+                className="dlmsf-btn dlmsf-btn-outline"
+              >
+                Dismiss
+              </button>
             </div>
           </div>
         </section>
@@ -585,7 +626,9 @@ function MembersPage() {
 
                     <div className="mt-4 rounded-lg border border-red-100 bg-red-50/70 px-3 py-3">
                       <p className="mt-1 text-xs text-red-600">
-                        This member will be removed from your records, and the linked development login account will also be permanently deleted. This cannot be undone.
+                        This member will be removed from your records, and the
+                        linked development login account will also be
+                        permanently deleted. This cannot be undone.
                       </p>
                     </div>
                   </div>
