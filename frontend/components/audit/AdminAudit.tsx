@@ -390,7 +390,7 @@ export default function AuditPage() {
           <h1 className="dlmsf-page-title">
             Audit
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="dlmsf-page-subtitle">
             Review and manage loan and payment audit records.
           </p>
         </div>
@@ -406,10 +406,10 @@ export default function AuditPage() {
       {/* Loan Audit Log - static card, independently scrollable table */}
       <section className="dlmsf-card">
         <div className="dlmsf-card-header">
-          <h2 className="font-semibold text-slate-900">Loans Audit Log</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Review loan amounts, repayment status, and audit remarks.
-          </p>
+          <div>
+            <h2 className="font-semibold text-slate-900">Loans Audit Log</h2>
+            <p className="mt-1 text-sm text-slate-500">Review loan amounts, repayment status, and audit remarks.</p>
+          </div>
         </div>
 
         <div className="max-h-[32rem] overflow-y-auto overflow-x-auto">
