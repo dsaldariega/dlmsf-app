@@ -42,7 +42,7 @@ export default function DataTable<T>({
   getRowKey,
 }: DataTableProps<T>) {
   return (
-    <table className={`${tableClassName} relative`} style={{ width: "100%" }}>
+    <table className={`${tableClassName} dlmsf-table relative`} style={{ width: "100%" }}>
       <thead className="bg-slate-50">
         <tr>
           {columns.map((column) => (
