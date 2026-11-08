@@ -4,20 +4,16 @@ import { useCallback, useEffect, useState } from "react";
 import { RefreshCw, Wallet, HandCoins, CircleDollarSign, PiggyBank } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { apiRequest } from "@/lib/api";
-import DataTable, { type DataTableColumn } from "@/components/ui/DataTable";
+import DataTable from "@/components/ui/DataTable";
+import type { DashboardMember, Loan, Payment, LoanPayment, DashboardRequest, MemberDashboardData, DataTableColumn } from "@/lib/types";
 
-type Member = { id: number; name?: string; heads?: number };
-type Loan = { id: number; borrower_id: number; amount: number | string; total: number; months: number; status: string | null };
-type Payment = { id: number; week_start: string; amount: number | string };
-type LoanPayment = { id: number | string; loan_id?: number; member_id: number; amount: number | string; paid_at: string; action?: string };
-type RequestRow = { id:number; status:string };
-type Data = { payments: Payment[]; loans: Loan[]; loanPayments: LoanPayment[]; loanRequests:RequestRow[]; paymentSubmissions:RequestRow[] };
+
 const money = (n: number) => `₱${n.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const monthOf = (date: string) => new Date(date + "T00:00:00Z").toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone:"UTC" });
 
 export default function MemberDashboard() {
-  const [member, setMember] = useState<Member | null>(null);
-  const [data, setData] = useState<Data | null>(null);
+  const [member, setMember] = useState<DashboardMember | null>(null);
+  const [data, setData] = useState<MemberDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const load = useCallback(async () => {
@@ -29,11 +25,11 @@ export default function MemberDashboard() {
       if (profileError) throw profileError;
       if (!profile) throw new Error("Your member profile could not be found.");
       const [summary,loanRequests,paymentSubmissions] = await Promise.all([
-        apiRequest<Omit<Data,"loanRequests"|"paymentSubmissions">>("/api/dashboard"),
-        apiRequest<RequestRow[]>("/api/loans/requests"),
-        apiRequest<RequestRow[]>("/api/payments/submissions"),
+        apiRequest<Omit<MemberDashboardData,"loanRequests"|"paymentSubmissions">>("/api/dashboard"),
+        apiRequest<DashboardRequest[]>("/api/loans/requests"),
+        apiRequest<DashboardRequest[]>("/api/payments/submissions"),
       ]);
-      setMember(profile as Member); setData({...summary,loanRequests,paymentSubmissions});
+      setMember(profile as DashboardMember); setData({...summary,loanRequests,paymentSubmissions});
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to load dashboard."); }
     finally { setLoading(false); }
   }, []);
