@@ -192,6 +192,11 @@ export default function DashboardShell({
       (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
     )?.label ?? (pathname === "/" ? "Dashboard" : "DLMSF System");
 
+  const breadcrumbItems = [
+    { label: "Home", href: "/dashboard" },
+    ...(currentPage !== "Dashboard" ? [{ label: currentPage }] : []),
+  ];
+
   const displayName = profile?.name || "Loading profile...";
   const displayRole = profile?.role || "Account";
   const initials = displayName.trim().charAt(0).toUpperCase() || "U";
@@ -367,7 +372,7 @@ export default function DashboardShell({
                   <Bell size={20}/>
                   {(pendingLoanRequests+pendingLoanPayments)>0&&<span className="absolute right-1 top-1 flex min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-4 text-white">{pendingLoanRequests+pendingLoanPayments>99?"99+":pendingLoanRequests+pendingLoanPayments}</span>}
                 </button>
-                {notificationsOpen&&<><button type="button" aria-label="Close notifications" onClick={()=>setNotificationsOpen(false)} className="fixed inset-0 z-40 cursor-default"/><div className="absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200 bg-white p-3 shadow-xl"><div className="flex items-center justify-between border-b border-slate-100 px-2 pb-3"><div><p className="text-sm font-semibold text-slate-900">Pending approvals</p><p className="mt-0.5 text-xs text-slate-500">Items waiting for your review</p></div><button type="button" onClick={()=>void loadPendingNotifications()} disabled={notificationLoading} className="text-xs font-medium text-blue-700 hover:text-blue-800">{notificationLoading?"Refreshing...":"Refresh"}</button></div><div className="space-y-1 py-2"><Link onClick={()=>setNotificationsOpen(false)} href="/loans" className="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm hover:bg-slate-50"><span className="text-slate-700">Loan requests</span><span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">{pendingLoanRequests}</span></Link><Link onClick={()=>setNotificationsOpen(false)} href="/payments" className="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm hover:bg-slate-50"><span className="text-slate-700">Loan repayment requests</span><span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">{pendingLoanPayments}</span></Link></div><p className="border-t border-slate-100 px-2 pt-3 text-xs text-slate-400">Counts refresh when you open this panel.</p></div></>}
+                {notificationsOpen&&<><button type="button" aria-label="Close notifications" onClick={()=>setNotificationsOpen(false)} className="fixed inset-0 z-40 cursor-default"/><div className="dlmsf-card absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] p-3 shadow-xl"><div className="flex items-center justify-between border-b border-slate-100 px-2 pb-3"><div><p className="text-sm font-semibold text-slate-900">Pending approvals</p><p className="mt-0.5 text-xs text-slate-500">Items waiting for your review</p></div><button type="button" onClick={()=>void loadPendingNotifications()} disabled={notificationLoading} className="text-xs font-medium text-blue-700 hover:text-blue-800">{notificationLoading?"Refreshing...":"Refresh"}</button></div><div className="space-y-1 py-2"><Link onClick={()=>setNotificationsOpen(false)} href="/loans" className="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm hover:bg-slate-50"><span className="text-slate-700">Loan requests</span><span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">{pendingLoanRequests}</span></Link><Link onClick={()=>setNotificationsOpen(false)} href="/payments" className="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm hover:bg-slate-50"><span className="text-slate-700">Loan repayment requests</span><span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">{pendingLoanPayments}</span></Link></div><p className="border-t border-slate-100 px-2 pt-3 text-xs text-slate-400">Counts refresh when you open this panel.</p></div></>}
               </div>
             )}
             {/* Profile dropdown */}
@@ -377,9 +382,9 @@ export default function DashboardShell({
                 onClick={() => setProfileOpen((previous) => !previous)}
                 aria-expanded={profileOpen}
                 aria-label="Open profile menu"
-                className="flex max-w-55 items-center gap-2 rounded-lg border border-transparent p-1.5 transition-colors hover:border-slate-200 hover:bg-slate-50"
+                className="flex max-w-55 items-center gap-2 rounded-lg border border-transparent p-1.5 transition-colors hover:border-slate-200 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200"
               >
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white shadow-sm">
                   {initials}
                 </div>
 
@@ -410,7 +415,7 @@ export default function DashboardShell({
                     className="fixed inset-0 z-40 cursor-default"
                   />
 
-                  <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+                  <div className="dlmsf-card absolute right-0 top-full z-50 mt-2 w-64 p-2 shadow-lg">
                     <div className="border-b border-slate-100 px-3 py-3">
                       <p className="truncate text-sm font-semibold text-slate-900">
                         {displayName}
@@ -448,7 +453,23 @@ export default function DashboardShell({
           id="main-content"
           className="min-h-[calc(100vh-8rem)] p-4 sm:p-6 lg:p-8"
         >
-          <div className="mx-auto w-full max-w-400">{children}</div>
+          <div className="mx-auto w-full max-w-400">
+            <nav aria-label="Breadcrumb" className="dlmsf-breadcrumbs mb-4">
+              {breadcrumbItems.map((item, index) => (
+                <span key={item.label} className="flex items-center gap-1.5">
+                  {index > 0 && (
+                    <span aria-hidden="true" className="text-slate-300">/</span>
+                  )}
+                  {item.href ? (
+                    <Link href={item.href} className="hover:text-blue-600">{item.label}</Link>
+                  ) : (
+                    <span className="font-medium text-slate-500">{item.label}</span>
+                  )}
+                </span>
+              ))}
+            </nav>
+            {children}
+          </div>
         </main>
 
         {/* Footer */}
