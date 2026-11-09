@@ -31,7 +31,7 @@ const corsOptions: cors.CorsOptions = {
 };
 
 app.use(cors(corsOptions));
-// Explicitly handle preflight before route matching in Vercel's catch-all function.
+// Handle preflight requests before Express route matching.
 app.options(/.*/, cors(corsOptions));
 
 app.use(express.json({ limit: "1mb" }));
