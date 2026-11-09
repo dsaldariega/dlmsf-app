@@ -10,10 +10,11 @@ The repository is a monorepo with two independent applications:
 Create or configure a separate Vercel project connected to this repository:
 
 - Project root directory: `backend`
-- Framework preset: Other
+- Framework preset: Express
 - Production branch: `main`
 - The `dev` branch and feature branches create Preview deployments; do not make `dev` the production branch
-- The catch-all function in `api/[...path].ts` forwards API requests to the Express app.
+- Vercel's Express framework integration uses the root-level `index.ts` entrypoint, which imports and default-exports the Express application from `src/app.ts`.
+- Express routes are discovered from the application; do not add a filesystem API catch-all such as `api/[...path].ts`. Next.js catch-all route syntax is not supported by traditional filesystem API functions in this non-Next.js project.
 
 Set these environment variables in the backend Vercel project for the required environments:
 
