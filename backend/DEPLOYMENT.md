@@ -13,8 +13,8 @@ Create or configure a separate Vercel project connected to this repository:
 - Framework preset: Express
 - Production branch: `main`
 - The `dev` branch and feature branches create Preview deployments; do not make `dev` the production branch
-- Vercel's Express framework integration should use the default-exported Express application in `src/app.ts` as the application entrypoint and discover its routes.
-- Do not add a filesystem API catch-all such as `api/[...path].ts`; Next.js catch-all route syntax is not supported by Vercel's traditional filesystem API functions for this non-Next.js Express project.
+- Vercel's Express framework integration uses the root-level `index.ts` entrypoint, which imports and default-exports the Express application from `src/app.ts`.
+- Express routes are discovered from the application; do not add a filesystem API catch-all such as `api/[...path].ts`. Next.js catch-all route syntax is not supported by traditional filesystem API functions in this non-Next.js project.
 
 Set these environment variables in the backend Vercel project for the required environments:
 
