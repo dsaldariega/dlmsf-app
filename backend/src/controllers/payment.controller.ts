@@ -114,7 +114,7 @@ export async function generateAllWeeklyContributions(req: Request, res: Response
     const weekStart = req.body?.weekStart;
     const paidOn = req.body?.paidOn;
     if (!validSunday(weekStart)) throw Object.assign(new Error("Choose a valid Sunday collection week."), { status: 400 });
-    if (typeof paidOn !== "string" || !/^\\d{4}-\\d{2}-\\d{2}$/.test(paidOn)) throw Object.assign(new Error("Choose a valid payment date."), { status: 400 });
+    if (typeof paidOn !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(paidOn)) throw Object.assign(new Error("Choose a valid payment date."), { status: 400 });
     const { data, error } = await db(req).rpc("admin_generate_all_weekly_contributions", {
       p_week_start: weekStart,
       p_paid_on: paidOn
