@@ -102,7 +102,7 @@ Member has 6 heads
 
 ## Weekly Payment Management
 
-Administrators can manage member payments from the Payments page. The admin Payments page is a single consolidated **Admin Payments** view. It contains the weekly contribution management workflow (including individual recording, member payment status, collection-week selection, and bulk generation) followed by the loan payments table. The separate weekly contributions screen is no longer rendered alongside Admin Payments.
+Administrators can manage member payments from the Payments page. The admin Payments page is a single consolidated **Admin Payments** view. It contains the weekly contribution management workflow (including individual recording, member payment status, collection-week selection, and bulk generation), followed by the loan repayment submissions table. Weekly contributions are not rendered as a separate page section.
 
 ### Individual recording
 
