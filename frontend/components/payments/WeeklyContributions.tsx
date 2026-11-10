@@ -6,10 +6,10 @@ import {
   useMemo,
   useState,
   type FormEvent,
+  type ReactNode,
 } from "react";
 import {
   CalendarDays,
-  CheckCircle2,
   CircleDollarSign,
   Eye,
   Plus,
@@ -42,8 +42,25 @@ const sundayOf = (value: string) => {
 const today = localDate(new Date());
 const initialWeek = sundayOf(today);
 
-export default function WeeklyContributions() {
-  const [weekStart, setWeekStart] = useState(initialWeek);
+type WeeklyContributionsProps = {
+  weekStart?: string;
+  onWeekStartChange?: (weekStart: string) => void;
+  refreshKey?: number;
+  bulkAction?: ReactNode;
+};
+
+export default function WeeklyContributions({
+  weekStart: controlledWeekStart,
+  onWeekStartChange,
+  refreshKey = 0,
+  bulkAction,
+}: WeeklyContributionsProps) {
+  const [localWeekStart, setLocalWeekStart] = useState(initialWeek);
+  const weekStart = controlledWeekStart ?? localWeekStart;
+  const setWeekStart = (value: string) => {
+    setLocalWeekStart(value);
+    onWeekStartChange?.(value);
+  };
   const [members, setMembers] = useState<WeeklyContributionMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<WeeklyContributionMember | null>(
@@ -71,7 +88,7 @@ export default function WeeklyContributions() {
     } finally {
       setLoading(false);
     }
-  }, [weekStart]);
+  }, [weekStart, refreshKey]);
 
   useEffect(() => {
     void load();
@@ -211,17 +228,10 @@ export default function WeeklyContributions() {
     <div className="space-y-6">
       <header className="dlmsf-page-header">
         <div>
-          <h2 className="dlmsf-page-title">Weekly member contributions</h2>
+          <h2 className="dlmsf-page-title">Weekly Contributions</h2>
           <p className="dlmsf-page-subtitle">
-            Record payments received by the administrator for each member.
+            Track weekly dues and record payments received from members.
           </p>
-          <nav className="dlmsf-breadcrumbs" aria-label="Breadcrumb">
-            <span>Payments</span>
-            <span aria-hidden="true">/</span>
-            <span className="font-medium text-slate-900">
-              Weekly contributions
-            </span>
-          </nav>
         </div>
       </header>
 
@@ -281,6 +291,7 @@ export default function WeeklyContributions() {
                 anchored to Sunday.
               </p>
             </div>
+            {bulkAction && <div className="w-full lg:w-auto">{bulkAction}</div>}
           </div>
         </div>
       </section>
