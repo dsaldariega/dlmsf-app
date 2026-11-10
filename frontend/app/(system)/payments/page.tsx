@@ -3,7 +3,6 @@
 import { useUserRole } from "@/app/hooks/useUserRole";
 import Loading from "@/components/layout/Loading";
 import AdminPayments from "@/components/payments/AdminPayments";
-import AdminPaymentSubmissions from "@/components/payments/AdminPaymentSubmissions";
 import MemberPaymentSubmissions from "@/components/payments/MemberPaymentSubmissions";
 
 export default function PaymentsPage() {
@@ -12,15 +11,7 @@ export default function PaymentsPage() {
   if (loading) return <Loading />;
   if (error) return <p role="alert">{error}</p>;
   if (role === "member") return <MemberPaymentSubmissions />;
-
-  if (role === "admin") {
-    return (
-      <div className="space-y-8">
-        <AdminPayments />
-        <AdminPaymentSubmissions />
-      </div>
-    );
-  }
+  if (role === "admin") return <AdminPayments />;
 
   return <p>Unauthorized access.</p>;
 }
