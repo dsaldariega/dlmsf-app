@@ -13,6 +13,13 @@ export default function AdminPayments() {
   const [loanPayments, setLoanPayments] = useState<LoanPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [generationNotice, setGenerationNotice] = useState("");
+  const [weekStart, setWeekStart] = useState(() => {
+    const today = new Date();
+    today.setDate(today.getDate() - today.getDay());
+    return today.toISOString().slice(0, 10);
+  });
 
   useEffect(() => {
     let active = true;
@@ -40,6 +47,33 @@ export default function AdminPayments() {
   }, []);
 
   const total = payments.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+
+  async function generateAllWeeklyPayments() {
+    if (generating) return;
+    if (!window.confirm(`Generate weekly payment records for all members for Sunday ${weekStart}? This will record the remaining weekly due for each member as paid.`)) return;
+    setGenerating(true);
+    setError("");
+    setGenerationNotice("");
+    try {
+      const result = await apiRequest<{ membersUpdated: number; totalGenerated: number }>(
+        "/api/payments/weekly/generate-all",
+        {
+          method: "POST",
+          body: JSON.stringify({ weekStart, paidOn: new Date().toISOString().slice(0, 10) }),
+        },
+      );
+      setGenerationNotice(
+        `Generated weekly payments for ${result.membersUpdated} member${result.membersUpdated === 1 ? "" : "s"} totaling ${formatCurrency(Number(result.totalGenerated || 0))}.`,
+      );
+      const refreshed = await apiRequest<{ payments: Payment[]; loanPayments: LoanPayment[] }>("/api/payments");
+      setPayments(refreshed.payments);
+      setLoanPayments(refreshed.loanPayments);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to generate weekly payments.");
+    } finally {
+      setGenerating(false);
+    }
+  }
   const weeklyColumns: DataTableColumn<Payment>[] = [
     { key: "week", header: "Week start", render: (row) => row.week_start },
     {
@@ -80,16 +114,46 @@ export default function AdminPayments() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
-          Payment records
-        </h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Review recorded weekly contributions and loan repayments.
-        </p>
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+              Payment records
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Review recorded weekly contributions and loan repayments.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 sm:items-end">
+            <label className="text-xs font-semibold text-slate-600">
+              Weekly collection (Sunday)
+              <input
+                type="date"
+                value={weekStart}
+                onChange={(event) => {
+                  if (event.target.value) setWeekStart(event.target.value);
+                }}
+                className="mt-1 block h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm font-normal text-slate-700"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={generateAllWeeklyPayments}
+              disabled={generating}
+              className="dlmsf-btn dlmsf-btn-primary disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {generating ? "Generating..." : "Generate weekly payment for all members"}
+            </button>
+          </div>
+        </div>
       </header>
       {error && (
         <p role="alert" className="dlmsf-alert dlmsf-alert-danger">
           {error}
+        </p>
+      )}
+      {generationNotice && (
+        <p role="status" className="dlmsf-alert dlmsf-alert-success">
+          {generationNotice}
         </p>
       )}
       <section className="grid gap-4 sm:grid-cols-2">
