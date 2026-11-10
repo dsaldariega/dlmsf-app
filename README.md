@@ -58,6 +58,40 @@ Copy `backend/.env-example` to `backend/.env` and fill in the Supabase values.
 
 Never commit real environment files, credentials, or Supabase service-role keys.
 
+
+## Current DLMSF Workflows
+
+### Loan workflow
+
+- Members can submit loan requests from the member side.
+- Administrators review each request and choose **Approved** or **Rejected**.
+- Loan audit status uses **Approved/Rejected** for request-review events.
+- Standard review remarks are generated as:
+  - `Approved loan request for Member 1`
+  - `Rejected loan request for Member 1`
+- Administrators can still create a loan directly for administrative/manual cases.
+
+### Weekly payments
+
+- Weekly sinking fund due is **PHP 50.00 per head**.
+- Administrators can record full or partial weekly contributions per member.
+- The Payments page provides a bulk **Generate weekly payment for all members** action.
+- Bulk generation records each member's remaining weekly due for the selected Sunday and avoids duplicating amounts already recorded.
+- Each generated weekly payment receives the standardized audit remark:
+  `Member 12 paid weekly dues of PHP 300.00.`
+
+### Loan payments
+
+- Members can submit loan repayments for administrator confirmation.
+- Confirmed loan payment audit remarks use:
+  `Member 12 made a loan payment of PHP 15,000.00.`
+
+### Audit
+
+The Audit page combines loan audit records, member loan-request workflow events, payment audit records, and payment-submission workflow events so financial and approval actions remain traceable.
+
+See `frontend/README.md` for the detailed current system behavior, business rules, and workflow documentation.
+
 ## Deployment
 
 Deploy the frontend and backend as separate Vercel projects:
