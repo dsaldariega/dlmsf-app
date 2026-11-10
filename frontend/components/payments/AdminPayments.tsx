@@ -18,7 +18,10 @@ export default function AdminPayments() {
   const [weekStart, setWeekStart] = useState(() => {
     const today = new Date();
     today.setDate(today.getDate() - today.getDay());
-    return today.toISOString().slice(0, 10);
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
   });
 
   useEffect(() => {
@@ -59,7 +62,16 @@ export default function AdminPayments() {
         "/api/payments/weekly/generate-all",
         {
           method: "POST",
-          body: JSON.stringify({ weekStart, paidOn: new Date().toISOString().slice(0, 10) }),
+          body: JSON.stringify({
+            weekStart,
+            paidOn: (() => {
+              const today = new Date();
+              const year = today.getFullYear();
+              const month = String(today.getMonth() + 1).padStart(2, "0");
+              const day = String(today.getDate()).padStart(2, "0");
+              return `${year}-${month}-${day}`;
+            })(),
+          }),
         },
       );
       setGenerationNotice(
