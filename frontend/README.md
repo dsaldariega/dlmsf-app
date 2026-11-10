@@ -102,7 +102,7 @@ Member has 6 heads
 
 ## Weekly Payment Management
 
-Administrators can manage weekly contributions from the Payments page.
+Administrators can manage member payments from the Payments page. The page is organized as **Payments → General Payments → Weekly Payment Contributions / Loan Payments** so the two payment tables stay together without duplicating the same information.
 
 ### Individual recording
 
@@ -116,7 +116,7 @@ An administrator can:
 
 The system prevents recording more than the member's remaining weekly due.
 
-### Generate weekly payment for all members
+### Bulk weekly payment generation
 
 The Payments page also provides:
 
@@ -251,7 +251,7 @@ For a confirmed loan payment:
 Member 12 made a loan payment of PHP 15,000.00.
 ```
 
-Amounts are formatted with two decimal places.
+Payment audit amounts are displayed without trailing decimal places. For example: `Member 12 paid weekly dues of PHP 300.` and `Member 12 made a loan payment of PHP 15,000.`
 
 ## Loan Audit
 
