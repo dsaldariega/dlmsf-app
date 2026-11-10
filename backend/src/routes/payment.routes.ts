@@ -1,13 +1,14 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth.middleware.js";
 import { authorize } from "../middleware/role.middleware.js";
-import { getPayments, deleteWeeklyPayment, getWeeklyContributions, recordWeeklyContribution } from "../controllers/payment.controller.js";
+import { getPayments, deleteWeeklyPayment, getWeeklyContributions, recordWeeklyContribution, generateAllWeeklyContributions } from "../controllers/payment.controller.js";
 import { listPaymentSubmissions, submitPayment, reviewPaymentSubmission } from "../controllers/member-workflow.controller.js";
 const router = Router();
 router.use(authenticate);
 router.get("/", getPayments);
 router.get("/weekly", authorize("admin"), getWeeklyContributions);
 router.post("/weekly", authorize("admin"), recordWeeklyContribution);
+router.post("/weekly/generate-all", authorize("admin"), generateAllWeeklyContributions);
 router.get("/submissions", listPaymentSubmissions);
 router.post("/submissions", authorize("member"), submitPayment);
 router.patch("/submissions/:id", authorize("admin"), reviewPaymentSubmission);
