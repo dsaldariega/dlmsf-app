@@ -75,7 +75,7 @@ Never commit real environment files, credentials, or Supabase service-role keys.
 
 - Weekly sinking fund due is **PHP 50.00 per head**.
 - Administrators can record full or partial weekly contributions per member.
-- The Payments page is organized as **Payments → General Payments → Weekly Payment Contributions / Loan Payments** and keeps the two payment tables together.\n- The collection-week control contains the bulk **Generate weekly payment for all members** action.
+- The admin Payments page is a single **Admin Payments** view. It combines weekly contribution management (individual recording, member payment status, collection-week selection, and bulk generation) with the loan repayment submissions table.\n- The collection-week control contains the bulk **Generate weekly payment for all members** action.
 - Bulk generation records each member's remaining weekly due for the selected Sunday and avoids duplicating amounts already recorded.
 - Each generated weekly payment receives the standardized audit remark:
   `Member 12 paid weekly dues of PHP 300.`
