@@ -49,8 +49,6 @@ export default function AdminPayments() {
     };
   }, []);
 
-  const total = payments.reduce((sum, row) => sum + Number(row.amount || 0), 0);
-
   async function generateAllWeeklyPayments() {
     if (generating) return;
     if (
