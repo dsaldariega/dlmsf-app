@@ -71,20 +71,20 @@ Never commit real environment files, credentials, or Supabase service-role keys.
   - `Rejected loan request for Member 1`
 - Administrators can still create a loan directly for administrative/manual cases.
 
-### Weekly payments
+### Payments
 
 - Weekly sinking fund due is **PHP 50.00 per head**.
 - Administrators can record full or partial weekly contributions per member.
-- The Payments page provides a bulk **Generate weekly payment for all members** action.
+- The Payments page is organized as **Payments → General Payments → Weekly Payment Contributions / Loan Payments** and keeps the two payment tables together.\n- The collection-week control contains the bulk **Generate weekly payment for all members** action.
 - Bulk generation records each member's remaining weekly due for the selected Sunday and avoids duplicating amounts already recorded.
 - Each generated weekly payment receives the standardized audit remark:
-  `Member 12 paid weekly dues of PHP 300.00.`
+  `Member 12 paid weekly dues of PHP 300.`
 
 ### Loan payments
 
 - Members can submit loan repayments for administrator confirmation.
 - Confirmed loan payment audit remarks use:
-  `Member 12 made a loan payment of PHP 15,000.00.`
+  `Member 12 made a loan payment of PHP 15,000.`
 
 ### Audit
 
