@@ -237,61 +237,61 @@ export default function WeeklyContributions({
 
       <section className="dlmsf-card overflow-visible">
         <div className="dlmsf-card-body">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="min-w-0">
-              <div className="flex items-start gap-3">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                  <CalendarDays size={20} aria-hidden="true" />
-                </span>
-                <div>
-                  <label
-                    className="dlmsf-form-label mb-0 text-sm text-slate-800"
-                    htmlFor="collection-week"
-                  >
-                    Collection week
-                  </label>
-                  <p className="mt-1 text-xs leading-5 text-slate-500">
-                    Choose the Sunday that starts the contribution week.
-                  </p>
-                </div>
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex min-w-0 items-start gap-3">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                <CalendarDays size={20} aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <h3 className="text-sm font-semibold text-slate-900">
+                  Collection week
+                </h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Select the Sunday that starts the contribution week.
+                </p>
               </div>
             </div>
 
-            <div className="w-full lg:w-80">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Week start
-                </span>
-                <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
-                  Sundays only
-                </span>
+            <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-end xl:w-auto xl:min-w-0">
+              <div className="w-full sm:w-64">
+                <div className="mb-1.5 flex items-center justify-between gap-2">
+                  <label
+                    className="text-xs font-semibold text-slate-600"
+                    htmlFor="collection-week"
+                  >
+                    Week starting
+                  </label>
+                  <span className="text-[11px] font-medium text-slate-400">
+                    Sundays only
+                  </span>
+                </div>
+                <div className="dlmsf-datepicker-wrap">
+                  <DatePicker
+                    id="collection-week"
+                    selected={new Date(weekStart + "T00:00:00")}
+                    onChange={(date: Date | null) => {
+                      if (date && date.getDay() === 0)
+                        setWeekStart(localDate(date));
+                    }}
+                    filterDate={(date: Date) => date.getDay() === 0}
+                    dateFormat="MMMM d, yyyy"
+                    popperClassName="!z-[99999]"
+                    portalId="dlmsf-datepicker-portal"
+                    popperPlacement="bottom-start"
+                    showPopperArrow={false}
+                    className="dlmsf-datepicker-input"
+                    wrapperClassName="w-full"
+                    placeholderText="Select a Sunday"
+                    aria-label="Collection week, Sundays only"
+                  />
+                </div>
               </div>
-              <div className="dlmsf-datepicker-wrap mt-2">
-                <DatePicker
-                  id="collection-week"
-                  selected={new Date(weekStart + "T00:00:00")}
-                  onChange={(date: Date | null) => {
-                    if (date && date.getDay() === 0)
-                      setWeekStart(localDate(date));
-                  }}
-                  filterDate={(date: Date) => date.getDay() === 0}
-                  dateFormat="MMMM d, yyyy"
-                  popperClassName="!z-[99999]"
-                  portalId="dlmsf-datepicker-portal"
-                  popperPlacement="bottom-start"
-                  showPopperArrow={false}
-                  className="dlmsf-datepicker-input"
-                  wrapperClassName="w-full"
-                  placeholderText="Select a Sunday"
-                  aria-label="Collection week, Sundays only"
-                />
-              </div>
-              <p className="dlmsf-form-hint mt-2">
-                Monday–Saturday are unavailable because weekly contributions are
-                anchored to Sunday.
-              </p>
+              {bulkAction && (
+                <div className="w-full sm:w-auto sm:shrink-0">
+                  {bulkAction}
+                </div>
+              )}
             </div>
-            {bulkAction && <div className="w-full lg:w-auto">{bulkAction}</div>}
           </div>
         </div>
       </section>
