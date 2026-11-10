@@ -92,7 +92,7 @@ export async function reviewPaymentSubmission(req: Request,res: Response,next: N
     if(!submission) throw Object.assign(new Error("Payment submission not found."),{status:404});
     const memberName=(submission.member as {name?:string}|null)?.name || "Member";
     const remarks=decision==="Confirmed" && submission.payment_type==="Loan"
-      ? memberName+" made a loan payment of PHP "+Number(submission.amount||0).toFixed(2)+"."
+      ? memberName+" made a loan payment of PHP "+Math.round(Number(submission.amount||0))+"."
       : typeof req.body?.remarks==="string" ? req.body.remarks : null;
     const {data,error}=await dbClient.rpc("review_payment_submission",{
       p_submission_id:submissionId,
