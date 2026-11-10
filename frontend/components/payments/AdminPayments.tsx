@@ -2,17 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api";
-import type { DataTableColumn, LoanPayment, Payment } from "@/lib/types";
+import type { DataTableColumn, LoanPayment } from "@/lib/types";
 import DataTable from "@/components/ui/DataTable";
 import TableLoading from "@/components/ui/TableLoading";
 import { formatCurrency } from "@/lib/utils/loans";
 import { tableClass, tdClass, thClass } from "@/components/ui/table-styles";
+import WeeklyContributions from "@/components/payments/WeeklyContributions";
 
 export default function AdminPayments() {
-  const [payments, setPayments] = useState<Payment[]>([]);
   const [loanPayments, setLoanPayments] = useState<LoanPayment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [loadingLoans, setLoadingLoans] = useState(true);
+  const [loanError, setLoanError] = useState("");
   const [generating, setGenerating] = useState(false);
   const [generationNotice, setGenerationNotice] = useState("");
   const [weekStart, setWeekStart] = useState(() => {
@@ -23,30 +23,25 @@ export default function AdminPayments() {
     const day = String(today.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   });
+  const [weeklyRefreshKey, setWeeklyRefreshKey] = useState(0);
+
+  async function loadLoanPayments() {
+    setLoadingLoans(true);
+    setLoanError("");
+    try {
+      const data = await apiRequest<{ loanPayments: LoanPayment[] }>("/api/payments");
+      setLoanPayments(data.loanPayments);
+    } catch (e) {
+      setLoanError(
+        e instanceof Error ? e.message : "Unable to load loan repayment submissions.",
+      );
+    } finally {
+      setLoadingLoans(false);
+    }
+  }
 
   useEffect(() => {
-    let active = true;
-    apiRequest<{ payments: Payment[]; loanPayments: LoanPayment[] }>(
-      "/api/payments",
-    )
-      .then((data) => {
-        if (active) {
-          setPayments(data.payments);
-          setLoanPayments(data.loanPayments);
-        }
-      })
-      .catch((e) => {
-        if (active)
-          setError(
-            e instanceof Error ? e.message : "Unable to load payment records.",
-          );
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
+    void loadLoanPayments();
   }, []);
 
   async function generateAllWeeklyPayments() {
@@ -55,69 +50,42 @@ export default function AdminPayments() {
       !window.confirm(
         `Generate weekly payment records for all members for Sunday ${weekStart}? This will record the remaining weekly due for each member as paid.`,
       )
-    )
+    ) {
       return;
+    }
 
     setGenerating(true);
-    setError("");
+    setLoanError("");
     setGenerationNotice("");
 
     try {
+      const today = new Date();
+      const paidOn = [
+        today.getFullYear(),
+        String(today.getMonth() + 1).padStart(2, "0"),
+        String(today.getDate()).padStart(2, "0"),
+      ].join("-");
       const result = await apiRequest<{
         membersUpdated: number;
         totalGenerated: number;
       }>("/api/payments/weekly/generate-all", {
         method: "POST",
-        body: JSON.stringify({
-          weekStart,
-          paidOn: (() => {
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = String(today.getMonth() + 1).padStart(2, "0");
-            const day = String(today.getDate()).padStart(2, "0");
-            return `${year}-${month}-${day}`;
-          })(),
-        }),
+        body: JSON.stringify({ weekStart, paidOn }),
       });
 
       setGenerationNotice(
         `Generated weekly payments for ${result.membersUpdated} member${result.membersUpdated === 1 ? "" : "s"} totaling ${formatCurrency(Number(result.totalGenerated || 0))}.`,
       );
-
-      const refreshed = await apiRequest<{
-        payments: Payment[];
-        loanPayments: LoanPayment[];
-      }>("/api/payments");
-
-      setPayments(refreshed.payments);
-      setLoanPayments(refreshed.loanPayments);
+      setWeeklyRefreshKey((value) => value + 1);
+      await loadLoanPayments();
     } catch (e) {
-      setError(
-        e instanceof Error
-          ? e.message
-          : "Unable to generate weekly payments.",
+      setLoanError(
+        e instanceof Error ? e.message : "Unable to generate weekly payments.",
       );
     } finally {
       setGenerating(false);
     }
   }
-
-  const weeklyColumns: DataTableColumn<Payment>[] = [
-    {
-      key: "week",
-      header: "Week start",
-      render: (row) => row.week_start,
-    },
-    {
-      key: "amount",
-      header: "Recorded contributions",
-      render: (row) => (
-        <span className="font-semibold text-emerald-700">
-          {formatCurrency(Number(row.amount || 0))}
-        </span>
-      ),
-    },
-  ];
 
   const loanColumns: DataTableColumn<LoanPayment>[] = [
     {
@@ -147,14 +115,8 @@ export default function AdminPayments() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
-        Payments
+        Admin Payments
       </h1>
-
-      {error && (
-        <p role="alert" className="dlmsf-alert dlmsf-alert-danger">
-          {error}
-        </p>
-      )}
 
       {generationNotice && (
         <p role="status" className="dlmsf-alert dlmsf-alert-success">
@@ -162,83 +124,36 @@ export default function AdminPayments() {
         </p>
       )}
 
-      <section>
-        <h2 className="text-xl font-bold text-slate-900">
-          Weekly contribution payments
-        </h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Generate the weekly payment records for all members.
-        </p>
-      </section>
+      <WeeklyContributions
+        weekStart={weekStart}
+        onWeekStartChange={setWeekStart}
+        refreshKey={weeklyRefreshKey}
+        bulkAction={
+          <button
+            type="button"
+            onClick={generateAllWeeklyPayments}
+            disabled={generating}
+            className="dlmsf-btn dlmsf-btn-primary w-full disabled:cursor-not-allowed disabled:opacity-50 lg:w-auto"
+          >
+            {generating
+              ? "Generating..."
+              : "Generate weekly payment for all members"}
+          </button>
+        }
+      />
 
-      <section className="dlmsf-card p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-            <label className="text-xs font-semibold text-slate-600">
-              Collection week
-              <span className="mt-1 block text-xs font-normal text-slate-500">
-                Choose the Sunday that starts the contribution week.
-              </span>
-              <input
-                type="date"
-                value={weekStart}
-                onChange={(event) => {
-                  if (event.target.value) setWeekStart(event.target.value);
-                }}
-                className="mt-2 block h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm font-normal text-slate-700"
-              />
-            </label>
-
-            <button
-              type="button"
-              onClick={generateAllWeeklyPayments}
-              disabled={generating}
-              className="dlmsf-btn dlmsf-btn-primary disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {generating
-                ? "Generating..."
-                : "Generate weekly payment for all members"}
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <section className="dlmsf-card overflow-hidden">
-        <div className="border-b border-slate-200 px-5 py-4">
-          <h2 className="font-semibold text-slate-900">Weekly Payment Contributions</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Weekly contribution totals are calculated from the individual
-            member records for each collection week.
-          </p>
-        </div>
-        <div className="overflow-x-auto">
-          <DataTable
-            data={payments}
-            columns={weeklyColumns}
-            getRowKey={(row) => row.week_start}
-            tableClassName={tableClass}
-            thClassName={thClass}
-            tdClassName={tdClass}
-            loading={loading}
-            loadingRow={
-              <TableLoading
-                message="Loading weekly records..."
-                colSpan={weeklyColumns.length}
-              />
-            }
-            emptyMessage="No weekly contributions recorded yet."
-          />
-        </div>
-      </section>
-
-      <section>
+      <section className="space-y-1">
         <h2 className="text-xl font-bold text-slate-900">Loan Payments</h2>
-        <p className="mt-1 text-sm text-slate-500">Loan repayment submissions.</p>
+        <p className="text-sm text-slate-500">Loan repayment submissions.</p>
       </section>
 
+      {loanError && (
+        <p role="alert" className="dlmsf-alert dlmsf-alert-danger">
+          {loanError}
+        </p>
+      )}
+
       <section className="dlmsf-card overflow-hidden">
-        <div className="border-b border-slate-200 px-5 py-4">
-        </div>
         <div className="overflow-x-auto">
           <DataTable
             data={loanPayments}
@@ -247,7 +162,7 @@ export default function AdminPayments() {
             tableClassName={tableClass}
             thClassName={thClass}
             tdClassName={tdClass}
-            loading={loading}
+            loading={loadingLoans}
             loadingRow={
               <TableLoading
                 message="Loading loan payments..."
