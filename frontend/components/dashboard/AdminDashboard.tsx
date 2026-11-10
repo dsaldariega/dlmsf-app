@@ -205,10 +205,63 @@ function AdminDashboard() {
     return 0;
   };
 
+  // Loan payment amounts already represent the actual repayment received,
+  // including principal and interest. Allocate each payment proportionally to
+  // the loan's recorded total interest, capped at the loan's remaining balance.
+  const getLoanPaymentInterest = () => {
+    const loanById = new Map(loans.map((loan) => [loan.id, loan]));
+    const paidByLoan = new Map<number, number>();
+    const interestByPayment = new Map<string | number, number>();
+
+    const chronologicalPayments = [...loanPayments].sort(
+      (a, b) =>
+        new Date(a.paid_at).getTime() - new Date(b.paid_at).getTime(),
+    );
+
+    for (const payment of chronologicalPayments) {
+      if (payment.loan_id == null) continue;
+
+      const loan = loanById.get(payment.loan_id);
+      if (!loan) continue;
+
+      const loanTotal = amount(loan.total);
+      const loanInterest = amount(loan.interest);
+      if (loanTotal <= 0 || loanInterest <= 0) continue;
+
+      const alreadyPaid = paidByLoan.get(payment.loan_id) ?? 0;
+      const paymentAmount = Math.min(
+        amount(payment.amount),
+        Math.max(loanTotal - alreadyPaid, 0),
+      );
+      const interestAlreadyCollected =
+        (alreadyPaid / loanTotal) * loanInterest;
+      const interestRemaining = Math.max(
+        loanInterest - interestAlreadyCollected,
+        0,
+      );
+      const interestPortion = Math.min(
+        (paymentAmount / loanTotal) * loanInterest,
+        interestRemaining,
+      );
+
+      interestByPayment.set(payment.id, interestPortion);
+      paidByLoan.set(payment.loan_id, alreadyPaid + paymentAmount);
+    }
+
+    return interestByPayment;
+  };
+
+  const loanPaymentInterest = getLoanPaymentInterest();
+
   const getMonthlyLoanCollected = (month: string) =>
     loanPayments
       .filter((payment) => monthOf(payment.paid_at) === month)
       .reduce((sum, payment) => sum + amount(payment.amount), 0);
+
+  const totalLoanInterestCollected = [...loanPaymentInterest.values()].reduce(
+    (sum, interest) => sum + interest,
+    0,
+  );
 
   const cardClass = "dlmsf-card p-5 transition-shadow hover:shadow-md";
 
@@ -292,14 +345,18 @@ function AdminDashboard() {
         const status =
           target === null
             ? "Cutoff"
-            : collected >= target
-              ? "Target reached"
-              : "Pending";
+            : target === 0
+              ? "No Target"
+              : collected > target
+                ? "Exceeded Target"
+                : collected === target
+                  ? "Target Met"
+                  : "Pending";
 
         const statusClass =
-          status === "Target reached"
+          status === "Exceeded Target" || status === "Target Met"
             ? "bg-green-100 text-green-700"
-            : status === "Cutoff"
+            : status === "Cutoff" || status === "No Target"
               ? "bg-slate-100 text-slate-600"
               : "bg-amber-100 text-amber-700";
 
@@ -432,6 +489,23 @@ function AdminDashboard() {
                 </motion.p>
               </div>
               <HandCoins className="text-purple-600" size={26} />
+            </div>
+          </div>
+
+          <div className={cardClass}>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm text-slate-500">Total Interest Collected</p>
+                <motion.p
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, delay: 0.225, ease: "easeOut" }}
+                  className="mt-3 text-2xl font-bold text-emerald-700"
+                >
+                  {loading ? "—" : currency(totalLoanInterestCollected)}
+                </motion.p>
+              </div>
+              <TrendingUp className="text-emerald-600" size={26} />
             </div>
           </div>
 
