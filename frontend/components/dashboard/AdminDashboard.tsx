@@ -180,15 +180,29 @@ function AdminDashboard() {
     return sundays.reduce((sum, payment) => sum + amount(payment.amount), 0);
   };
 
-  // Keep the dashboard target in sync with the monthly installment values
-  // shown on the Loan Admin page. Paid loans no longer contribute to the
-  // expected monthly collection target.
   const getMonthlyLoanTarget = (month: string): number | null => {
     if (CUTOFF_MONTHS.includes(month)) return null;
 
-    return loans
-      .filter((loan) => loan.status !== "Paid")
-      .reduce((sum, loan) => sum + amount(loan.monthly), 0);
+    if (["December 2025", "January 2026", "February 2026"].includes(month)) {
+      return 15000;
+    }
+
+    if (month === "March 2026") return 20000;
+
+    if (
+      [
+        "April 2026",
+        "May 2026",
+        "June 2026",
+        "July 2026",
+        "August 2026",
+        "September 2026",
+      ].includes(month)
+    ) {
+      return 25000;
+    }
+
+    return 0;
   };
 
   const getMonthlyLoanCollected = (month: string) =>
