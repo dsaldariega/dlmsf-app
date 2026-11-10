@@ -148,14 +148,9 @@ export default function AdminPayments() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
-          Payments
-        </h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Manage member payments, weekly contributions, and loan repayments.
-        </p>
-      </header>
+      <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+        Payments
+      </h1>
 
       {error && (
         <p role="alert" className="dlmsf-alert dlmsf-alert-danger">
@@ -169,16 +164,17 @@ export default function AdminPayments() {
         </p>
       )}
 
+      <section>
+        <h2 className="text-xl font-bold text-slate-900">
+          Weekly contribution payments
+        </h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Generate the weekly payment records for all members.
+        </p>
+      </section>
+
       <section className="dlmsf-card p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <h2 className="font-semibold text-slate-900">General Payments</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Use the collection week below to generate the weekly payment
-              records for all members.
-            </p>
-          </div>
-
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
             <label className="text-xs font-semibold text-slate-600">
               Collection week
@@ -209,25 +205,6 @@ export default function AdminPayments() {
         </div>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2">
-        <article className="dlmsf-card p-5">
-          <p className="text-sm font-medium text-slate-500">
-            Total weekly contributions
-          </p>
-          <p className="mt-2 text-2xl font-bold tabular-nums text-emerald-700">
-            {loading ? "—" : formatCurrency(total)}
-          </p>
-        </article>
-        <article className="dlmsf-card p-5">
-          <p className="text-sm font-medium text-slate-500">
-            Weekly collection weeks
-          </p>
-          <p className="mt-2 text-2xl font-bold tabular-nums text-blue-700">
-            {loading ? "—" : payments.length.toLocaleString("en-PH")}
-          </p>
-        </article>
-      </section>
-
       <section className="dlmsf-card overflow-hidden">
         <div className="border-b border-slate-200 px-5 py-4">
           <h2 className="font-semibold text-slate-900">Weekly Payment Contributions</h2>
@@ -256,13 +233,13 @@ export default function AdminPayments() {
         </div>
       </section>
 
+      <section>
+        <h2 className="text-xl font-bold text-slate-900">Loan Payments</h2>
+        <p className="mt-1 text-sm text-slate-500">Loan repayment submissions.</p>
+      </section>
+
       <section className="dlmsf-card overflow-hidden">
         <div className="border-b border-slate-200 px-5 py-4">
-          <h2 className="font-semibold text-slate-900">Loan Payments</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Confirmed loan repayments remain separate from weekly
-            contributions.
-          </p>
         </div>
         <div className="overflow-x-auto">
           <DataTable
