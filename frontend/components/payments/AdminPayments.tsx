@@ -1,20 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { apiRequest } from "@/lib/api";
-import type { DataTableColumn, LoanPayment } from "@/lib/types";
-import DataTable from "@/components/ui/DataTable";
-import TableLoading from "@/components/ui/TableLoading";
 import { formatCurrency } from "@/lib/utils/loans";
-import { tableClass, tdClass, thClass } from "@/components/ui/table-styles";
 import WeeklyContributions from "@/components/payments/WeeklyContributions";
+import AdminPaymentSubmissions from "@/components/payments/AdminPaymentSubmissions";
 
 export default function AdminPayments() {
-  const [loanPayments, setLoanPayments] = useState<LoanPayment[]>([]);
-  const [loadingLoans, setLoadingLoans] = useState(true);
-  const [loanError, setLoanError] = useState("");
   const [generating, setGenerating] = useState(false);
   const [generationNotice, setGenerationNotice] = useState("");
+  const [generationError, setGenerationError] = useState("");
   const [weekStart, setWeekStart] = useState(() => {
     const today = new Date();
     today.setDate(today.getDate() - today.getDay());
@@ -24,25 +19,6 @@ export default function AdminPayments() {
     return `${year}-${month}-${day}`;
   });
   const [weeklyRefreshKey, setWeeklyRefreshKey] = useState(0);
-
-  async function loadLoanPayments() {
-    setLoadingLoans(true);
-    setLoanError("");
-    try {
-      const data = await apiRequest<{ loanPayments: LoanPayment[] }>("/api/payments");
-      setLoanPayments(data.loanPayments);
-    } catch (e) {
-      setLoanError(
-        e instanceof Error ? e.message : "Unable to load loan repayment submissions.",
-      );
-    } finally {
-      setLoadingLoans(false);
-    }
-  }
-
-  useEffect(() => {
-    void loadLoanPayments();
-  }, []);
 
   async function generateAllWeeklyPayments() {
     if (generating) return;
@@ -55,7 +31,7 @@ export default function AdminPayments() {
     }
 
     setGenerating(true);
-    setLoanError("");
+    setGenerationError("");
     setGenerationNotice("");
 
     try {
@@ -77,40 +53,14 @@ export default function AdminPayments() {
         `Generated weekly payments for ${result.membersUpdated} member${result.membersUpdated === 1 ? "" : "s"} totaling ${formatCurrency(Number(result.totalGenerated || 0))}.`,
       );
       setWeeklyRefreshKey((value) => value + 1);
-      await loadLoanPayments();
     } catch (e) {
-      setLoanError(
+      setGenerationError(
         e instanceof Error ? e.message : "Unable to generate weekly payments.",
       );
     } finally {
       setGenerating(false);
     }
   }
-
-  const loanColumns: DataTableColumn<LoanPayment>[] = [
-    {
-      key: "borrower",
-      header: "Borrower",
-      render: (row) => row.borrower || "—",
-    },
-    {
-      key: "amount",
-      header: "Amount",
-      render: (row) => (
-        <span className="font-semibold text-purple-700">
-          {formatCurrency(Number(row.amount || 0))}
-        </span>
-      ),
-    },
-    {
-      key: "paid",
-      header: "Date paid",
-      render: (row) =>
-        row.paid_at
-          ? new Date(row.paid_at + "T00:00:00").toLocaleDateString("en-PH")
-          : "—",
-    },
-  ];
 
   return (
     <div className="space-y-6">
@@ -121,6 +71,11 @@ export default function AdminPayments() {
       {generationNotice && (
         <p role="status" className="dlmsf-alert dlmsf-alert-success">
           {generationNotice}
+        </p>
+      )}
+      {generationError && (
+        <p role="alert" className="dlmsf-alert dlmsf-alert-danger">
+          {generationError}
         </p>
       )}
 
@@ -146,33 +101,7 @@ export default function AdminPayments() {
         <h2 className="text-xl font-bold text-slate-900">Loan Payments</h2>
         <p className="text-sm text-slate-500">Loan repayment submissions.</p>
       </section>
-
-      {loanError && (
-        <p role="alert" className="dlmsf-alert dlmsf-alert-danger">
-          {loanError}
-        </p>
-      )}
-
-      <section className="dlmsf-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <DataTable
-            data={loanPayments}
-            columns={loanColumns}
-            getRowKey={(row) => String(row.id)}
-            tableClassName={tableClass}
-            thClassName={thClass}
-            tdClassName={tdClass}
-            loading={loadingLoans}
-            loadingRow={
-              <TableLoading
-                message="Loading loan payments..."
-                colSpan={loanColumns.length}
-              />
-            }
-            emptyMessage="No loan repayments recorded yet."
-          />
-        </div>
-      </section>
+      <AdminPaymentSubmissions />
     </div>
   );
 }
