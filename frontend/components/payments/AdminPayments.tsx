@@ -53,41 +53,63 @@ export default function AdminPayments() {
 
   async function generateAllWeeklyPayments() {
     if (generating) return;
-    if (!window.confirm(`Generate weekly payment records for all members for Sunday ${weekStart}? This will record the remaining weekly due for each member as paid.`)) return;
+    if (
+      !window.confirm(
+        `Generate weekly payment records for all members for Sunday ${weekStart}? This will record the remaining weekly due for each member as paid.`,
+      )
+    )
+      return;
+
     setGenerating(true);
     setError("");
     setGenerationNotice("");
+
     try {
-      const result = await apiRequest<{ membersUpdated: number; totalGenerated: number }>(
-        "/api/payments/weekly/generate-all",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            weekStart,
-            paidOn: (() => {
-              const today = new Date();
-              const year = today.getFullYear();
-              const month = String(today.getMonth() + 1).padStart(2, "0");
-              const day = String(today.getDate()).padStart(2, "0");
-              return `${year}-${month}-${day}`;
-            })(),
-          }),
-        },
-      );
+      const result = await apiRequest<{
+        membersUpdated: number;
+        totalGenerated: number;
+      }>("/api/payments/weekly/generate-all", {
+        method: "POST",
+        body: JSON.stringify({
+          weekStart,
+          paidOn: (() => {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, "0");
+            const day = String(today.getDate()).padStart(2, "0");
+            return `${year}-${month}-${day}`;
+          })(),
+        }),
+      });
+
       setGenerationNotice(
         `Generated weekly payments for ${result.membersUpdated} member${result.membersUpdated === 1 ? "" : "s"} totaling ${formatCurrency(Number(result.totalGenerated || 0))}.`,
       );
-      const refreshed = await apiRequest<{ payments: Payment[]; loanPayments: LoanPayment[] }>("/api/payments");
+
+      const refreshed = await apiRequest<{
+        payments: Payment[];
+        loanPayments: LoanPayment[];
+      }>("/api/payments");
+
       setPayments(refreshed.payments);
       setLoanPayments(refreshed.loanPayments);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to generate weekly payments.");
+      setError(
+        e instanceof Error
+          ? e.message
+          : "Unable to generate weekly payments.",
+      );
     } finally {
       setGenerating(false);
     }
   }
+
   const weeklyColumns: DataTableColumn<Payment>[] = [
-    { key: "week", header: "Week start", render: (row) => row.week_start },
+    {
+      key: "week",
+      header: "Week start",
+      render: (row) => row.week_start,
+    },
     {
       key: "amount",
       header: "Recorded contributions",
@@ -98,6 +120,7 @@ export default function AdminPayments() {
       ),
     },
   ];
+
   const loanColumns: DataTableColumn<LoanPayment>[] = [
     {
       key: "borrower",
@@ -126,48 +149,66 @@ export default function AdminPayments() {
   return (
     <div className="space-y-6">
       <header>
-        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+          Payments
+        </h1>
+        <p className="mt-1 text-sm text-slate-500">
+          Manage member payments, weekly contributions, and loan repayments.
+        </p>
+      </header>
+
+      {error && (
+        <p role="alert" className="dlmsf-alert dlmsf-alert-danger">
+          {error}
+        </p>
+      )}
+
+      {generationNotice && (
+        <p role="status" className="dlmsf-alert dlmsf-alert-success">
+          {generationNotice}
+        </p>
+      )}
+
+      <section className="dlmsf-card p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
-              Payment records
-            </h1>
+            <h2 className="font-semibold text-slate-900">General Payments</h2>
             <p className="mt-1 text-sm text-slate-500">
-              Review recorded weekly contributions and loan repayments.
+              Use the collection week below to generate the weekly payment
+              records for all members.
             </p>
           </div>
-          <div className="flex flex-col gap-2 sm:items-end">
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
             <label className="text-xs font-semibold text-slate-600">
-              Weekly collection (Sunday)
+              Collection week
+              <span className="mt-1 block text-xs font-normal text-slate-500">
+                Choose the Sunday that starts the contribution week.
+              </span>
               <input
                 type="date"
                 value={weekStart}
                 onChange={(event) => {
                   if (event.target.value) setWeekStart(event.target.value);
                 }}
-                className="mt-1 block h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm font-normal text-slate-700"
+                className="mt-2 block h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm font-normal text-slate-700"
               />
             </label>
+
             <button
               type="button"
               onClick={generateAllWeeklyPayments}
               disabled={generating}
               className="dlmsf-btn dlmsf-btn-primary disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {generating ? "Generating..." : "Generate weekly payment for all members"}
+              {generating
+                ? "Generating..."
+                : "Generate weekly payment for all members"}
             </button>
           </div>
         </div>
-      </header>
-      {error && (
-        <p role="alert" className="dlmsf-alert dlmsf-alert-danger">
-          {error}
-        </p>
-      )}
-      {generationNotice && (
-        <p role="status" className="dlmsf-alert dlmsf-alert-success">
-          {generationNotice}
-        </p>
-      )}
+      </section>
+
       <section className="grid gap-4 sm:grid-cols-2">
         <article className="dlmsf-card p-5">
           <p className="text-sm font-medium text-slate-500">
@@ -186,14 +227,13 @@ export default function AdminPayments() {
           </p>
         </article>
       </section>
-      <section className="overflow-hidden dlmsf-card">
+
+      <section className="dlmsf-card overflow-hidden">
         <div className="border-b border-slate-200 px-5 py-4">
-          <h2 className="font-semibold text-slate-900">
-            Weekly contribution history
-          </h2>
+          <h2 className="font-semibold text-slate-900">Weekly Payment Contributions</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Totals are calculated from the individual member records for each
-            week.
+            Weekly contribution totals are calculated from the individual
+            member records for each collection week.
           </p>
         </div>
         <div className="overflow-x-auto">
@@ -215,13 +255,13 @@ export default function AdminPayments() {
           />
         </div>
       </section>
-      <section className="overflow-hidden dlmsf-card">
+
+      <section className="dlmsf-card overflow-hidden">
         <div className="border-b border-slate-200 px-5 py-4">
-          <h2 className="font-semibold text-slate-900">
-            Loan repayment records
-          </h2>
+          <h2 className="font-semibold text-slate-900">Loan Payments</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Confirmed loan repayments remain separate from weekly contributions.
+            Confirmed loan repayments remain separate from weekly
+            contributions.
           </p>
         </div>
         <div className="overflow-x-auto">
