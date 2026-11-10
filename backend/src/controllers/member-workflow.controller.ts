@@ -34,8 +34,24 @@ export async function reviewLoanRequest(req: Request,res: Response,next: NextFun
   try {
     const decision=req.body?.decision;
     if(!["Approved","Rejected"].includes(decision)) throw Object.assign(new Error("Choose Approved or Rejected."),{status:400});
-    const {data,error}=await client(req).rpc("review_loan_request",{p_request_id:validId(req.params.id),p_decision:decision,p_remarks:typeof req.body?.remarks==="string"?req.body.remarks:null});
-    if(error) throw error; res.json({success:true,data,message:"Loan request "+decision.toLowerCase()+"."});
+    const requestId=validId(req.params.id);
+    const dbClient=client(req);
+    const {data:request,error:requestError}=await dbClient
+      .from("loan_requests")
+      .select("member_id, member:members!loan_requests_member_id_fkey(name)")
+      .eq("id",requestId)
+      .maybeSingle();
+    if(requestError) throw requestError;
+    if(!request) throw Object.assign(new Error("Loan request not found."),{status:404});
+    const memberName=(request.member as {name?:string}|null)?.name || "Member";
+    const remarks=decision+" loan request for "+memberName;
+    const {data,error}=await dbClient.rpc("review_loan_request",{
+      p_request_id:requestId,
+      p_decision:decision,
+      p_remarks:remarks
+    });
+    if(error) throw error;
+    res.json({success:true,data,message:"Loan request "+decision.toLowerCase()+"."});
   } catch(e) { next(e); }
 }
 export async function listPaymentSubmissions(req: Request,res: Response,next: NextFunction) {
@@ -65,9 +81,25 @@ export async function reviewPaymentSubmission(req: Request,res: Response,next: N
   try {
     const decision=req.body?.decision;
     if(!["Confirmed","Rejected"].includes(decision)) throw Object.assign(new Error("Choose Confirmed or Rejected."),{status:400});
-    const {data,error}=await client(req).rpc("review_payment_submission",{
-      p_submission_id:validId(req.params.id),p_decision:decision,p_remarks:typeof req.body?.remarks==="string"?req.body.remarks:null
+    const submissionId=validId(req.params.id);
+    const dbClient=client(req);
+    const {data:submission,error:submissionError}=await dbClient
+      .from("payment_submissions")
+      .select("member_id,amount,payment_type,member:members!payment_submissions_member_id_fkey(name)")
+      .eq("id",submissionId)
+      .maybeSingle();
+    if(submissionError) throw submissionError;
+    if(!submission) throw Object.assign(new Error("Payment submission not found."),{status:404});
+    const memberName=(submission.member as {name?:string}|null)?.name || "Member";
+    const remarks=decision==="Confirmed" && submission.payment_type==="Loan"
+      ? memberName+" made a loan payment of PHP "+Math.round(Number(submission.amount||0))+"."
+      : typeof req.body?.remarks==="string" ? req.body.remarks : null;
+    const {data,error}=await dbClient.rpc("review_payment_submission",{
+      p_submission_id:submissionId,
+      p_decision:decision,
+      p_remarks:remarks
     });
-    if(error) throw error; res.json({success:true,data,message:"Payment submission "+decision.toLowerCase()+"."});
+    if(error) throw error;
+    res.json({success:true,data,message:"Payment submission "+decision.toLowerCase()+"."});
   } catch(e) { next(e); }
 }

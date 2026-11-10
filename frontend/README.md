@@ -2,684 +2,428 @@
 
 **DLMSF Management System**
 
-A web-based management and monitoring system designed to help administrators manage members, sinking fund contributions, member loans, loan payments, and financial records.
+A web-based management system for administrators and members to manage sinking fund contributions, loans, repayments, and audit records.
 
-> 🚧 **Project Status: Under Development**
->
-> The Admin Management and Monitoring features are currently being developed. Member-side functionality and additional backend services are still in progress.
+## Current System Architecture
 
----
-
-## 📌 Overview
-
-The **Dili Labad Members Sinking Fund Management System (DLMSF)** is designed to simplify the management of a members' sinking fund.
-
-The system helps the administrator or assigned fund handler monitor:
-
-- Members
-- Member heads
-- Weekly sinking fund contributions
-- Available funds
-- Member loans
-- Loan repayments
-- Monthly collection targets
-- Financial audit records
-
-The main goal is to provide a centralized system that makes fund management easier, more organized, and easier to monitor.
-
----
-
-## 🎯 Objectives
-
-The system aims to:
-
-- Manage sinking fund members.
-- Track the number of heads per member.
-- Automatically calculate weekly contributions.
-- Monitor weekly and monthly sinking fund collections.
-- Monitor available funds for member loans.
-- Manage member loans.
-- Track outstanding loan balances.
-- Record loan payments.
-- Monitor monthly loan collection targets.
-- Maintain loan and payment audit records.
-
----
-
-## 🛠️ Technology Stack
-
-| Technology | Purpose |
-|---|---|
-| React.js | Frontend UI |
-| Next.js | Web application framework |
-| Supabase | Database and backend services |
-| Node.js | Planned backend/server-side functionality |
-
-### Current Architecture
+The repository is a small monorepo:
 
 ```text
-React.js
-    │
-    ▼
-Next.js
-    │
-    ▼
-Supabase
-    │
-    ▼
-Database
+.
+├── frontend/          # Next.js web application
+├── backend/           # Express + TypeScript API
+├── supabase/          # Database migrations and SQL functions
+└── package.json       # Root development/build scripts
 ```
 
-Node.js is planned to be added as the project develops.
+The frontend communicates with the Express API, while the API uses Supabase with the authenticated user's access token.
 
----
+## Requirements
 
-# ✨ Features
+- Node.js 22 or later
+- npm
+- A configured Supabase project
+- Frontend API and Supabase environment variables
 
-## 📊 Admin Dashboard
+Install dependencies:
 
-The Admin Dashboard provides an overview of the current sinking fund and loan status.
-
-### Dashboard Metrics
-
-- **Total Members**
-  - Total number of registered sinking fund members.
-
-- **Total Heads**
-  - Combined number of heads owned by all members.
-
-- **Sinking Fund Collected**
-  - Total sinking fund contributions collected.
-
-- **Available Funds**
-  - Funds currently available for member loans.
-
-- **Total Loan Payments**
-  - Total amount collected from loan payments.
-
-- **Outstanding Loan Principal**
-  - Remaining principal amount from active member loans.
-
----
-
-## 💰 Sinking Fund
-
-Each member contributes based on their number of heads.
-
-### Contribution Rate
-
-**₱50 per head per week**
-
-### Formula
-
-```text
-Weekly Due = Number of Heads × ₱50
+```sh
+npm install
+npm --prefix frontend install
+npm --prefix backend ci
 ```
 
-Example:
+Run the application:
 
-```text
-Member has 4 heads
-
-4 × ₱50 = ₱200 weekly contribution
+```sh
+npm run dev
 ```
 
-Weekly collection is scheduled for **Sunday**.
+- Frontend: http://localhost:3000
+- Backend health endpoint: http://localhost:4000/api/health
 
----
+Build everything:
 
-## 📅 Monthly Sinking Fund Collection
-
-The system provides monthly monitoring of sinking fund collections.
-
-The collection monitoring starts from:
-
-**December 2025**
-
-The monthly collection table contains:
-
-| Column | Description |
-|---|---|
-| Month | Collection month |
-| Target | Expected collection |
-| Collected | Actual collected amount |
-| Status | Indicates whether the target was reached |
-
----
-
-## 📈 Monthly Loan Collection
-
-The system also monitors monthly loan repayment collections.
-
-The administrator can define the expected monthly collection target.
-
-| Column | Description |
-|---|---|
-| Month | Collection month |
-| Target | Expected loan collection |
-| Collected | Actual loan payments collected |
-| Status | Pending or Completed |
-
----
-
-# 👥 Members
-
-The Members Page is used to manage sinking fund members.
-
-### Member Summary
-
-The page displays:
-
-- Total Members
-- Total Heads
-- Estimated Weekly Collection
-
-### Estimated Weekly Collection
-
-```text
-Estimated Weekly Collection
-= Total Heads × ₱50
+```sh
+npm run build
 ```
 
-### Add Member
+## Roles and Responsibilities
 
-The administrator can add:
+### Administrator
 
-- Member Name
-- Number of Heads
+Administrators can:
 
-### Member Table
+- Manage members and member heads.
+- Review and approve or reject member loan requests.
+- Create a loan directly when an administrative/manual loan entry is required.
+- Mark eligible loans as paid.
+- Review and confirm loan payment submissions.
+- Record weekly contributions for individual members.
+- Generate weekly contribution records for all members in one action.
+- Review payment and loan audit records.
+- Delete supported loan/payment records and their corresponding audit entries.
 
-| Column | Description |
-|---|---|
-| Member | Member name |
-| Heads | Number of heads |
-| Weekly Due | Heads × ₱50 |
+### Member
 
----
+Members can:
 
-# 💵 Loans
+- View their member information and registered heads.
+- Submit a loan request.
+- Track loan request status and administrator remarks.
+- View their approved/rejected requests and loan records.
+- Submit loan repayment records for administrator confirmation.
+- View their payment history.
 
-The Loans Page manages member loans.
-
-### Loan Dashboard
-
-The page provides:
-
-- Total Loan Principal
-- Outstanding Loan Balance
-- Ongoing Loans
-- Paid Loans
-
----
-
-## Add Loan
-
-The administrator can create a loan by selecting:
-
-- Borrower
-- Loan Amount
-- Repayment Duration
-
-### Loan Eligibility
-
-A member must meet the applicable loan requirements.
-
-The system is designed to ensure that:
-
-- The borrower is a registered member.
-- Sufficient available funds exist.
-- Members with outstanding/pending loans cannot create another loan.
-
----
-
-## Repayment Duration
-
-The system supports repayment durations from:
-
-**1 to 12 months**
-
----
-
-# 📋 Loan Terms
-
-The current loan terms are:
-
-| Term | Value |
-|---|---|
-| Monthly Interest | 5% of original principal |
-| Standard Repayment Duration | 2 months |
-| Payment Due Date | 15th of every month |
-| Late Payment Penalty | 2.5% of original loan amount |
-
-### Interest Formula
-
-```text
-Monthly Interest
-= Original Principal × 5%
-```
-
-Example:
-
-```text
-Principal = ₱10,000
-
-₱10,000 × 5%
-= ₱500 monthly interest
-```
-
----
-
-# 💳 Payments
-
-The Payments Page manages sinking fund and loan payment records.
-
-### Payment Summary
-
-- Total Loan Payments
-- Weekly Payment Records
-
----
-
-## Generate Weekly Payment
-
-The administrator can generate a weekly sinking fund collection record.
-
-The collection day is restricted to:
-
-**Sunday**
-
-Example:
-
-```text
-Week Start: November 1, 2026
-```
-
----
-
-## Weekly Payment Table
-
-| Column | Description |
-|---|---|
-| Week Start | Sunday collection date |
-| Amount | Total expected/recorded collection |
-
-### Amount Calculation
-
-```text
-Total Heads × ₱50
-```
-
-Example:
-
-```text
-Total Heads = 211
-Rate = ₱50
-
-211 × ₱50
-= ₱10,550
-```
-
----
-
-## Loan Payments Table
-
-| Column | Description |
-|---|---|
-| Borrower | Member who borrowed the loan |
-| Amount | Loan amount |
-| Date Paid | Date loan was fully paid |
-
----
-
-# 🔎 Audit
-
-The Audit Page provides a record of important loan and payment transactions.
-
-It contains:
-
-- Loan Audit
-- Payment Audit
-
-The purpose of the audit system is to provide traceability and historical records for financial activities.
-
----
-
-# 🧾 Loan Audit
-
-The Loan Audit table contains:
-
-| Column | Description |
-|---|---|
-| Reference ID | Unique system-generated loan ID |
-| Borrower | Member who received the loan |
-| Principal | Original loan principal |
-| Interest | Applicable interest |
-| Total | Principal + Interest |
-| Monthly | Expected monthly payment |
-| Status | Current loan status |
-| Remarks | Additional transaction information |
-| Created Date | Date audit record was created |
-
-### Loan Reference Format
-
-```text
-L-<DDmmYYYY>-000001
-```
-
-Example:
-
-```text
-L-05112026-000001
-```
-
-Subsequent records increment the sequence:
-
-```text
-L-05112026-000001
-L-05112026-000002
-L-05112026-000003
-```
-
-### Example Audit Remark
-
-```text
-New loan created for member X, payable for 5 months,
-created date: 2026-11-05
-```
-
----
-
-# 🧾 Payment Audit
-
-The Payment Audit table records weekly sinking fund collection activities.
-
-| Column | Description |
-|---|---|
-| Reference ID | Unique payment reference |
-| Week | Sunday collection week |
-| Amount | Weekly collection amount |
-| Remarks | Collection information |
-
-### Payment Reference Format
-
-```text
-P-<DDmmYYYY>-000001
-```
-
-Example:
-
-```text
-P-05112026-000001
-```
-
-Subsequent records increment the sequence:
-
-```text
-P-05112026-000001
-P-05112026-000002
-P-05112026-000003
-```
-
-### Example Audit Remark
-
-```text
-Weekly sinking fund collected/generated for Sunday,
-2026-11-01, Total members heads: 211,
-Rate per head ₱50
-```
-
----
-
-# 🔄 System Workflow
-
-The general system workflow is:
-
-```text
-                         DLMSF SYSTEM
-                              │
-                              ▼
-                       ADMIN DASHBOARD
-                              │
-          ┌───────────────────┼───────────────────┐
-          │                   │                   │
-          ▼                   ▼                   ▼
-       MEMBERS              LOANS              PAYMENTS
-          │                   │                   │
-          ▼                   ▼                   ▼
-    Member + Heads       Loan Creation       Weekly Collection
-          │                   │                   │
-          ▼                   ▼                   ▼
-    Weekly Due          Repayment Plan       Payment Record
-          │                   │                   │
-          └───────────────────┼───────────────────┘
-                              ▼
-                           AUDIT
-                              │
-                   ┌──────────┴──────────┐
-                   ▼                     ▼
-               Loan Audit          Payment Audit
-```
-
----
-
-# 📐 Core Business Rules
+The normal loan workflow is now **member request → administrator review → approved/rejected**. The administrator's direct loan creation capability remains available as an administrative fallback.
 
 ## Sinking Fund
 
-```text
-Rate per Head = ₱50/week
+The weekly contribution rate is:
 
-Weekly Due = Number of Heads × ₱50
-```
+**PHP 50.00 per head per week**
 
-Collection day:
+Formula:
 
 ```text
-Sunday
+Weekly Due = Number of Heads × PHP 50.00
 ```
 
----
+Collection weeks use **Sunday** as the week-start date.
+
+Example:
+
+```text
+Member has 6 heads
+
+6 × PHP 50.00
+= PHP 300.00 weekly due
+```
+
+## Weekly Payment Management
+
+Administrators can manage member payments from the Payments page. The admin Payments page is a single consolidated **Admin Payments** view. It contains the weekly contribution management workflow (including individual recording, member payment status, collection-week selection, and bulk generation), followed by the loan repayment submissions table. Weekly contributions are not rendered as a separate page section.
+
+### Individual recording
+
+An administrator can:
+
+1. Select a Sunday collection week.
+2. Select a member.
+3. Record a full or partial payment.
+4. Enter the payment date.
+5. Optionally add a reference/note.
+
+The system prevents recording more than the member's remaining weekly due.
+
+### Bulk weekly payment generation
+
+The weekly contributions section on Admin Payments also provides:
+
+**Generate weekly payment for all members**
+
+This bulk action:
+
+- Uses each member's registered number of heads.
+- Calculates each member's weekly due at PHP 50.00 per head.
+- Checks any amount already recorded for that Sunday.
+- Records only the remaining amount.
+- Creates confirmed member payment records and contribution allocations.
+- Creates an audit entry for each generated member payment.
+- Can therefore be safely run again without duplicating already-paid weekly amounts.
+
+Example:
+
+```text
+Member 12
+Heads: 6
+Weekly due: PHP 300.00
+Already recorded: PHP 0.00
+
+Bulk generation records:
+PHP 300.00
+```
+
+If the member already has PHP 100.00 recorded, the bulk action records only the remaining PHP 200.00.
 
 ## Loans
 
-- Only registered members can receive loans.
-- Loan availability depends on available funds.
-- Members with outstanding/pending loans should not receive another loan.
-- Repayment duration can be configured from 1–12 months.
-- Monthly interest is currently set to 5% of the original principal.
-- Payment due date is the 15th of each month.
-- Late-payment penalty is currently set to 2.5% of the original loan amount.
+### Member loan request
 
----
+Members can submit a loan request by specifying:
 
-# 🗂️ Project Structure
+- Loan amount
+- Repayment duration
 
-The project structure may evolve as development continues.
+The request is sent to the administrator for review.
 
-A typical structure is expected to follow:
+A member cannot create another request while an existing loan is still ongoing or while another request is pending.
+
+### Administrator review
+
+The administrator chooses:
+
+- **Approved**
+- **Rejected**
+
+The audit status uses the same values.
+
+The audit remarks are standardized to:
 
 ```text
-DLMSF/
-│
-├── app/
-│   ├── dashboard/
-│   ├── members/
-│   ├── loans/
-│   ├── payments/
-│   └── audit/
-│
-├── components/
-│
-├── lib/
-│
-├── public/
-│
-├── styles/
-│
-└── README.md
+Approved loan request for Member 1
 ```
 
-> The actual project structure may differ depending on the current implementation.
+or:
 
----
+```text
+Rejected loan request for Member 1
+```
 
-# 🚧 Development Status
+The member name is inserted from the member record, so the wording is consistent across audit records.
 
-The project is currently under active development.
+### Administrator direct loan creation
 
-### Currently Implemented / In Development
+Administrators can still create a loan directly from the administrative loan management workflow. This is intentionally retained for administrative/manual cases.
 
-- [x] Admin Dashboard
-- [x] Member Management
-- [x] Member Heads
-- [x] Weekly Contribution Calculation
-- [x] Sinking Fund Monitoring
-- [x] Monthly Sinking Fund Collection
-- [x] Monthly Loan Collection Monitoring
-- [x] Loan Management
-- [x] Loan Terms
-- [x] Payment Management
-- [x] Weekly Payment Generation
-- [x] Loan Payment Records
-- [x] Loan Audit
-- [x] Payment Audit
+The member-request workflow should be used for normal member-initiated borrowing.
 
-### In Progress
+## Loan Terms
 
-- [ ] Member Portal
-- [ ] Member Dashboard
-- [ ] Member Payment History
-- [ ] Member Loan History
-- [ ] Node.js backend integration
-- [ ] Additional validation
-- [ ] Additional reports
-- [ ] Additional security improvements
+The current loan calculation rules are:
 
----
+| Term | Current value |
+|---|---|
+| Monthly interest | 5% of original principal |
+| Supported duration | 1, 2, 3, 4, 5, 6, 9, 12, 18, or 24 months |
+| Payment due date | 15th of each month |
+| Late payment penalty | 2.5% of original loan amount |
 
-# 🚀 Future Enhancements
+Interest:
 
-Possible future improvements include:
+```text
+Interest = Original Principal × 5% × Number of Months
+```
 
-- Member login and authentication
-- Member dashboard
-- Member contribution history
-- Member loan history
-- Automated loan repayment schedules
-- Automated late-payment calculations
-- Automated penalty calculations
+Total repayment:
+
+```text
+Total = Principal + Interest
+```
+
+Monthly amount:
+
+```text
+Monthly = Total ÷ Number of Months
+```
+
+## Loan Payments
+
+Members can submit loan repayment records for administrator confirmation.
+
+For a confirmed loan payment, the payment audit remark is standardized to (without trailing decimal places):
+
+```text
+Member 12 made a loan payment of PHP 15,000.
+```
+
+The member name and amount are taken from the payment submission, so the audit message is generated consistently.
+
+Rejected submissions can retain administrator-provided remarks because the payment was not confirmed as received.
+
+## Payment Audit
+
+Payment audit records include the collection/payment reference, date or week, amount, action, and remarks.
+
+### Weekly payment audit remark
+
+For a confirmed weekly payment (without trailing decimal places):
+
+```text
+Member 12 paid weekly dues of PHP 300.
+```
+
+### Loan payment audit remark
+
+For a confirmed loan payment:
+
+```text
+Member 12 made a loan payment of PHP 15,000.00.
+```
+
+Payment audit amounts are displayed without trailing decimal places. For example: `Member 12 paid weekly dues of PHP 300.` and `Member 12 made a loan payment of PHP 15,000.`
+
+## Loan Audit
+
+Loan audit records include:
+
+- Reference ID
+- Borrower
+- Principal
+- Interest
+- Total repayment
+- Monthly amount
+- Status/action
+- Remarks
+- Created date
+
+Loan request review records use:
+
+```text
+Status: Approved
+Remarks: Approved loan request for Member 1
+```
+
+or:
+
+```text
+Status: Rejected
+Remarks: Rejected loan request for Member 1
+```
+
+## Audit Trail
+
+The Audit page combines:
+
+- Loan audit records
+- Member loan-request workflow events
+- Payment audit records
+- Member payment-submission workflow events
+
+The audit trail is intended to make financial and approval actions traceable.
+
+## System Workflow
+
+```text
+                    DLMSF SYSTEM
+                         │
+          ┌──────────────┼──────────────┐
+          │              │              │
+          ▼              ▼              ▼
+       MEMBERS          LOANS         PAYMENTS
+          │              │              │
+          │              ▼              │
+          │       Member Request        │
+          │              │              │
+          │              ▼              │
+          │      Admin Review           │
+          │         /       \           │
+          │   Approved     Rejected     │
+          │       │                      │
+          │       ▼                      │
+          │     LOAN                     │
+          │       │                      │
+          │       ▼                      │
+          │  Loan Payments ◄─────────────┘
+          │
+          ▼
+   Weekly Contribution
+          │
+          ├── Individual recording
+          │
+          └── Bulk generation
+                  │
+                  ▼
+             All Members
+                  │
+                  ▼
+                AUDIT
+          ┌───────┴────────┐
+          ▼                ▼
+      Loan Audit       Payment Audit
+```
+
+## Core Business Rules
+
+### Sinking Fund
+
+- Rate: PHP 50.00 per head per week.
+- Collection week starts on Sunday.
+- Administrators can record full or partial weekly contributions.
+- Bulk generation fills only each member's remaining weekly due.
+- Re-running bulk generation does not duplicate amounts already recorded for that week.
+
+### Loans
+
+- Only registered members can request loans.
+- Members may have only one pending loan request at a time.
+- Members with an ongoing unpaid loan cannot request another loan.
+- Administrators review member requests.
+- Request status is either **Approved** or **Rejected** after review.
+- Administrators retain direct loan creation for administrative/manual cases.
+- Loan duration is selected from the supported duration list.
+- Loan calculations use the configured interest and penalty rules.
+
+### Payments
+
+- Loan payment submissions require administrator confirmation before they are treated as confirmed repayments.
+- Weekly contributions are recorded by administrators.
+- Bulk weekly generation records the remaining weekly due for all members.
+- Audit remarks use standardized member-name and PHP amount formatting.
+
+## Development Status
+
+### Implemented
+
+- [x] Admin dashboard
+- [x] Member management
+- [x] Member heads
+- [x] Weekly contribution calculation
+- [x] Individual weekly contribution recording
+- [x] Bulk weekly contribution generation
+- [x] Monthly sinking fund monitoring
+- [x] Monthly loan collection monitoring
+- [x] Member loan requests
+- [x] Administrator loan approval/rejection
+- [x] Administrator direct loan creation
+- [x] Loan repayment records
+- [x] Loan payment submission and confirmation workflow
+- [x] Loan audit
+- [x] Payment audit
+- [x] Standardized loan approval/rejection remarks
+- [x] Standardized weekly payment audit remarks
+- [x] Standardized confirmed loan payment audit remarks
+
+### Future Improvements
+
+Possible future work includes:
+
+- Member contribution history improvements
+- Automated repayment schedules
+- Automated late-payment and penalty processing
 - Financial reports
 - PDF/Excel report generation
 - Exportable audit records
-- Notification system
-- Role-based access control
-- Improved backend architecture
-- Additional data validation
-- Enhanced security
+- Notifications
+- Additional role-based permissions
+- Additional validation and security hardening
 
----
+## Security
 
-# 🔐 Security Considerations
+The application uses authenticated Supabase sessions and role-based API authorization.
 
-As the system continues to develop, security improvements will include:
+Production deployments should continue to enforce:
 
 - Authentication
 - Authorization
-- Role-based permissions
-- Database access control
+- Database Row Level Security
+- Secure environment variables
 - Input validation
-- Secure API endpoints
-- Audit logging
 - Protection of member financial information
+- Audit logging
 
-Supabase security policies should be configured appropriately before the system is deployed for production use.
+Never commit real environment files, credentials, or Supabase service-role keys.
 
----
+## Project Information
 
-# 📅 Project Timeline
+**Project:** Dili Labad Members Sinking Fund Management System
 
-The sinking fund collection records currently begin from:
+**Abbreviation:** DLMSF
 
-**December 2025**
+**Frontend:** Next.js / React
 
-The system uses weekly Sunday collections as the primary sinking fund collection period.
+**API:** Express + TypeScript
 
----
+**Database:** Supabase / PostgreSQL
 
-# 📍 Project Information
-
-**Project Name:**  
-Dili Labad Members Sinking Fund Management System
-
-**Abbreviation:**  
-DLMSF
-
-**Application:**  
-DLMSF Management System
-
-**Status:**  
-Under Development
-
-**Frontend:**  
-React.js / Next.js
-
-**Backend / Database:**  
-Supabase
-
-**Planned Backend:**  
-Node.js
-
----
-
-# 👨‍💻 Development
-
-This project is currently being developed as a custom management solution for the Dili Labad Members Sinking Fund.
-
-The system and its features may continue to change as additional requirements, validation rules, and member-side functionality are implemented.
-
----
-
-# 📄 License
-
-This project is currently intended for the management and operational use of the Dili Labad Members Sinking Fund.
-
-License terms may be added when the project is finalized.
-
-
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
-
-## Getting Started
-
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**Status:** Under active development

@@ -322,7 +322,9 @@ export default function DashboardShell({ children }: DashboardShellProps) {
             <p className="dlmsf-brand-text text-xs font-semibold">
               DLMSF Monitoring
             </p>
-            <p className="dlmsf-muted mt-1 text-xs">Loan Management System</p>
+            <p className="dlmsf-muted mt-1 text-xs">
+              Singking Fund Management System
+            </p>
           </div>
         </div>
       </aside>
