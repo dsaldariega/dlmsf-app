@@ -2,9 +2,9 @@ name: Build and test
 
 on:
   pull_request:
-    branches: [dev, main]
+    branches: [dev, main, mobile]
   push:
-    branches: [dev, main]
+    branches: [dev, main, mobile]
 
 permissions:
   contents: read
@@ -46,3 +46,26 @@ jobs:
       - name: Run backend tests
         run: npm test -- --passWithNoTests
         working-directory: backend
+
+  mobile:
+    name: Mobile typecheck and Android bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - name: Install mobile dependencies
+        run: npm ci
+        working-directory: mobile
+      - name: TypeScript check
+        run: npm run typecheck
+        working-directory: mobile
+      - name: Validate Expo configuration
+        run: npx expo-doctor
+        working-directory: mobile
+      - name: Export Android bundle
+        run: npx expo export --platform android
+        working-directory: mobile
