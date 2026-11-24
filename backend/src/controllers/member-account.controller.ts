@@ -1,4 +1,3 @@
-import { randomBytes } from "node:crypto";
 import type { Request, Response, NextFunction } from "express";
 import { createSupabaseAdminClient } from "../config/supabase-admin.js";
 
@@ -8,7 +7,7 @@ function memberEmail(name: string): string {
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ".")
+    .replace(/[^a-z0-9]+/g, "")
     .replace(/^\.+|\.+$/g, "");
   if (!slug) throw Object.assign(new Error("Member name cannot be converted into a login email."), { status: 400 });
   return `${slug}@test.com`;
@@ -23,31 +22,82 @@ function parseId(value: string | string[]): number {
 
 export async function createMemberWithLogin(req: Request, res: Response, next: NextFunction) {
   let newlyCreatedAuthId: string | null = null;
+  let newlyCreatedMemberId: number | null = null;
   let temporaryPassword: string | null = null;
   try {
     const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
     const heads = Number(req.body?.heads);
+    const requestedTierCode = typeof req.body?.tierCode === "string" ? req.body.tierCode.trim().toLowerCase() : "";
     if (!name) throw Object.assign(new Error("Member name is required."), { status: 400 });
     if (name.length > 120) throw Object.assign(new Error("Member name must be 120 characters or fewer."), { status: 400 });
     if (!Number.isSafeInteger(heads) || heads < 1) throw Object.assign(new Error("Heads must be a whole number of at least 1."), { status: 400 });
 
     const admin = createSupabaseAdminClient();
-    const email = memberEmail(name);
-    const { data: usersPage, error: listError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-    if (listError) throw listError;
-    const existingUser = usersPage.users.find((user) => user.email?.toLowerCase() === email);
-    let authId = existingUser?.id ?? null;
-
-    if (authId) {
-      const { data: linkedMember, error: linkedError } = await admin
-        .from("members").select("id").eq("auth_id", authId).maybeSingle();
-      if (linkedError) throw linkedError;
-      if (linkedMember) throw Object.assign(new Error("That login email is already linked to another member."), { status: 409 });
-      throw Object.assign(new Error("A Supabase login already exists for this generated email but is not linked to a member. Resolve that account before creating this member."), { status: 409 });
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit"
+    }).formatToParts(new Date());
+    const part = (type: string) => parts.find((item) => item.type === type)?.value ?? "";
+    const today = `${part("year")}-${part("month")}-${part("day")}`;
+    const { data: activeFiscalYear, error: fiscalYearError } = await admin
+      .from("fiscal_years")
+      .select("id,code,max_total_heads")
+      .eq("status", "active")
+      .maybeSingle();
+    if (fiscalYearError) throw fiscalYearError;
+    if (!activeFiscalYear) {
+      throw Object.assign(new Error("Create and activate a fiscal year before adding members."), { status: 409 });
     }
-
-    const generatedPassword = randomBytes(24).toString("base64url");
+    const { data: tierRows, error: tierError } = await admin
+      .from("tier_settings")
+      .select("tier_code,display_name,enabled,max_heads_per_member")
+      .eq("fiscal_year_id", activeFiscalYear.id)
+      .eq("enabled", true);
+    if (tierError) throw tierError;
+    if (!tierRows?.length) {
+      throw Object.assign(new Error("Enable at least one membership tier in the active fiscal year before adding members."), { status: 409 });
+    }
+    const tier = tierRows.find((item) => item.tier_code.toLowerCase() === requestedTierCode) ?? (requestedTierCode ? null : tierRows[0]);
+    if (!tier) {
+      throw Object.assign(new Error("The selected membership tier is not enabled for the active fiscal year."), { status: 409 });
+    }
+    if (tier.max_heads_per_member != null && heads > Number(tier.max_heads_per_member)) {
+      const limitLabel = `${tier.max_heads_per_member} ${Number(tier.max_heads_per_member) === 1 ? "head" : "heads"}`;
+      throw Object.assign(new Error(`${tier.display_name} allows a maximum of ${limitLabel} per member in FY ${activeFiscalYear.code}.`), { status: 409 });
+    }
+    if (activeFiscalYear.max_total_heads != null) {
+      const { data: assignedRows, error: assignedError } = await admin
+        .from("member_fiscal_years")
+        .select("assigned_heads")
+        .eq("fiscal_year_id", activeFiscalYear.id);
+      if (assignedError) throw assignedError;
+      const assignedTotal = (assignedRows ?? []).reduce((sum, row) => sum + Number(row.assigned_heads || 0), 0);
+      if (assignedTotal + heads > Number(activeFiscalYear.max_total_heads)) {
+        throw Object.assign(new Error(`Adding this member would exceed the FY ${activeFiscalYear.code} total head limit of ${activeFiscalYear.max_total_heads}.`), { status: 409 });
+      }
+    }
+    const email = memberEmail(name);
+    const generatedPassword = process.env.MEMBER_DEFAULT_PASSWORD?.trim();
+    if (!generatedPassword) throw Object.assign(new Error("Set MEMBER_DEFAULT_PASSWORD in the backend environment before creating member accounts."), { status: 500 });
     temporaryPassword = generatedPassword;
+    const { data: authUsers, error: authUsersError } = await admin.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000,
+    });
+    if (authUsersError) throw authUsersError;
+    const existingAuth = authUsers.users.find((user) => user.email?.toLowerCase() === email.toLowerCase());
+    if (existingAuth) {
+      const { data: linkedMember, error: linkedMemberError } = await admin
+        .from("members")
+        .select("id")
+        .eq("auth_id", existingAuth.id)
+        .maybeSingle();
+      if (linkedMemberError) throw linkedMemberError;
+      if (linkedMember) {
+        throw Object.assign(new Error("A member with this generated login email already exists."), { status: 409 });
+      }
+      const { error: orphanDeleteError } = await admin.auth.admin.deleteUser(existingAuth.id);
+      if (orphanDeleteError) throw orphanDeleteError;
+    }
     const { data: created, error: createError } = await admin.auth.admin.createUser({
       email,
       password: generatedPassword,
@@ -56,16 +106,36 @@ export async function createMemberWithLogin(req: Request, res: Response, next: N
     });
     if (createError) throw createError;
     if (!created.user) throw new Error("Supabase did not return the created login.");
-    authId = created.user.id;
-    newlyCreatedAuthId = authId;
+    newlyCreatedAuthId = created.user.id;
 
     const { data, error } = await admin
       .from("members")
-      .insert({ name, heads, roles: ["member"], auth_id: authId })
+      .insert({ name, heads, roles: ["member"], auth_id: newlyCreatedAuthId })
       .select("*").single();
     if (error) throw error;
-    res.status(201).json({ success: true, data: { member: data, loginEmail: email, temporaryPassword }, message: "Member and login created. Share the one-time temporary password securely." });
+    newlyCreatedMemberId = Number(data.id);
+
+    const { error: assignmentError } = await admin
+      .from("member_fiscal_years")
+      .insert({
+        fiscal_year_id: activeFiscalYear.id,
+        member_id: newlyCreatedMemberId,
+        tier_code: tier.tier_code,
+        assigned_heads: heads,
+      });
+    if (assignmentError) throw assignmentError;
+
+    res.status(201).json({ success: true, data: { member: data, loginEmail: email, temporaryPassword }, message: "Member created. Share the one-time temporary password securely." });
   } catch (error) {
+    if (newlyCreatedMemberId) {
+      try {
+        const admin = createSupabaseAdminClient();
+        const { error: rollbackMemberError } = await admin.from("members").delete().eq("id", newlyCreatedMemberId);
+        if (rollbackMemberError) console.error("Failed to roll back newly created member:", rollbackMemberError);
+      } catch (rollbackMemberError) {
+        console.error("Failed to roll back newly created member:", rollbackMemberError);
+      }
+    }
     if (newlyCreatedAuthId) {
       try {
         const admin = createSupabaseAdminClient();
