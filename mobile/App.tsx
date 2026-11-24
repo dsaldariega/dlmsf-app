@@ -1570,7 +1570,6 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
         data={members}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={styles.memberListContent}
-        ItemSeparatorComponent={() => <View style={styles.memberCardSeparator} />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} tintColor={BLUE} />}
         ListHeaderComponent={
           <View>
@@ -1586,26 +1585,29 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
         renderItem={({ item }) => {
           const assignment = assignments[item.id];
           return (
-            <InfoCard>
-              <View style={styles.memberCardBody}>
-                <View style={styles.memberIdentity}>
-                  <Text style={styles.cardTitle}>{item.name}</Text>
-                  <Text style={styles.mutedSmall}>Member #{item.id}</Text>
-                </View>
-                {activeFiscalYear && assignment ? (
-                  <View style={styles.memberTierLine}>
-                    <TierBadge tier={assignment.tier_code} />
-                    <Text style={styles.tierMeta}>{assignment.assigned_heads} FY head{assignment.assigned_heads === 1 ? "" : "s"}</Text>
+            <View style={styles.memberCardItem}>
+              <InfoCard>
+                <View style={styles.memberCardBody}>
+                  <View style={styles.memberTopRow}>
+                    <View style={styles.memberIdentity}>
+                      <Text style={styles.cardTitle}>{item.name}</Text>
+                    </View>
+                    {activeFiscalYear && assignment ? <TierBadge tier={assignment.tier_code} /> : null}
                   </View>
-                ) : (
-                  <Text style={styles.tierMeta}>Not assigned to the active FY</Text>
-                )}
-                <View style={styles.memberActions}>
-                  <TouchableOpacity onPress={() => openEdit(item)} style={styles.memberActionButton}><Text style={styles.smallActionText}>Edit</Text></TouchableOpacity>
-                  <TouchableOpacity onPress={() => confirmDelete(item)} style={styles.memberActionButtonDelete}><Text style={styles.smallDeleteText}>Delete</Text></TouchableOpacity>
+
+                  {activeFiscalYear && assignment ? (
+                    <Text style={styles.tierMeta}>{assignment.assigned_heads} {assignment.assigned_heads === 1 ? "head" : "heads"}</Text>
+                  ) : (
+                    <Text style={styles.tierMeta}>Not assigned to the active FY</Text>
+                  )}
+
+                  <View style={styles.memberActions}>
+                    <TouchableOpacity onPress={() => openEdit(item)} style={styles.memberActionButton}><Text style={styles.smallActionText}>Edit</Text></TouchableOpacity>
+                    <TouchableOpacity onPress={() => confirmDelete(item)} style={styles.memberActionButtonDelete}><Text style={styles.smallDeleteText}>Delete</Text></TouchableOpacity>
+                  </View>
                 </View>
-              </View>
-            </InfoCard>
+              </InfoCard>
+            </View>
           );
         }}
         ListEmptyComponent={<EmptyState title="No members" message="Member accounts will appear here." />}
@@ -1641,7 +1643,9 @@ function TierPicker({ value, onChange }: { value: string; onChange: (value: stri
     <View style={styles.tierPicker}>
       {["bronze", "silver", "gold"].map((item) => (
         <TouchableOpacity key={item} onPress={() => onChange(item)} style={[styles.tierOption, value === item && styles.tierOptionActive]}>
-          <TierBadge tier={item} />
+          <View style={styles.tierOptionContent}>
+            <TierBadge tier={item} />
+          </View>
         </TouchableOpacity>
       ))}
     </View>
@@ -2285,8 +2289,10 @@ const styles = StyleSheet.create({
   listContent: { paddingHorizontal: theme.spacing.page, paddingTop: 22, paddingBottom: 40, gap: theme.spacing.lg },
   memberListContent: { paddingHorizontal: theme.spacing.page, paddingTop: 22, paddingBottom: 40 },
   memberCardSeparator: { height: theme.spacing.lg },
+  memberCardItem: { marginBottom: theme.spacing.lg },
   memberCardBody: { gap: theme.spacing.md },
-  memberIdentity: { gap: theme.spacing.xs },
+  memberTopRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: theme.spacing.md },
+  memberIdentity: { flex: 1, gap: theme.spacing.xs },
   sectionEyebrow: { color: "#94A3B8", fontSize: 10, fontWeight: "900", letterSpacing: 1.6 },
   pageTitle: { color: DARK, fontSize: 29, lineHeight: 36, fontWeight: "800", letterSpacing: -0.65, marginTop: 6 },
   muted: { color: SLATE, fontSize: 13, lineHeight: 20, marginTop: 5 },
@@ -2351,9 +2357,10 @@ const styles = StyleSheet.create({
   settingsChevron: { color: SLATE, fontSize: 26, fontWeight: "300" },
   fyRequiredIcon: { width: 58, height: 58, borderRadius: 18, backgroundColor: "#DBEAFE", alignItems: "center", justifyContent: "center", marginBottom: 20 },
   fyRequiredIconText: { color: "#1D4ED8", fontSize: 18, fontWeight: "900" },
-  tierPicker: { flexDirection: "row", gap: theme.spacing.sm, marginTop: theme.spacing.xs, alignItems: "center" },
-  tierOption: { flex: 1, minHeight: 42, borderRadius: 9, borderWidth: 1, borderColor: "#CBD5E1", alignItems: "center", justifyContent: "center", backgroundColor: WHITE },
+  tierPicker: { flexDirection: "row", gap: theme.spacing.sm, marginTop: theme.spacing.xs, alignItems: "stretch" },
+  tierOption: { flex: 1, minHeight: 50, borderRadius: 9, borderWidth: 1, borderColor: "#CBD5E1", alignItems: "center", justifyContent: "center", backgroundColor: WHITE, paddingHorizontal: 4 },
   tierOptionActive: { borderColor: BLUE, backgroundColor: "#EFF6FF" },
+  tierOptionContent: { width: "100%", alignItems: "center", justifyContent: "center" },
   tierOptionText: { color: SLATE, fontSize: 11, fontWeight: "800" },
   tierOptionTextActive: { color: "#1D4ED8" },
   fullModalBackdrop: { flex: 1, backgroundColor: "rgba(15,23,42,0.45)", justifyContent: "flex-end" },
