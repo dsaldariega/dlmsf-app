@@ -2415,7 +2415,7 @@ const styles = StyleSheet.create({
   muted: { color: SLATE, fontSize: 13, lineHeight: 20, marginTop: 5 },
   mutedSmall: { color: SLATE, fontSize: 11, marginTop: 4 },
   welcomeRow: { flexDirection: "row", alignItems: "flex-start" },
-  statGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: theme.spacing.md, marginTop: theme.spacing.sm },
+  statGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: theme.spacing.lg, marginTop: theme.spacing.sm },
   statCardInner: { flex: 1 },
   statLabel: { color: SLATE, fontSize: 10, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.6 },
   statValue: { color: DARK, fontSize: 20, fontWeight: "800", marginTop: 7 },
