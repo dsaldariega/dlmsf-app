@@ -1737,7 +1737,6 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
                   })()}
                 </>
               ) : null}
-              {modal === "create" ? <Text style={styles.helperText}>A linked Supabase login is created by the existing backend account workflow.</Text> : null}
               <PrimaryButton label={modal === "create" ? "Create member" : "Save changes"} loading={saving} onPress={() => void saveMember()} />
             </>
           ) : null}
