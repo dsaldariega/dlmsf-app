@@ -161,7 +161,7 @@ export default function App() {
           <View style={styles.brandMark}>
             <Text style={styles.brandInitials}>DL</Text>
           </View>
-          <Text style={styles.eyebrow}>DILI LABAD MEMBERS</Text>
+          <Text style={styles.eyebrow}>DLMSF MONITORING</Text>
           <Text style={styles.title}>Sinking Fund</Text>
           <Text style={styles.subtitle}>
             {user
@@ -256,7 +256,7 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#F4F7F5" },
+  screen: { flex: 1, backgroundColor: "#F1F5F9" },
   scrollContent: {
     flexGrow: 1,
     justifyContent: "space-between",
@@ -275,40 +275,40 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F4F7F5",
+    backgroundColor: "#F1F5F9",
   },
   brandMark: {
     width: 58,
     height: 58,
     borderRadius: 18,
-    backgroundColor: "#173D32",
+    backgroundColor: "#2563EB",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 28,
   },
   brandInitials: { color: "#FFFFFF", fontSize: 21, fontWeight: "800", letterSpacing: 1 },
-  eyebrow: { color: "#648075", fontSize: 11, fontWeight: "700", letterSpacing: 2 },
-  title: { color: "#172D26", fontSize: 38, lineHeight: 46, fontWeight: "800", letterSpacing: -1.2, marginTop: 7 },
-  subtitle: { color: "#64736D", fontSize: 15, lineHeight: 23, marginTop: 10, marginBottom: 28 },
-  formCard: { backgroundColor: "#FFFFFF", borderRadius: 22, padding: 22, borderWidth: 1, borderColor: "#E7EDE9" },
-  formTitle: { color: "#1A3028", fontSize: 21, fontWeight: "800" },
-  formDescription: { color: "#738078", fontSize: 13, lineHeight: 20, marginTop: 6, marginBottom: 22 },
-  label: { color: "#34483F", fontSize: 12, fontWeight: "700", marginBottom: 8, marginTop: 14 },
-  input: { height: 50, borderRadius: 12, borderWidth: 1, borderColor: "#DCE5DF", backgroundColor: "#FBFCFB", paddingHorizontal: 14, color: "#1A3028", fontSize: 14 },
-  primaryButton: { height: 52, borderRadius: 13, backgroundColor: "#1B4A3A", alignItems: "center", justifyContent: "center", marginTop: 22 },
+  eyebrow: { color: "#64748B", fontSize: 11, fontWeight: "700", letterSpacing: 2 },
+  title: { color: "#1E293B", fontSize: 34, lineHeight: 42, fontWeight: "800", letterSpacing: -0.8, marginTop: 7 },
+  subtitle: { color: "#64748B", fontSize: 15, lineHeight: 23, marginTop: 10, marginBottom: 28 },
+  formCard: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 22, borderWidth: 1, borderColor: "#E2E8F0" },
+  formTitle: { color: "#1E293B", fontSize: 21, fontWeight: "800" },
+  formDescription: { color: "#64748B", fontSize: 13, lineHeight: 20, marginTop: 6, marginBottom: 22 },
+  label: { color: "#334155", fontSize: 12, fontWeight: "700", marginBottom: 8, marginTop: 14 },
+  input: { height: 50, borderRadius: 10, borderWidth: 1, borderColor: "#CBD5E1", backgroundColor: "#FFFFFF", paddingHorizontal: 14, color: "#1E293B", fontSize: 14 },
+  primaryButton: { height: 52, borderRadius: 10, backgroundColor: "#2563EB", alignItems: "center", justifyContent: "center", marginTop: 22 },
   disabledButton: { opacity: 0.65 },
   primaryButtonText: { color: "#FFFFFF", fontSize: 14, fontWeight: "800" },
-  securityNote: { color: "#8A9891", fontSize: 11, textAlign: "center", marginTop: 16 },
-  errorBox: { backgroundColor: "#FFF1F0", borderColor: "#F4D2CF", borderWidth: 1, borderRadius: 10, padding: 11, marginTop: 16 },
-  errorText: { color: "#A43B32", fontSize: 12, lineHeight: 18 },
-  accountCard: { backgroundColor: "#FFFFFF", borderRadius: 22, padding: 22, borderWidth: 1, borderColor: "#E7EDE9" },
-  cardEyebrow: { color: "#829088", fontSize: 10, fontWeight: "800", letterSpacing: 1.4 },
-  accountEmail: { color: "#1A3028", fontSize: 16, fontWeight: "700", marginTop: 9 },
-  rolePill: { alignSelf: "flex-start", backgroundColor: "#E7F0EA", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, marginTop: 15 },
-  roleText: { color: "#315D49", fontSize: 11, fontWeight: "800" },
-  accountNote: { color: "#738078", fontSize: 13, lineHeight: 20, marginTop: 20 },
-  secondaryButton: { height: 48, borderRadius: 12, borderWidth: 1, borderColor: "#DCE5DF", alignItems: "center", justifyContent: "center", marginTop: 24 },
-  secondaryButtonText: { color: "#315D49", fontSize: 13, fontWeight: "800" },
-  loadingText: { color: "#738078", fontSize: 13, marginTop: 14 },
-  footer: { color: "#91A099", fontSize: 12, fontWeight: "600", textAlign: "center", marginTop: 30 },
+  securityNote: { color: "#94A3B8", fontSize: 11, textAlign: "center", marginTop: 16 },
+  errorBox: { backgroundColor: "#FEF2F2", borderColor: "#FECACA", borderWidth: 1, borderRadius: 10, padding: 11, marginTop: 16 },
+  errorText: { color: "#B91C1C", fontSize: 12, lineHeight: 18 },
+  accountCard: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 22, borderWidth: 1, borderColor: "#E2E8F0" },
+  cardEyebrow: { color: "#94A3B8", fontSize: 10, fontWeight: "800", letterSpacing: 1.4 },
+  accountEmail: { color: "#1E293B", fontSize: 16, fontWeight: "700", marginTop: 9 },
+  rolePill: { alignSelf: "flex-start", backgroundColor: "#DBEAFE", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, marginTop: 15 },
+  roleText: { color: "#1D4ED8", fontSize: 11, fontWeight: "800" },
+  accountNote: { color: "#64748B", fontSize: 13, lineHeight: 20, marginTop: 20 },
+  secondaryButton: { height: 48, borderRadius: 10, borderWidth: 1, borderColor: "#CBD5E1", alignItems: "center", justifyContent: "center", marginTop: 24 },
+  secondaryButtonText: { color: "#1D4ED8", fontSize: 13, fontWeight: "800" },
+  loadingText: { color: "#64748B", fontSize: 13, marginTop: 14 },
+  footer: { color: "#94A3B8", fontSize: 12, fontWeight: "600", textAlign: "center", marginTop: 30 },
 });
