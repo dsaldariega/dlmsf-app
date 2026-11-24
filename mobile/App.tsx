@@ -1742,7 +1742,7 @@ function TierPicker({ value, onChange }: { value: string; onChange: (value: stri
 
 function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: number; onChanged: () => void }) {
   const showToast = useToast();
-  const [fiscalYears, setFiscalYears = useState<FiscalYear[]>([]);
+  const [fiscalYears, setFiscalYears] = useState<FiscalYear[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [settings, setSettings] = useState<FiscalYearSettings | null>(null);
   const [loading, setLoading] = useState(true);
