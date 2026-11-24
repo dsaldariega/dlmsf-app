@@ -39,6 +39,14 @@ function numericValue(value: unknown, label: string, min = 0) {
     );
   return n;
 }
+function sortTiers<T extends { tier_code?: string }>(tiers: T[]) {
+  const order: Record<string, number> = { bronze: 0, silver: 1, gold: 2 };
+  return [...tiers].sort(
+    (left, right) =>
+      (order[String(left.tier_code ?? "").toLowerCase()] ?? 99) -
+      (order[String(right.tier_code ?? "").toLowerCase()] ?? 99),
+  );
+}
 
 export async function getActiveFiscalYear(
   req: Request,
@@ -235,14 +243,13 @@ export async function createFiscalYear(
     const { data: settings, error: settingsError } = await client
       .from("tier_settings")
       .select("*")
-      .eq("fiscal_year_id", fy.id)
-      .order("tier_code");
+      .eq("fiscal_year_id", fy.id);
     if (settingsError) throw settingsError;
     res
       .status(201)
       .json({
         success: true,
-        data: { fiscalYear: fy, tiers: settings },
+        data: { fiscalYear: fy, tiers: sortTiers(settings ?? []) },
         message:
           "Active fiscal year created with configured Bronze, Silver, and Gold settings.",
       });
@@ -405,11 +412,7 @@ export async function listFiscalYearSettings(
     const client = db(req);
     const [fyResult, tiersResult, assignmentsResult] = await Promise.all([
       client.from("fiscal_years").select("*").eq("id", id).maybeSingle(),
-      client
-        .from("tier_settings")
-        .select("*")
-        .eq("fiscal_year_id", id)
-        .order("tier_code"),
+      client.from("tier_settings").select("*").eq("fiscal_year_id", id),
       client
         .from("member_fiscal_years")
         .select(
@@ -426,7 +429,7 @@ export async function listFiscalYearSettings(
       success: true,
       data: {
         fiscalYear: fyResult.data,
-        tiers: tiersResult.data ?? [],
+        tiers: sortTiers(tiersResult.data ?? []),
         assignments: assignmentsResult.data ?? [],
       },
     });
