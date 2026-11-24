@@ -1719,11 +1719,11 @@ function AdminFiscalSettingsScreen({ refreshKey, onClose, onChanged }: { refresh
         throw new Error(message || "Unable to export fiscal year activities.");
       }
       const workbook = await response.text();
-      const file = new File(Paths.cache, `DLMSF-${settings.fiscalYear.code}-Activities.xls`);
+      const file = new File(Paths.cache, `DLMSF-${settings.fiscalYear.code}-Activities.xlsx`);
       if (file.exists) file.delete();
       await file.write(workbook);
       if (!(await Sharing.isAvailableAsync())) throw new Error("File sharing is not available on this device.");
-      await Sharing.shareAsync(file.uri, { dialogTitle: "Export DLMSF fiscal year", mimeType: "application/vnd.ms-excel" });
+      await Sharing.shareAsync(file.uri, { dialogTitle: "Export DLMSF fiscal year", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
     } catch (e) { Alert.alert("Unable to export", getErrorMessage(e)); }
     finally { setExporting(false); }
   }
