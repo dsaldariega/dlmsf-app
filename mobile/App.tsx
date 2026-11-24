@@ -1771,7 +1771,7 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
           retentionMonths: Number(retentionMonths),
           tiers: draftTiers.map((tier) => ({
             tierCode: tier.tierCode, displayName: tier.displayName, enabled: tier.enabled,
-            maxHeadsPerMember: tier.maxHeadsPerMember === "" ? (maxHeadsPerMember === "" ? null : Number(maxHeadsPerMember)) : Number(tier.maxHeadsPerMember),
+            maxHeadsPerMember: tier.maxHeadsPerMember === "" ? null : Number(tier.maxHeadsPerMember),
             loanEligible: tier.loanEligible, loanLimitMode: tier.loanLimitMode,
             contributionMultiplier: Number(tier.contributionMultiplier || 1),
             maxLoanAmount: tier.maxLoanAmount === "" ? null : Number(tier.maxLoanAmount),
