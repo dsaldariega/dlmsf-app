@@ -237,7 +237,7 @@ export async function exportFiscalYear(req: Request, res: Response, next: NextFu
     const [members, assignments, tiers, payments, allocations, loans, loanPayments, loanRequests, paymentSubmissions, loanAudit, paymentAudit, requestAudit] = await Promise.all([
       client.from("members").select("id,name,heads").order("id"),
       client.from("member_fiscal_years").select("member_id,tier_code,assigned_heads,assigned_at").eq("fiscal_year_id", fiscalYearId),
-      client.from("tier_settings").select("tier_code,display_name,enabled,max_heads_per_member,loan_eligible,loan_limit_mode,contribution_multiplier,max_loan_amount").eq("fiscal_year_id", fiscalYearId).order("tier_code"),
+      client.from("tier_settings").select("tier_code,display_name,enabled,max_heads_per_member,loan_eligible,loan_limit_mode").eq("fiscal_year_id", fiscalYearId).order("tier_code"),
       client.from("payments").select("id,fiscal_year_id,member_id,amount,week_start,created_at").eq("fiscal_year_id", fiscalYearId).order("week_start"),
       client.from("weekly_contribution_allocations").select("id,fiscal_year_id,payment_submission_id,member_id,week_start,amount,created_at").eq("fiscal_year_id", fiscalYearId).order("week_start"),
       client.from("loans").select("id,fiscal_year_id,borrower_id,amount,interest,total,monthly,status,months,created_at").eq("fiscal_year_id", fiscalYearId).order("id"),
@@ -268,8 +268,8 @@ export async function exportFiscalYear(req: Request, res: Response, next: NextFu
         ...(members.data ?? []).map((m: any) => [m.id,m.name,m.heads,assignmentMap.get(Number(m.id))?.tier_code ?? "",assignmentMap.get(Number(m.id))?.assigned_heads ?? "",assignmentMap.get(Number(m.id))?.assigned_at ?? ""])
       ]},
       { name: "Tier Settings", data: [
-        ["Tier","Display Name","Enabled","Max Heads","Loan Eligible","Loan Limit Mode","Contribution Multiplier","Max Loan Amount"],
-        ...(tiers.data ?? []).map((t: any) => [t.tier_code,t.display_name,t.enabled,t.max_heads_per_member,t.loan_eligible,t.loan_limit_mode,t.contribution_multiplier,t.max_loan_amount])
+        ["Tier","Display Name","Enabled","Max Heads","Loan Eligible","Loan Limit Basis"],
+        ...(tiers.data ?? []).map((t: any) => [t.tier_code,t.display_name,t.enabled,t.max_heads_per_member,t.loan_eligible,t.loan_limit_mode])
       ]},
       { name: "Contributions", data: [
         ["ID","Submission ID","Member","Member ID","Week Start","Amount","Created At"],
