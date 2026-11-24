@@ -27,6 +27,7 @@ export async function createMemberWithLogin(req: Request, res: Response, next: N
   try {
     const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
     const heads = Number(req.body?.heads);
+    const requestedTierCode = typeof req.body?.tierCode === "string" ? req.body.tierCode.trim().toLowerCase() : "";
     if (!name) throw Object.assign(new Error("Member name is required."), { status: 400 });
     if (name.length > 120) throw Object.assign(new Error("Member name must be 120 characters or fewer."), { status: 400 });
     if (!Number.isSafeInteger(heads) || heads < 1) throw Object.assign(new Error("Heads must be a whole number of at least 1."), { status: 400 });
@@ -39,25 +40,40 @@ export async function createMemberWithLogin(req: Request, res: Response, next: N
     const today = `${part("year")}-${part("month")}-${part("day")}`;
     const { data: activeFiscalYear, error: fiscalYearError } = await admin
       .from("fiscal_years")
-      .select("id")
+      .select("id,code,max_total_heads")
       .eq("status", "active")
-      .lte("start_date", today)
-      .gte("end_date", today)
       .maybeSingle();
     if (fiscalYearError) throw fiscalYearError;
     if (!activeFiscalYear) {
       throw Object.assign(new Error("Create and activate a fiscal year before adding members."), { status: 409 });
     }
-    const { data: enabledTier, error: tierError } = await admin
+    const { data: tierRows, error: tierError } = await admin
       .from("tier_settings")
-      .select("tier_code")
+      .select("tier_code,display_name,enabled,max_heads_per_member")
       .eq("fiscal_year_id", activeFiscalYear.id)
-      .eq("enabled", true)
-      .limit(1)
-      .maybeSingle();
+      .eq("enabled", true);
     if (tierError) throw tierError;
-    if (!enabledTier) {
+    if (!tierRows?.length) {
       throw Object.assign(new Error("Enable at least one membership tier in the active fiscal year before adding members."), { status: 409 });
+    }
+    const tier = tierRows.find((item) => item.tier_code.toLowerCase() === requestedTierCode) ?? (requestedTierCode ? null : tierRows[0]);
+    if (!tier) {
+      throw Object.assign(new Error("The selected membership tier is not enabled for the active fiscal year."), { status: 409 });
+    }
+    if (tier.max_heads_per_member != null && heads > Number(tier.max_heads_per_member)) {
+      const limitLabel = `${tier.max_heads_per_member} ${Number(tier.max_heads_per_member) === 1 ? "head" : "heads"}`;
+      throw Object.assign(new Error(`${tier.display_name} allows a maximum of ${limitLabel} per member in FY ${activeFiscalYear.code}.`), { status: 409 });
+    }
+    if (activeFiscalYear.max_total_heads != null) {
+      const { data: assignedRows, error: assignedError } = await admin
+        .from("member_fiscal_years")
+        .select("assigned_heads")
+        .eq("fiscal_year_id", activeFiscalYear.id);
+      if (assignedError) throw assignedError;
+      const assignedTotal = (assignedRows ?? []).reduce((sum, row) => sum + Number(row.assigned_heads || 0), 0);
+      if (assignedTotal + heads > Number(activeFiscalYear.max_total_heads)) {
+        throw Object.assign(new Error(`Adding this member would exceed the FY ${activeFiscalYear.code} total head limit of ${activeFiscalYear.max_total_heads}.`), { status: 409 });
+      }
     }
     const email = memberEmail(name);
     const { data: usersPage, error: listError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
