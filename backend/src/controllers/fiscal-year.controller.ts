@@ -153,7 +153,7 @@ export async function createFiscalYear(
         displayName: "Bronze",
         enabled: true,
         loanEligible: true,
-        loanLimitMode: "total_contribution",
+        loanLimitMode: "member_contribution",
       },
       {
         tierCode: "silver",
@@ -167,7 +167,7 @@ export async function createFiscalYear(
         displayName: "Gold",
         enabled: true,
         loanEligible: true,
-        loanLimitMode: "member_contribution",
+        loanLimitMode: "total_contribution",
       },
     ];
     const configured = tierInput ?? defaults;

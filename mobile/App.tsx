@@ -82,11 +82,11 @@ type AuditRecord = {
   loan_request_id?: number;
 };
 
-const BLUE = "#2563EB";
+const BLUE = "#1D4ED8";
 const DARK = "#1E293B";
 const SLATE = "#64748B";
 const BORDER = "#E2E8F0";
-const BG = "#F1F5F9";
+const BG = "#F8FAFC";
 const WHITE = "#FFFFFF";
 const GREEN = "#15803D";
 const RED = "#B91C1C";
@@ -1843,9 +1843,11 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
         <Text style={styles.helperText}>Create fiscal years, configure tier eligibility, manage head limits, and export historical activity.</Text>
       </View>
       <ScrollView contentContainerStyle={styles.modalContent}>
-        <PrimaryButton label="Create fiscal year" onPress={() => {
-          setCode(""); setStartDate(""); setEndDate(""); setMaxTotalHeads(""); setRetentionMonths("3"); setDraftTiers(createDefaultDraftTiers()); setShowCreate(true);
-        }} />
+        <View style={styles.createFiscalYearAction}>
+          <PrimaryButton label="Create fiscal year" onPress={() => {
+            setCode(""); setStartDate(""); setEndDate(""); setMaxTotalHeads(""); setRetentionMonths("3"); setDraftTiers(createDefaultDraftTiers()); setShowCreate(true);
+          }} />
+        </View>
         {fiscalYears.length ? (
           <>
             <FieldLabel text="Fiscal year" />
@@ -1883,7 +1885,7 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
               </>
             ) : <EmptyState title="Select a fiscal year" message="Choose a fiscal year to configure its rules." />}
           </>
-        ) : <EmptyState title="No fiscal years" message="Create the next FY to start configuring tiers and head limits." />}
+        ) : <View style={styles.fiscalYearEmptyWrap}><EmptyState title="No fiscal years" message="Create the next FY to start configuring tiers and head limits." /></View>}
       </ScrollView>
 
       <Modal transparent visible={showCreate} animationType="slide" onRequestClose={() => setShowCreate(false)}>
@@ -1907,7 +1909,7 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
             <Text style={styles.cardTitle}>{code.trim() || "Fiscal year code not entered"}</Text>
             <Text style={styles.mutedSmall}>{startDate || "Start date"} → {endDate || "End date"}</Text>
             <Text style={styles.mutedSmall}>Retention: {retentionMonths || "3"} months after closure</Text>
-            {draftTiers.map((tier) => <Text key={tier.tierCode} style={styles.mutedSmall}>{tier.displayName}: {tier.enabled ? "Enabled" : "Disabled"} · {tier.loanEligible ? "Loan eligible" : "Not loan eligible"} · {tier.loanLimitMode === "member_contribution" ? "Member contribution" : "Total contribution"}</Text>)}
+            {draftTiers.map((tier) => <Text key={tier.tierCode} style={styles.mutedSmall}>{tier.displayName}: {tier.enabled ? "Enabled" : "Disabled"} · {tier.loanEligible ? "Loan eligible" : "Not loan eligible"} · {tier.loanLimitMode === "member_contribution" ? "Member contribution" : "Total contributions"}</Text>)}
           </InfoCard>
           <PrimaryButton label="Create draft fiscal year" loading={saving} onPress={() => void createYear()} />
         </ModalSheet>
@@ -1977,9 +1979,9 @@ type DraftTier = {
 };
 function createDefaultDraftTiers(): DraftTier[] {
   return [
-    { tierCode: "bronze", displayName: "Bronze", enabled: true, maxHeadsPerMember: "", loanEligible: true, loanLimitMode: "total_contribution" },
+    { tierCode: "bronze", displayName: "Bronze", enabled: true, maxHeadsPerMember: "", loanEligible: true, loanLimitMode: "member_contribution" },
     { tierCode: "silver", displayName: "Silver", enabled: true, maxHeadsPerMember: "", loanEligible: true, loanLimitMode: "member_contribution" },
-    { tierCode: "gold", displayName: "Gold", enabled: true, maxHeadsPerMember: "", loanEligible: true, loanLimitMode: "member_contribution" },
+    { tierCode: "gold", displayName: "Gold", enabled: true, maxHeadsPerMember: "", loanEligible: true, loanLimitMode: "total_contribution" },
   ];
 }
 function DraftTierSettingsCard({ tier, onChange }: { tier: DraftTier; onChange: (tier: DraftTier) => void }) {
@@ -1995,8 +1997,8 @@ function DraftTierSettingsCard({ tier, onChange }: { tier: DraftTier; onChange: 
         <FieldLabel text="Maximum heads per member" />
         <TextInput keyboardType="numeric" value={tier.maxHeadsPerMember} onChangeText={(v) => patch({ maxHeadsPerMember: v })} placeholder="No tier-specific limit" placeholderTextColor="#94A3B8" style={styles.input} />
         <FieldLabel text="Loan limit mode" />
-        <View style={styles.modePicker}>{(["member_contribution","total_contribution"] as const).map((mode) => <TouchableOpacity key={mode} onPress={() => patch({ loanLimitMode: mode })} style={[styles.modeOption, tier.loanLimitMode === mode && styles.modeOptionActive]}><Text style={[styles.modeOptionText, tier.loanLimitMode === mode && styles.modeOptionTextActive]}>{mode === "member_contribution" ? "Member contribution" : "Total contribution"}</Text></TouchableOpacity>)}</View>
-        {tier.loanLimitMode === "member_contribution" ? <Text style={styles.helperText}>Loan limit is based on this member's paid contributions during the fiscal year.</Text> : <Text style={styles.helperText}>Loan limit is based on all paid contributions collected during the fiscal year.</Text>}
+        <View style={styles.modePicker}>{(["member_contribution","total_contribution"] as const).map((mode) => <TouchableOpacity key={mode} onPress={() => patch({ loanLimitMode: mode })} style={[styles.modeOption, tier.loanLimitMode === mode && styles.modeOptionActive]}><Text style={[styles.modeOptionText, tier.loanLimitMode === mode && styles.modeOptionTextActive]}>{mode === "member_contribution" ? "Member contribution" : "Total contributions"}</Text></TouchableOpacity>)}</View>
+        {tier.loanLimitMode === "member_contribution" ? <Text style={styles.helperText}>Loan limit is based on this member's paid contributions during the fiscal year.</Text> : <Text style={styles.helperText}>Loan limit is based on all paid contributions collected across the fiscal year.</Text>}
         
       </>
     ) : null}
@@ -2018,11 +2020,11 @@ function TierSettingsCard({ tier, saving, onSave }: { tier: TierSetting; saving:
           <View style={styles.modePicker}>
             {(["member_contribution","total_contribution"] as const).map((mode) => (
               <TouchableOpacity key={mode} onPress={() => setDraft({ ...draft, loan_limit_mode: mode })} style={[styles.modeOption, draft.loan_limit_mode === mode && styles.modeOptionActive]}>
-                <Text style={[styles.modeOptionText, draft.loan_limit_mode === mode && styles.modeOptionTextActive]}>{mode === "member_contribution" ? "Member contribution" : "Total contribution"}</Text>
+                <Text style={[styles.modeOptionText, draft.loan_limit_mode === mode && styles.modeOptionTextActive]}>{mode === "member_contribution" ? "Member contribution" : "Total contributions"}</Text>
               </TouchableOpacity>
             ))}
           </View>
-          {draft.loan_limit_mode === "member_contribution" ? <Text style={styles.helperText}>Loan limit is based on this member's paid contributions during the fiscal year.</Text> : <Text style={styles.helperText}>Loan limit is based on all paid contributions collected during the fiscal year.</Text>}
+          {draft.loan_limit_mode === "member_contribution" ? <Text style={styles.helperText}>Loan limit is based on this member's paid contributions during the fiscal year.</Text> : <Text style={styles.helperText}>Loan limit is based on all paid contributions collected across the fiscal year.</Text>}
           
         </>
       ) : null}
@@ -2226,30 +2228,30 @@ const styles = StyleSheet.create({
   authTitle: { color: DARK, fontSize: 34, lineHeight: 42, fontWeight: "800", letterSpacing: -0.8, marginTop: 7 },
   subtitle: { color: SLATE, fontSize: 15, lineHeight: 23, marginTop: 10, marginBottom: 28 },
   footer: { color: "#94A3B8", fontSize: 12, fontWeight: "600", textAlign: "center", marginTop: 30 },
-  card: { backgroundColor: WHITE, borderRadius: 16, padding: 22, borderWidth: 1, borderColor: BORDER },
+  card: { backgroundColor: WHITE, borderRadius: 18, padding: 22, borderWidth: 1, borderColor: BORDER, shadowColor: "#0F172A", shadowOpacity: 0.035, shadowRadius: 10, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
   formTitle: { color: DARK, fontSize: 21, fontWeight: "800", marginBottom: 2 },
   label: { color: "#334155", fontSize: 12, fontWeight: "700", marginBottom: 8, marginTop: 14 },
-  input: { height: 50, borderRadius: 10, borderWidth: 1, borderColor: "#CBD5E1", backgroundColor: WHITE, paddingHorizontal: 14, color: DARK, fontSize: 14 },
-  primaryButton: { minHeight: 50, borderRadius: 10, backgroundColor: BLUE, alignItems: "center", justifyContent: "center", paddingHorizontal: 16, marginTop: 20 },
+  input: { minHeight: 52, borderRadius: 12, borderWidth: 1, borderColor: "#CBD5E1", backgroundColor: WHITE, paddingHorizontal: 15, color: DARK, fontSize: 14 },
+  primaryButton: { minHeight: 52, borderRadius: 12, backgroundColor: BLUE, alignItems: "center", justifyContent: "center", paddingHorizontal: 18, marginTop: 16, shadowColor: BLUE, shadowOpacity: 0.16, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
   disabledButton: { opacity: 0.55 },
   primaryButtonText: { color: WHITE, fontSize: 14, fontWeight: "800" },
   errorBox: { backgroundColor: "#FEF2F2", borderColor: "#FECACA", borderWidth: 1, borderRadius: 10, padding: 11, marginTop: 16 },
   errorText: { color: RED, fontSize: 12, lineHeight: 18 },
   loadingText: { color: SLATE, fontSize: 13, marginTop: 12 },
-  topBar: { paddingTop: Platform.OS === "ios" ? 58 : NativeStatusBar.currentHeight ? NativeStatusBar.currentHeight + 16 : 34, paddingHorizontal: 20, paddingBottom: 16, backgroundColor: WHITE, borderBottomWidth: 1, borderBottomColor: BORDER, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  topBar: { paddingTop: Platform.OS === "ios" ? 58 : NativeStatusBar.currentHeight ? NativeStatusBar.currentHeight + 16 : 34, paddingHorizontal: 20, paddingBottom: 18, backgroundColor: WHITE, borderBottomWidth: 1, borderBottomColor: BORDER, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   topEyebrow: { color: "#94A3B8", fontSize: 9, fontWeight: "800", letterSpacing: 1.5 },
   topTitle: { color: DARK, fontSize: 20, fontWeight: "800", marginTop: 3 },
   roleBadge: { backgroundColor: "#DBEAFE", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20 },
   roleBadgeText: { color: "#1D4ED8", fontSize: 9, fontWeight: "900", letterSpacing: 1 },
-  tabBar: { flexGrow: 0, backgroundColor: WHITE, borderTopWidth: 1, borderTopColor: BORDER, elevation: 8, shadowColor: "#0F172A", shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: -2 } },
+  tabBar: { flexGrow: 0, backgroundColor: WHITE, borderTopWidth: 1, borderTopColor: BORDER, elevation: 10, shadowColor: "#0F172A", shadowOpacity: 0.07, shadowRadius: 12, shadowOffset: { width: 0, height: -3 } },
   tabBarScroll: { paddingHorizontal: 4, paddingBottom: Platform.OS === "ios" ? 20 : 8, paddingTop: 8 },
-  tabButton: { minWidth: 78, alignItems: "center", paddingVertical: 8, paddingHorizontal: 6 },
+  tabButton: { minWidth: 78, alignItems: "center", paddingVertical: 10, paddingHorizontal: 7 },
   tabLabel: { color: "#94A3B8", fontSize: 11, fontWeight: "700" },
   tabLabelActive: { color: BLUE },
-  scrollContent: { padding: 20, paddingBottom: 24 },
-  listContent: { padding: 20, paddingBottom: 24 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 22, paddingBottom: 32 },
+  listContent: { paddingHorizontal: 20, paddingTop: 22, paddingBottom: 32 },
   sectionEyebrow: { color: "#94A3B8", fontSize: 10, fontWeight: "900", letterSpacing: 1.6 },
-  pageTitle: { color: DARK, fontSize: 29, lineHeight: 35, fontWeight: "800", letterSpacing: -0.5, marginTop: 5 },
+  pageTitle: { color: DARK, fontSize: 29, lineHeight: 36, fontWeight: "800", letterSpacing: -0.65, marginTop: 6 },
   muted: { color: SLATE, fontSize: 13, lineHeight: 20, marginTop: 5 },
   mutedSmall: { color: SLATE, fontSize: 11, marginTop: 4 },
   welcomeRow: { flexDirection: "row", alignItems: "flex-start" },
@@ -2257,7 +2259,7 @@ const styles = StyleSheet.create({
   statCardInner: { flex: 1 },
   statLabel: { color: SLATE, fontSize: 10, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.6 },
   statValue: { color: DARK, fontSize: 20, fontWeight: "800", marginTop: 7 },
-  statCard: { backgroundColor: WHITE, borderRadius: 14, borderWidth: 1, borderColor: BORDER, padding: 14, margin: 5, width: "46%" },
+  statCard: { backgroundColor: WHITE, borderRadius: 16, borderWidth: 1, borderColor: BORDER, padding: 15, margin: 5, width: "46%", shadowColor: "#0F172A", shadowOpacity: 0.025, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
   sectionHeader: { color: DARK, fontSize: 17, fontWeight: "800", marginTop: 24, marginBottom: 11 },
   heroCard: { backgroundColor: BLUE, borderRadius: 18, padding: 20, marginTop: 18 },
   heroValue: { color: WHITE, fontSize: 34, fontWeight: "900", marginTop: 5 },
@@ -2266,7 +2268,7 @@ const styles = StyleSheet.create({
   heroLabel: { color: "#DBEAFE", fontSize: 11, fontWeight: "700" },
   heroLabelValue: { color: WHITE, fontSize: 13, fontWeight: "800" },
   inlineStat: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  infoCard: { backgroundColor: WHITE, borderRadius: 15, borderWidth: 1, borderColor: BORDER, padding: 16, marginBottom: 11 },
+  infoCard: { backgroundColor: WHITE, borderRadius: 17, borderWidth: 1, borderColor: BORDER, padding: 17, marginBottom: 13, shadowColor: "#0F172A", shadowOpacity: 0.025, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
   cardEyebrow: { color: "#94A3B8", fontSize: 9, fontWeight: "900", letterSpacing: 1.4 },
   cardTitle: { color: DARK, fontSize: 14, fontWeight: "800" },
   detailGrid: { flexDirection: "row", flexWrap: "wrap", marginTop: 15, marginHorizontal: -4 },
@@ -2278,11 +2280,11 @@ const styles = StyleSheet.create({
   statusText: { fontSize: 9, fontWeight: "900", textTransform: "uppercase" },
   activityRow: { backgroundColor: WHITE, borderWidth: 1, borderColor: BORDER, borderRadius: 13, padding: 14, marginBottom: 8, flexDirection: "row", alignItems: "center" },
   activityAmount: { color: DARK, fontSize: 13, fontWeight: "800" },
-  emptyState: { backgroundColor: WHITE, borderWidth: 1, borderColor: BORDER, borderRadius: 14, padding: 18, alignItems: "center", marginBottom: 10 },
+  emptyState: { backgroundColor: WHITE, borderWidth: 1, borderColor: BORDER, borderRadius: 16, paddingHorizontal: 20, paddingVertical: 24, alignItems: "center", marginBottom: 12 },
   emptyTitle: { color: DARK, fontSize: 13, fontWeight: "800" },
   emptyMessage: { color: SLATE, fontSize: 11, textAlign: "center", marginTop: 5, lineHeight: 17 },
   actionRow: { flexDirection: "row", gap: 10, marginTop: 14 },
-  actionButton: { flex: 1, minHeight: 46, backgroundColor: BLUE, borderRadius: 10, alignItems: "center", justifyContent: "center", paddingHorizontal: 12 },
+  actionButton: { flex: 1, minHeight: 48, backgroundColor: BLUE, borderRadius: 11, alignItems: "center", justifyContent: "center", paddingHorizontal: 14 },
   actionButtonSecondary: { backgroundColor: WHITE, borderWidth: 1, borderColor: "#CBD5E1" },
   actionButtonText: { color: WHITE, fontSize: 11, fontWeight: "800", textAlign: "center" },
   actionButtonTextSecondary: { color: "#1D4ED8" },
@@ -2311,8 +2313,10 @@ const styles = StyleSheet.create({
   tierOptionTextActive: { color: "#1D4ED8" },
   fullModalBackdrop: { flex: 1, backgroundColor: "rgba(15,23,42,0.45)", justifyContent: "flex-end" },
   fullModalSheet: { height: "94%", backgroundColor: BG, borderTopLeftRadius: 22, borderTopRightRadius: 22, overflow: "hidden" },
-  yearPicker: { gap: 14, paddingVertical: 8, paddingHorizontal: 2 },
-  yearChip: { borderWidth: 1, borderColor: "#CBD5E1", borderRadius: 18, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: WHITE },
+  createFiscalYearAction: { marginBottom: 20 },
+  fiscalYearEmptyWrap: { marginTop: 2, paddingTop: 4 },
+  yearPicker: { gap: 12, paddingVertical: 10, paddingHorizontal: 2 },
+  yearChip: { borderWidth: 1, borderColor: "#CBD5E1", borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: WHITE },
   yearChipActive: { backgroundColor: "#EFF6FF", borderColor: BLUE },
   yearChipText: { color: SLATE, fontSize: 11, fontWeight: "800" },
   yearChipTextActive: { color: "#1D4ED8" },
@@ -2325,8 +2329,8 @@ const styles = StyleSheet.create({
   modeOptionText: { color: SLATE, fontSize: 9, fontWeight: "800", textAlign: "center" },
   modeOptionTextActive: { color: "#1D4ED8" },
   note: { color: SLATE, fontSize: 11, lineHeight: 17, marginTop: 13, backgroundColor: "#F8FAFC", padding: 10, borderRadius: 8 },
-  segment: { flexDirection: "row", backgroundColor: "#E2E8F0", borderRadius: 10, padding: 3, marginTop: 18, marginBottom: 14 },
-  segmentButton: { flex: 1, minHeight: 40, alignItems: "center", justifyContent: "center", borderRadius: 8 },
+  segment: { flexDirection: "row", backgroundColor: "#E2E8F0", borderRadius: 12, padding: 4, marginTop: 20, marginBottom: 16 },
+  segmentButton: { flex: 1, minHeight: 44, alignItems: "center", justifyContent: "center", borderRadius: 9 },
   segmentActive: { backgroundColor: WHITE },
   segmentText: { color: SLATE, fontSize: 11, fontWeight: "800" },
   segmentTextActive: { color: BLUE },
@@ -2348,14 +2352,14 @@ const styles = StyleSheet.create({
   errorStateMessage: { color: SLATE, fontSize: 12, lineHeight: 19, textAlign: "center", marginTop: 8, marginBottom: 10 },
   modalBackdrop: { flex: 1, backgroundColor: "rgba(15,23,42,0.45)", justifyContent: "flex-end" },
   modalKeyboard: { width: "100%" },
-  modalSheet: { maxHeight: "88%", backgroundColor: WHITE, borderTopLeftRadius: 22, borderTopRightRadius: 22, paddingBottom: Platform.OS === "ios" ? 26 : 14 },
-  modalHeader: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: BORDER, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  modalSheet: { maxHeight: "90%", backgroundColor: WHITE, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: Platform.OS === "ios" ? 26 : 18 },
+  modalHeader: { paddingHorizontal: 22, paddingTop: 22, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: BORDER, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   modalTitle: { color: DARK, fontSize: 19, fontWeight: "800" },
   closeText: { color: BLUE, fontSize: 12, fontWeight: "800" },
-  modalContent: { padding: 20, paddingBottom: 28 },
+  modalContent: { paddingHorizontal: 20, paddingTop: 18, paddingBottom: 34 },
   modalLead: { color: SLATE, fontSize: 13, lineHeight: 20, marginTop: 4 },
   dateModalBackdrop: { flex: 1, backgroundColor: "rgba(15,23,42,0.48)", justifyContent: "center", padding: 22 },
-  dateModalCard: { backgroundColor: WHITE, borderRadius: 18, padding: 18, borderWidth: 1, borderColor: BORDER },
+  dateModalCard: { backgroundColor: WHITE, borderRadius: 20, padding: 20, borderWidth: 1, borderColor: BORDER, shadowColor: "#0F172A", shadowOpacity: 0.12, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 5 },
   dateNavText: { color: BLUE, fontSize: 30, fontWeight: "700", paddingHorizontal: 12 },
   calendarGrid: { flexDirection: "row", flexWrap: "wrap", marginTop: 14 },
   calendarCell: { width: "14.2857%", alignItems: "center", justifyContent: "center", paddingVertical: 3 },
