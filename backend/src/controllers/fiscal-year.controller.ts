@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { createUserSupabaseClient } from "../config/supabase-user.js";
 import xlsx from "node-xlsx";
+import { createSupabaseAdminClient } from "../config/supabase-admin.js";
 
 function db(req: Request) {
   if (!req.accessToken) throw Object.assign(new Error("Authentication required"), { status: 401 });
@@ -24,6 +25,25 @@ function numericValue(value: unknown, label: string, min = 0) {
   const n = Number(value);
   if (!Number.isFinite(n) || n < min) throw Object.assign(new Error(label + " must be a valid number of at least " + min + "."), { status: 400 });
   return n;
+}
+
+export async function getActiveFiscalYear(req: Request, res: Response, next: NextFunction) {
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit"
+    }).formatToParts(new Date());
+    const part = (type: string) => parts.find((item) => item.type === type)?.value ?? "";
+    const today = `${part("year")}-${part("month")}-${part("day")}`;
+    const { data, error } = await createSupabaseAdminClient()
+      .from("fiscal_years")
+      .select("id,code,start_date,end_date,status")
+      .eq("status", "active")
+      .lte("start_date", today)
+      .gte("end_date", today)
+      .maybeSingle();
+    if (error) throw error;
+    res.json({ success: true, data: data ?? null });
+  } catch (error) { next(error); }
 }
 
 export async function listFiscalYears(req: Request, res: Response, next: NextFunction) {

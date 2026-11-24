@@ -32,6 +32,33 @@ export async function createMemberWithLogin(req: Request, res: Response, next: N
     if (!Number.isSafeInteger(heads) || heads < 1) throw Object.assign(new Error("Heads must be a whole number of at least 1."), { status: 400 });
 
     const admin = createSupabaseAdminClient();
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit"
+    }).formatToParts(new Date());
+    const part = (type: string) => parts.find((item) => item.type === type)?.value ?? "";
+    const today = `${part("year")}-${part("month")}-${part("day")}`;
+    const { data: activeFiscalYear, error: fiscalYearError } = await admin
+      .from("fiscal_years")
+      .select("id")
+      .eq("status", "active")
+      .lte("start_date", today)
+      .gte("end_date", today)
+      .maybeSingle();
+    if (fiscalYearError) throw fiscalYearError;
+    if (!activeFiscalYear) {
+      throw Object.assign(new Error("Create and activate a fiscal year before adding members."), { status: 409 });
+    }
+    const { data: enabledTier, error: tierError } = await admin
+      .from("tier_settings")
+      .select("tier_code")
+      .eq("fiscal_year_id", activeFiscalYear.id)
+      .eq("enabled", true)
+      .limit(1)
+      .maybeSingle();
+    if (tierError) throw tierError;
+    if (!enabledTier) {
+      throw Object.assign(new Error("Enable at least one membership tier in the active fiscal year before adding members."), { status: 409 });
+    }
     const email = memberEmail(name);
     const { data: usersPage, error: listError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
     if (listError) throw listError;
