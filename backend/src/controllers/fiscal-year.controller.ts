@@ -67,6 +67,11 @@ export async function createFiscalYear(req: Request, res: Response, next: NextFu
 export async function updateFiscalYear(req: Request, res: Response, next: NextFunction) {
   try {
     const id = idParam(req.params.id);
+    const client = db(req);
+    const { data: existing, error: existingError } = await client.from("fiscal_years").select("status").eq("id", id).maybeSingle();
+    if (existingError) throw existingError;
+    if (!existing) throw Object.assign(new Error("Fiscal year not found."), { status: 404 });
+    if (existing.status !== "draft") throw Object.assign(new Error("Only draft fiscal years can be edited. Activated and closed fiscal years are preserved as historical snapshots."), { status: 409 });
     const updates: Record<string, unknown> = {};
     if (req.body?.code !== undefined) {
       if (typeof req.body.code !== "string" || !req.body.code.trim() || req.body.code.trim().length > 40) throw Object.assign(new Error("Enter a valid fiscal year code."), { status: 400 });
@@ -141,7 +146,12 @@ export async function updateTierSetting(req: Request, res: Response, next: NextF
     if (req.body?.contributionMultiplier !== undefined) updates.contribution_multiplier = numericValue(req.body.contributionMultiplier, "Contribution multiplier");
     if (req.body?.maxLoanAmount !== undefined) updates.max_loan_amount = req.body.maxLoanAmount === null || req.body.maxLoanAmount === "" ? null : numericValue(req.body.maxLoanAmount, "Maximum loan amount");
     if (!Object.keys(updates).length) throw Object.assign(new Error("No tier changes were provided."), { status: 400 });
-    const { data, error } = await db(req).from("tier_settings").update(updates).eq("fiscal_year_id", fiscalYearId).eq("tier_code", tierCode).select("*").maybeSingle();
+    const client = db(req);
+    const { data: fy, error: fyError } = await client.from("fiscal_years").select("status").eq("id", fiscalYearId).maybeSingle();
+    if (fyError) throw fyError;
+    if (!fy) throw Object.assign(new Error("Fiscal year not found."), { status: 404 });
+    if (fy.status !== "draft") throw Object.assign(new Error("Tier settings are locked after the fiscal year is activated."), { status: 409 });
+    const { data, error } = await client.from("tier_settings").update(updates).eq("fiscal_year_id", fiscalYearId).eq("tier_code", tierCode).select("*").maybeSingle();
     if (error) throw error;
     if (!data) throw Object.assign(new Error("Tier setting not found."), { status: 404 });
     res.json({ success: true, data, message: data.display_name + " tier settings updated." });
