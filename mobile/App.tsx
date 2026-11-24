@@ -22,6 +22,7 @@ import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { supabase } from "./lib/supabase";
 import { getMemberRole, type MemberRole } from "./lib/auth";
+import { ThemeProvider, theme, useTheme } from "./theme";
 import { apiRequest, ApiError } from "./lib/api";
 import { currency, dateLabel, shortDate, statusTone, wholeCurrency } from "./lib/format";
 import type { FiscalYear, FiscalYearSettings } from "./lib/fiscal";
@@ -84,17 +85,17 @@ type AuditRecord = {
   loan_request_id?: number;
 };
 
-const BLUE = "#1D4ED8";
-const DARK = "#1E293B";
-const SLATE = "#64748B";
-const BORDER = "#E2E8F0";
-const BG = "#F8FAFC";
-const WHITE = "#FFFFFF";
-const GREEN = "#15803D";
-const RED = "#B91C1C";
-const AMBER = "#B45309";
+const BLUE = theme.colors.primary;
+const DARK = theme.colors.text;
+const SLATE = theme.colors.textSecondary;
+const BORDER = theme.colors.border;
+const BG = theme.colors.background;
+const WHITE = theme.colors.white;
+const GREEN = theme.colors.success;
+const RED = theme.colors.danger;
+const AMBER = theme.colors.warning;
 
-export default function App() {
+function AppContent() {
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
   const [initializing, setInitializing] = useState(true);
   const [authError, setAuthError] = useState("");
@@ -409,13 +410,6 @@ function HomeScreen({
         <StatCard label="Loan Payments" value={wholeCurrency(loanPayments)} />
         <StatCard label="Outstanding Principal" value={wholeCurrency(outstanding)} />
       </View>
-
-      <SectionHeader title="Quick actions" />
-      <View style={styles.actionRow}>
-        <ActionButton label="Review Loan Requests" onPress={() => onNavigate("loans")} />
-        <ActionButton label="Members" secondary onPress={() => onNavigate("members")} />
-      </View>
-
       <SectionHeader title="Recent activity" />
       {data.loanPayments.slice(0, 4).map((payment, index) => (
         <ActivityRow
@@ -1476,7 +1470,7 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
-  const [modal, setModal] = useState<"create" | "edit" | "tier" | null>(null);
+  const [modal, setModal] = useState<"create" | "edit" | null>(null);
   const [selected, setSelected] = useState<Member | null>(null);
   const [name, setName] = useState("");
   const [tier, setTier] = useState("bronze");
@@ -1522,14 +1516,6 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
     const assignment = assignments[member.id];
     setTier(assignment?.tier_code ?? "bronze"); setTierHeads(String(assignment?.assigned_heads ?? member.heads ?? 1));
   }
-  function openTier(member: Member) {
-    setSelected(member);
-    const assignment = assignments[member.id];
-    setTier(assignment?.tier_code ?? "bronze");
-    setTierHeads(String(assignment?.assigned_heads ?? member.heads ?? 1));
-    setModal("tier");
-  }
-
   async function saveMember() {
     if (!activeFiscalYear) { Alert.alert("Fiscal year required", "Create and activate a fiscal year before managing members."); return; }
     const trimmed = name.trim();
@@ -1562,23 +1548,6 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
     } finally { setSaving(false); }
   }
 
-  async function saveTierAssignment() {
-    if (!selected || !activeFiscalYear) return;
-    const assignedHeads = Number(tierHeads);
-    if (!Number.isInteger(assignedHeads) || assignedHeads < 0) {
-      Alert.alert("Invalid heads", "Enter a whole number of zero or greater.");
-      return;
-    }
-    setSaving(true);
-    try {
-      await apiRequest(`/api/fiscal-years/${activeFiscalYear.id}/members/${selected.id}`, {
-        method: "PUT", body: JSON.stringify({ tierCode: tier, assignedHeads }),
-      });
-      setModal(null); onChanged();
-    } catch (e) { Alert.alert("Unable to assign tier", getErrorMessage(e)); }
-    finally { setSaving(false); }
-  }
-
   function confirmDelete(member: Member) {
     Alert.alert("Delete member?", `This will delete ${member.name} and the linked login. This action cannot be undone.`, [
       { text: "Cancel", style: "cancel" },
@@ -1607,7 +1576,7 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
             <Text style={styles.sectionEyebrow}>MEMBERS</Text>
             <Text style={styles.pageTitle}>Member accounts</Text>
             <Text style={styles.muted}>Manage members, FY assignments, and linked logins.</Text>
-            <View style={styles.actionRow}>
+            <View style={styles.memberAddAction}>
               <ActionButton label="Add member" onPress={openCreate} />
             </View>
             {activeFiscalYear ? <InfoCard><Text style={styles.cardEyebrow}>ACTIVE FISCAL YEAR</Text><Text style={styles.cardTitle}>{activeFiscalYear.code}</Text><Text style={styles.mutedSmall}>{activeFiscalYear.start_date} → {activeFiscalYear.end_date}</Text></InfoCard> : <EmptyState title="No fiscal year configured" message="Create and configure the next fiscal year before assigning tiers." />}
@@ -1624,7 +1593,6 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
                   {activeFiscalYear && assignment ? <View style={styles.memberTierLine}><TierBadge tier={assignment.tier_code} /><Text style={styles.tierMeta}>{assignment.assigned_heads} FY head{assignment.assigned_heads === 1 ? "" : "s"}</Text></View> : <Text style={styles.tierMeta}>Not assigned to the active FY</Text>}
                 </View>
                 <View style={styles.memberActions}>
-                  <TouchableOpacity onPress={() => openTier(item)} style={styles.smallAction}><Text style={styles.smallActionText}>Tier</Text></TouchableOpacity>
                   <TouchableOpacity onPress={() => openEdit(item)} style={styles.smallAction}><Text style={styles.smallActionText}>Edit</Text></TouchableOpacity>
                   <TouchableOpacity onPress={() => confirmDelete(item)} style={styles.smallDelete}><Text style={styles.smallDeleteText}>Delete</Text></TouchableOpacity>
                 </View>
@@ -1636,18 +1604,8 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
       />
 
       <Modal transparent visible={Boolean(modal)} animationType="none" onRequestClose={() => setModal(null)}>
-        <ModalSheet title={modal === "create" ? "Add member" : modal === "edit" ? "Edit member" : "Assign membership tier"} onClose={() => setModal(null)}>
-          {modal === "tier" ? (
-            <>
-              <Text style={styles.modalLead}>{activeFiscalYear ? `Assign ${selected?.name ?? "this member"} for ${activeFiscalYear.code}.` : "No fiscal year is available."}</Text>
-              <FieldLabel text="Membership tier" />
-              <TierPicker value={tier} onChange={setTier} />
-              <FieldLabel text="FY heads" />
-              <TextInput keyboardType="numeric" onChangeText={setTierHeads} placeholder="1" placeholderTextColor="#94A3B8" style={styles.input} value={tierHeads} />
-              <Text style={styles.helperText}>The server validates the fiscal-year total head limit and the selected tier's head limit.</Text>
-              <PrimaryButton label="Save tier assignment" loading={saving} onPress={() => void saveTierAssignment()} />
-            </>
-          ) : (
+        <ModalSheet title={modal === "create" ? "Add member" : "Edit member"} onClose={() => setModal(null)}>
+: (
             <>
               <FieldLabel text="Name" />
               <TextInput onChangeText={setName} placeholder="Member name" placeholderTextColor="#94A3B8" style={styles.input} value={name} />
@@ -1848,15 +1806,15 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
   if (loading && !settings) return <ScreenLoader />;
 
   return (
-    <View style={styles.flex}>
-      <View style={{ paddingHorizontal: 18, paddingTop: 10, paddingBottom: 8 }}>
+    <ScrollView style={styles.settingsPage} contentContainerStyle={styles.settingsPageContent}>
+      <View style={styles.settingsHeader}>
         <Text style={styles.sectionEyebrow}>APP PREFERENCES</Text>
         <Text style={styles.pageTitle}>Settings</Text>
         <Text style={styles.muted}>Manage application preferences and fiscal-year configuration.</Text>
         <SectionHeader title="Fiscal Year Management" />
         <Text style={styles.helperText}>Create fiscal years, configure tier eligibility, manage head limits, and export historical activity.</Text>
       </View>
-      <ScrollView contentContainerStyle={styles.settingsContent}>
+      <View style={styles.settingsContent}>
         <View style={styles.createFiscalYearAction}>
           <PrimaryButton label="Create fiscal year" onPress={() => {
             setCode(""); setStartDate(""); setEndDate(""); setMaxTotalHeads(""); setRetentionMonths("3"); setDraftTiers(createDefaultDraftTiers()); setShowCreate(true);
@@ -1913,7 +1871,8 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
             ) : <EmptyState title="Select a fiscal year" message="Choose a fiscal year to configure its rules." />}
           </>
         ) : <View style={styles.fiscalYearEmptyWrap}><EmptyState title="No fiscal years" message="Create the next FY to start configuring tiers and head limits." /></View>}
-      </ScrollView>
+      </View>
+    </ScrollView>
 
       <Modal transparent visible={showCreate} animationType="none" onRequestClose={() => setShowCreate(false)}>
         <ModalSheet title="Create fiscal year" onClose={() => setShowCreate(false)}>
@@ -2111,6 +2070,7 @@ function PrimaryButton({
   loading?: boolean;
   disabled?: boolean;
 }) {
+  const { colors } = useTheme();
   return (
     <TouchableOpacity
       accessibilityRole="button"
@@ -2118,7 +2078,7 @@ function PrimaryButton({
       onPress={onPress}
       style={[styles.primaryButton, (loading || disabled) && styles.disabledButton]}
     >
-      {loading ? <ActivityIndicator color={WHITE} /> : <Text style={styles.primaryButtonText}>{label}</Text>}
+      {loading ? <ActivityIndicator color={colors.white} /> : <Text style={styles.primaryButtonText}>{label}</Text>}
     </TouchableOpacity>
   );
 }
@@ -2288,11 +2248,11 @@ const styles = StyleSheet.create({
   authTitle: { color: DARK, fontSize: 34, lineHeight: 42, fontWeight: "800", letterSpacing: -0.8, marginTop: 7 },
   subtitle: { color: SLATE, fontSize: 15, lineHeight: 23, marginTop: 10, marginBottom: 28 },
   footer: { color: "#94A3B8", fontSize: 12, fontWeight: "600", textAlign: "center", marginTop: 30 },
-  card: { backgroundColor: WHITE, borderRadius: 18, padding: 22, borderWidth: 1, borderColor: BORDER, shadowColor: "#0F172A", shadowOpacity: 0.035, shadowRadius: 10, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
+  card: { backgroundColor: WHITE, borderRadius: theme.radii.xl, padding: theme.spacing.xxl, borderWidth: 1, borderColor: BORDER, shadowColor: "#0F172A", shadowOpacity: 0.035, shadowRadius: 10, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
   formTitle: { color: DARK, fontSize: 21, fontWeight: "800", marginBottom: 2 },
   label: { color: "#334155", fontSize: 12, fontWeight: "700", marginBottom: 8, marginTop: 14 },
   input: { minHeight: 52, borderRadius: 12, borderWidth: 1, borderColor: "#CBD5E1", backgroundColor: WHITE, paddingHorizontal: 15, color: DARK, fontSize: 14 },
-  primaryButton: { minHeight: 52, borderRadius: 12, backgroundColor: BLUE, alignItems: "center", justifyContent: "center", paddingHorizontal: 18, marginTop: 16, shadowColor: BLUE, shadowOpacity: 0.16, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
+  primaryButton: { minHeight: 52, borderRadius: theme.radii.md, backgroundColor: BLUE, alignItems: "center", justifyContent: "center", paddingHorizontal: 18, marginTop: 16, shadowColor: BLUE, shadowOpacity: 0.16, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
   disabledButton: { opacity: 0.55 },
   primaryButtonText: { color: WHITE, fontSize: 14, fontWeight: "800" },
   errorBox: { backgroundColor: "#FEF2F2", borderColor: "#FECACA", borderWidth: 1, borderRadius: 10, padding: 11, marginTop: 16 },
@@ -2308,19 +2268,19 @@ const styles = StyleSheet.create({
   tabButton: { minWidth: 88, minHeight: 50, alignItems: "center", justifyContent: "center", paddingVertical: 13, paddingHorizontal: 9, borderRadius: 12 },
   tabLabel: { color: "#94A3B8", fontSize: 12, fontWeight: "800" },
   tabLabelActive: { color: BLUE },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 22, paddingBottom: 36, gap: 14 },
-  listContent: { paddingHorizontal: 20, paddingTop: 22, paddingBottom: 36, gap: 12 },
+  scrollContent: { paddingHorizontal: theme.spacing.page, paddingTop: 22, paddingBottom: 40, gap: theme.spacing.lg },
+  listContent: { paddingHorizontal: theme.spacing.page, paddingTop: 22, paddingBottom: 40, gap: theme.spacing.lg },
   sectionEyebrow: { color: "#94A3B8", fontSize: 10, fontWeight: "900", letterSpacing: 1.6 },
   pageTitle: { color: DARK, fontSize: 29, lineHeight: 36, fontWeight: "800", letterSpacing: -0.65, marginTop: 6 },
   muted: { color: SLATE, fontSize: 13, lineHeight: 20, marginTop: 5 },
   mutedSmall: { color: SLATE, fontSize: 11, marginTop: 4 },
   welcomeRow: { flexDirection: "row", alignItems: "flex-start" },
-  statGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 12, marginTop: 6 },
+  statGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: theme.spacing.md, marginTop: theme.spacing.sm },
   statCardInner: { flex: 1 },
   statLabel: { color: SLATE, fontSize: 10, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.6 },
   statValue: { color: DARK, fontSize: 20, fontWeight: "800", marginTop: 7 },
   statCard: { backgroundColor: WHITE, borderRadius: 16, borderWidth: 1, borderColor: BORDER, padding: 16, margin: 0, width: "48%", minHeight: 88, justifyContent: "center", shadowColor: "#0F172A", shadowOpacity: 0.025, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
-  sectionHeader: { color: DARK, fontSize: 17, fontWeight: "800", marginTop: 8, marginBottom: 0 },
+  sectionHeader: { color: DARK, fontSize: 17, fontWeight: "800", marginTop: theme.spacing.md, marginBottom: theme.spacing.xs },
   heroCard: { backgroundColor: BLUE, borderRadius: 18, padding: 21, marginTop: 0 },
   heroValue: { color: WHITE, fontSize: 34, fontWeight: "900", marginTop: 5 },
   heroSub: { color: "#DBEAFE", fontSize: 12, marginTop: 3 },
@@ -2328,7 +2288,7 @@ const styles = StyleSheet.create({
   heroLabel: { color: "#DBEAFE", fontSize: 11, fontWeight: "700" },
   heroLabelValue: { color: WHITE, fontSize: 13, fontWeight: "800" },
   inlineStat: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  infoCard: { backgroundColor: WHITE, borderRadius: 17, borderWidth: 1, borderColor: BORDER, padding: 18, marginBottom: 0, gap: 10, shadowColor: "#0F172A", shadowOpacity: 0.025, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
+  infoCard: { backgroundColor: WHITE, borderRadius: theme.radii.xl, borderWidth: 1, borderColor: BORDER, padding: theme.spacing.card, marginBottom: 0, gap: theme.spacing.sm, shadowColor: "#0F172A", shadowOpacity: 0.025, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
   reviewConfiguration: { gap: 10 },
   reviewTierList: { gap: 10, marginTop: 4 },
   reviewTierRow: { borderTopWidth: 1, borderTopColor: BORDER, paddingTop: 10, gap: 4 },
@@ -2348,8 +2308,9 @@ const styles = StyleSheet.create({
   emptyState: { backgroundColor: WHITE, borderWidth: 1, borderColor: BORDER, borderRadius: 16, paddingHorizontal: 20, paddingVertical: 24, alignItems: "center", marginBottom: 0, width: "100%" },
   emptyTitle: { color: DARK, fontSize: 13, fontWeight: "800" },
   emptyMessage: { color: SLATE, fontSize: 11, textAlign: "center", marginTop: 5, lineHeight: 17 },
-  actionRow: { flexDirection: "row", gap: 10, marginTop: 0 },
-  actionButton: { flex: 1, minHeight: 48, backgroundColor: BLUE, borderRadius: 11, alignItems: "center", justifyContent: "center", paddingHorizontal: 14 },
+  actionRow: { flexDirection: "row", gap: theme.spacing.sm, marginTop: theme.spacing.sm },
+  memberAddAction: { marginTop: theme.spacing.md, marginBottom: theme.spacing.md },
+  actionButton: { flex: 1, minHeight: 48, backgroundColor: BLUE, borderRadius: theme.radii.md, alignItems: "center", justifyContent: "center", paddingHorizontal: 14 },
   actionButtonSecondary: { backgroundColor: WHITE, borderWidth: 1, borderColor: "#CBD5E1" },
   actionButtonDanger: { backgroundColor: "#FEF2F2", borderWidth: 1, borderColor: "#FECACA" },
   actionButtonText: { color: WHITE, fontSize: 11, fontWeight: "800", textAlign: "center" },
@@ -2373,19 +2334,22 @@ const styles = StyleSheet.create({
   settingsChevron: { color: SLATE, fontSize: 26, fontWeight: "300" },
   fyRequiredIcon: { width: 58, height: 58, borderRadius: 18, backgroundColor: "#DBEAFE", alignItems: "center", justifyContent: "center", marginBottom: 20 },
   fyRequiredIconText: { color: "#1D4ED8", fontSize: 18, fontWeight: "900" },
-  tierPicker: { flexDirection: "row", gap: 7, marginTop: 2 },
+  tierPicker: { flexDirection: "row", gap: theme.spacing.sm, marginTop: theme.spacing.xs, alignItems: "center" },
   tierOption: { flex: 1, minHeight: 42, borderRadius: 9, borderWidth: 1, borderColor: "#CBD5E1", alignItems: "center", justifyContent: "center", backgroundColor: WHITE },
   tierOptionActive: { borderColor: BLUE, backgroundColor: "#EFF6FF" },
   tierOptionText: { color: SLATE, fontSize: 11, fontWeight: "800" },
   tierOptionTextActive: { color: "#1D4ED8" },
   fullModalBackdrop: { flex: 1, backgroundColor: "rgba(15,23,42,0.45)", justifyContent: "flex-end" },
   fullModalSheet: { height: "94%", backgroundColor: BG, borderTopLeftRadius: 22, borderTopRightRadius: 22, overflow: "hidden" },
-  settingsContent: { paddingHorizontal: 18, paddingTop: 14, paddingBottom: 36, gap: 16 },
-  settingsSummaryCard: { gap: 14 },
+  settingsPage: { flex: 1 },
+  settingsPageContent: { paddingBottom: 40 },
+  settingsHeader: { paddingHorizontal: theme.spacing.page, paddingTop: theme.spacing.sm, paddingBottom: theme.spacing.sm, gap: theme.spacing.xs },
+  settingsContent: { paddingHorizontal: theme.spacing.page, paddingTop: theme.spacing.sm, paddingBottom: 8, gap: theme.spacing.lg },
+  settingsSummaryCard: { gap: theme.spacing.lg },
   settingsSummaryHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
   settingsSummaryTitle: { flex: 1, gap: 5 },
   settingsSummaryDetails: { flexDirection: "row", flexWrap: "wrap", rowGap: 10, paddingTop: 4 },
-  settingsTierSummary: { gap: 10, paddingTop: 14, borderTopWidth: 1, borderTopColor: BORDER },
+  settingsTierSummary: { gap: theme.spacing.sm, paddingTop: theme.spacing.lg, borderTopWidth: 1, borderTopColor: BORDER },
   settingsTierRow: { gap: 6, paddingVertical: 3 },
   settingsTierDetail: { color: SLATE, fontSize: 11, lineHeight: 17 },
   deleteWarning: { color: AMBER, fontSize: 12, lineHeight: 18, backgroundColor: "#FFFBEB", borderRadius: 10, padding: 12 },
@@ -2413,7 +2377,7 @@ const styles = StyleSheet.create({
   reviewActions: { marginTop: 14, flexDirection: "row" },
   rejectButton: { borderWidth: 1, borderColor: "#CBD5E1", borderRadius: 9, minHeight: 40, paddingHorizontal: 16, alignItems: "center", justifyContent: "center" },
   rejectText: { color: "#1D4ED8", fontSize: 11, fontWeight: "800" },
-  memberActions: { flexDirection: "row", gap: 7 },
+  memberActions: { flexDirection: "row", gap: theme.spacing.sm, alignItems: "center" },
   smallAction: { backgroundColor: "#EFF6FF", borderRadius: 8, paddingHorizontal: 9, paddingVertical: 7 },
   smallActionText: { color: "#1D4ED8", fontSize: 10, fontWeight: "800" },
   smallDelete: { backgroundColor: "#FEF2F2", borderRadius: 8, paddingHorizontal: 9, paddingVertical: 7 },
@@ -2428,13 +2392,13 @@ const styles = StyleSheet.create({
   errorStateMessage: { color: SLATE, fontSize: 12, lineHeight: 19, textAlign: "center", marginTop: 8, marginBottom: 10 },
   modalBackdrop: { flex: 1, backgroundColor: "rgba(15,23,42,0.45)", justifyContent: "flex-end" },
   modalKeyboard: { width: "100%" },
-  modalSheet: { maxHeight: "90%", marginBottom: 10, backgroundColor: WHITE, borderRadius: 24, overflow: "hidden", paddingBottom: Platform.OS === "ios" ? 26 : 18 },
+  modalSheet: { maxHeight: "90%", marginBottom: 10, backgroundColor: WHITE, borderRadius: theme.radii.xxl, overflow: "hidden", paddingBottom: Platform.OS === "ios" ? 26 : 18 },
   modalHeader: { paddingHorizontal: 22, paddingTop: 22, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: BORDER, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   modalTitle: { color: DARK, fontSize: 19, fontWeight: "800" },
   closeText: { color: BLUE, fontSize: 12, fontWeight: "800" },
-  modalContent: { paddingHorizontal: 20, paddingTop: 18, paddingBottom: 34, gap: 12 },
-  createFiscalYearModalContent: { gap: 14 },
-  draftTierList: { gap: 14 },
+  modalContent: { paddingHorizontal: theme.spacing.xl, paddingTop: theme.spacing.lg, paddingBottom: 34, gap: theme.spacing.md },
+  createFiscalYearModalContent: { gap: theme.spacing.lg },
+  draftTierList: { gap: theme.spacing.lg },
   tierCardHeading: { gap: 6 },
   tierCardSubtitle: { color: SLATE, fontSize: 10, fontWeight: "700" },
   modalLead: { color: SLATE, fontSize: 13, lineHeight: 20, marginTop: 4 },
@@ -2452,3 +2416,12 @@ const styles = StyleSheet.create({
   dateCancel: { alignSelf: "flex-end", paddingHorizontal: 14, paddingVertical: 10, marginTop: 10 },
 
 });
+
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
+  );
+}
