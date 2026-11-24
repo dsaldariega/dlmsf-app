@@ -77,9 +77,9 @@ export async function createFiscalYear(req: Request, res: Response, next: NextFu
     if (error) throw error;
 
     const defaults = [
-      { tierCode: "bronze", displayName: "Bronze", enabled: true, loanEligible: true, loanLimitMode: "total_contribution" },
+      { tierCode: "bronze", displayName: "Bronze", enabled: true, loanEligible: true, loanLimitMode: "member_contribution" },
       { tierCode: "silver", displayName: "Silver", enabled: true, loanEligible: true, loanLimitMode: "member_contribution" },
-      { tierCode: "gold", displayName: "Gold", enabled: true, loanEligible: true, loanLimitMode: "member_contribution" }
+      { tierCode: "gold", displayName: "Gold", enabled: true, loanEligible: true, loanLimitMode: "total_contribution" }
     ];
     const configured = tierInput ?? defaults;
     const codes = ["bronze", "silver", "gold"];
