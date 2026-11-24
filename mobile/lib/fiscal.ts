@@ -23,7 +23,7 @@ export type TierSetting = {
   enabled: boolean;
   max_heads_per_member: number | null;
   loan_eligible: boolean;
-  loan_limit_mode: "contributions_only" | "tier_maximum" | "unlimited";
+  loan_limit_mode: "member_contribution" | "total_contribution";
   contribution_multiplier: number;
   max_loan_amount: number | null;
 };

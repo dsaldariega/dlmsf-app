@@ -153,27 +153,21 @@ export async function createFiscalYear(
         displayName: "Bronze",
         enabled: true,
         loanEligible: true,
-        loanLimitMode: "contributions_only",
-        contributionMultiplier: 1,
-        maxLoanAmount: null,
+        loanLimitMode: "total_contribution",
       },
       {
         tierCode: "silver",
         displayName: "Silver",
         enabled: true,
         loanEligible: true,
-        loanLimitMode: "tier_maximum",
-        contributionMultiplier: 1.25,
-        maxLoanAmount: null,
+        loanLimitMode: "member_contribution",
       },
       {
         tierCode: "gold",
         displayName: "Gold",
         enabled: true,
         loanEligible: true,
-        loanLimitMode: "tier_maximum",
-        contributionMultiplier: 2,
-        maxLoanAmount: null,
+        loanLimitMode: "member_contribution",
       },
     ];
     const configured = tierInput ?? defaults;
@@ -195,7 +189,7 @@ export async function createFiscalYear(
     const tiers = configured.map((tier: any) => {
       if (
         !codes.includes(tier.tierCode) ||
-        !["contributions_only", "tier_maximum", "unlimited"].includes(
+        !["member_contribution", "total_contribution"].includes(
           tier.loanLimitMode,
         )
       )
@@ -215,16 +209,6 @@ export async function createFiscalYear(
             : integerValue(tier.maxHeadsPerMember, "Tier maximum heads"),
         loan_eligible: Boolean(tier.loanEligible),
         loan_limit_mode: tier.loanLimitMode,
-        contribution_multiplier: numericValue(
-          tier.contributionMultiplier ?? 1,
-          "Contribution multiplier",
-        ),
-        max_loan_amount:
-          tier.maxLoanAmount === null ||
-          tier.maxLoanAmount === "" ||
-          tier.maxLoanAmount === undefined
-            ? null
-            : numericValue(tier.maxLoanAmount, "Maximum loan amount"),
       };
     });
     const { error: tierError } = await client
@@ -240,14 +224,12 @@ export async function createFiscalYear(
       .eq("fiscal_year_id", fy.id)
       .order("tier_code");
     if (settingsError) throw settingsError;
-    res
-      .status(201)
-      .json({
-        success: true,
-        data: { fiscalYear: fy, tiers: settings },
-        message:
-          "Draft fiscal year created with configured Bronze, Silver, and Gold settings.",
-      });
+    res.status(201).json({
+      success: true,
+      data: { fiscalYear: fy, tiers: settings },
+      message:
+        "Draft fiscal year created with configured Bronze, Silver, and Gold settings.",
+    });
   } catch (error) {
     next(error);
   }
@@ -467,7 +449,7 @@ export async function updateTierSetting(
       updates.loan_eligible = Boolean(req.body.loanEligible);
     if (req.body?.loanLimitMode !== undefined) {
       if (
-        !["contributions_only", "tier_maximum", "unlimited"].includes(
+        !["member_contribution", "total_contribution"].includes(
           req.body.loanLimitMode,
         )
       )
@@ -476,16 +458,6 @@ export async function updateTierSetting(
         });
       updates.loan_limit_mode = req.body.loanLimitMode;
     }
-    if (req.body?.contributionMultiplier !== undefined)
-      updates.contribution_multiplier = numericValue(
-        req.body.contributionMultiplier,
-        "Contribution multiplier",
-      );
-    if (req.body?.maxLoanAmount !== undefined)
-      updates.max_loan_amount =
-        req.body.maxLoanAmount === null || req.body.maxLoanAmount === ""
-          ? null
-          : numericValue(req.body.maxLoanAmount, "Maximum loan amount");
     if (!Object.keys(updates).length)
       throw Object.assign(new Error("No tier changes were provided."), {
         status: 400,
@@ -627,7 +599,7 @@ export async function exportFiscalYear(
       client
         .from("tier_settings")
         .select(
-          "tier_code,display_name,enabled,max_heads_per_member,loan_eligible,loan_limit_mode,contribution_multiplier,max_loan_amount",
+          "tier_code,display_name,enabled,max_heads_per_member,loan_eligible,loan_limit_mode",
         )
         .eq("fiscal_year_id", fiscalYearId)
         .order("tier_code"),
@@ -774,9 +746,7 @@ export async function exportFiscalYear(
             "Enabled",
             "Max Heads",
             "Loan Eligible",
-            "Loan Limit Mode",
-            "Contribution Multiplier",
-            "Max Loan Amount",
+            "Loan Limit Basis",
           ],
           ...(tiers.data ?? []).map((t: any) => [
             t.tier_code,
@@ -785,8 +755,6 @@ export async function exportFiscalYear(
             t.max_heads_per_member,
             t.loan_eligible,
             t.loan_limit_mode,
-            t.contribution_multiplier,
-            t.max_loan_amount,
           ]),
         ],
       },
