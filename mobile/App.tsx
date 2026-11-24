@@ -2019,7 +2019,7 @@ function TierSettingsCard({ tier, saving, onSave }: { tier: TierSetting; saving:
           <View style={styles.modePicker}>
             {(["member_contribution","total_contribution"] as const).map((mode) => (
               <TouchableOpacity key={mode} onPress={() => setDraft({ ...draft, loan_limit_mode: mode })} style={[styles.modeOption, draft.loan_limit_mode === mode && styles.modeOptionActive]}>
-                <Text style={[styles.modeOptionText, draft.loan_limit_mode === mode && styles.modeOptionTextActive]}>{mode === "contributions_only" ? "Paid contributions" : mode === "tier_maximum" ? "Multiplier" : "Unlimited"}</Text>
+                <Text style={[styles.modeOptionText, draft.loan_limit_mode === mode && styles.modeOptionTextActive]}>{mode === "member_contribution" ? "Member contribution" : "Total contribution"}</Text>
               </TouchableOpacity>
             ))}
           </View>
