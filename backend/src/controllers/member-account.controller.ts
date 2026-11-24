@@ -79,19 +79,23 @@ export async function createMemberWithLogin(req: Request, res: Response, next: N
     const email = memberEmail(name);
     const generatedPassword = randomBytes(24).toString("base64url");
     temporaryPassword = generatedPassword;
-    const { data: existingAuth, error: existingAuthError } = await admin.auth.admin.getUserByEmail(email);
-    if (existingAuthError && existingAuthError.message !== "User not found") throw existingAuthError;
-    if (existingAuth?.user) {
+    const { data: authUsers, error: authUsersError } = await admin.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000,
+    });
+    if (authUsersError) throw authUsersError;
+    const existingAuth = authUsers.users.find((user) => user.email?.toLowerCase() === email.toLowerCase());
+    if (existingAuth) {
       const { data: linkedMember, error: linkedMemberError } = await admin
         .from("members")
         .select("id")
-        .eq("auth_id", existingAuth.user.id)
+        .eq("auth_id", existingAuth.id)
         .maybeSingle();
       if (linkedMemberError) throw linkedMemberError;
       if (linkedMember) {
         throw Object.assign(new Error("A member with this generated login email already exists."), { status: 409 });
       }
-      const { error: orphanDeleteError } = await admin.auth.admin.deleteUser(existingAuth.user.id);
+      const { error: orphanDeleteError } = await admin.auth.admin.deleteUser(existingAuth.id);
       if (orphanDeleteError) throw orphanDeleteError;
     }
     const { data: created, error: createError } = await admin.auth.admin.createUser({
