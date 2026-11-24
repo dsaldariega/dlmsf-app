@@ -11,6 +11,8 @@ end,
 contribution_multiplier = 1,
 max_loan_amount = null;
 alter table public.tier_settings
+  alter column loan_limit_mode set default 'member_contribution';
+alter table public.tier_settings
   add constraint tier_settings_loan_limit_mode_check
   check (loan_limit_mode in ('member_contribution', 'total_contribution'));
 
