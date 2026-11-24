@@ -1162,7 +1162,7 @@ function AdminAuditScreen({ refreshKey, onChanged }: { refreshKey: number; onCha
         style: "destructive",
         onPress: async () => {
           try {
-            await apiRequest(`/api/audit/${type === "loans" ? "loans" : "payments"}/${record.id}`, { method: "DELETE" });
+            await apiRequest(`/api/audit/${type === "loan" ? "loans" : "payments"}/${record.id}`, { method: "DELETE" });
             Alert.alert("Deleted", "The audit record was deleted.");
             onChanged();
           } catch (e) {
@@ -1215,7 +1215,7 @@ function AdminAuditScreen({ refreshKey, onChanged }: { refreshKey: number; onCha
             {item.loan_request_id ? <Detail label="Request" value={`#${item.loan_request_id}`} /> : null}
           </View>
           {item.remarks ? <Text style={styles.note}>{item.remarks}</Text> : null}
-          {!item.synthetic ? <TouchableOpacity style={styles.smallDelete} onPress={() => void removeRecord(tab, item)}><Text style={styles.smallDeleteText}>Delete audit entry</Text></TouchableOpacity> : null}
+          {!item.synthetic ? <TouchableOpacity style={styles.smallDelete} onPress={() => void removeRecord(tab === "loans" ? "loan" : "payment", item)}><Text style={styles.smallDeleteText}>Delete audit entry</Text></TouchableOpacity> : null}
         </InfoCard>
       )}
       ListEmptyComponent={<EmptyState title="No audit records" message="Recorded activity will appear here." />}
