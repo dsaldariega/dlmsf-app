@@ -227,3 +227,43 @@ $$;
 
 revoke execute on function public.submit_loan_request(numeric,integer) from public, anon;
 grant execute on function public.submit_loan_request(numeric,integer) to authenticated;
+
+-- Consolidate RLS policies and add the composite foreign-key index.
+create index if not exists member_fiscal_years_fiscal_year_tier_idx on public.member_fiscal_years(fiscal_year_id,tier_code);
+
+drop policy if exists "Admin manages fiscal years" on public.fiscal_years;
+drop policy if exists "Members read own fiscal years" on public.fiscal_years;
+create policy "Fiscal years admin or own" on public.fiscal_years for select to authenticated
+using ((select private.is_admin()) or exists (
+  select 1 from public.member_fiscal_years mfy
+  join public.members m on m.id = mfy.member_id
+  where mfy.fiscal_year_id = fiscal_years.id and m.auth_id = (select auth.uid())
+));
+create policy "Fiscal years admin write" on public.fiscal_years for insert to authenticated with check ((select private.is_admin()));
+create policy "Fiscal years admin update" on public.fiscal_years for update to authenticated using ((select private.is_admin())) with check ((select private.is_admin()));
+create policy "Fiscal years admin delete" on public.fiscal_years for delete to authenticated using ((select private.is_admin()));
+
+drop policy if exists "Admin manages tier settings" on public.tier_settings;
+drop policy if exists "Members read assigned tier settings" on public.tier_settings;
+create policy "Tier settings admin or assigned" on public.tier_settings for select to authenticated
+using ((select private.is_admin()) or exists (
+  select 1 from public.member_fiscal_years mfy
+  join public.members m on m.id = mfy.member_id
+  where mfy.fiscal_year_id = tier_settings.fiscal_year_id
+    and mfy.tier_code = tier_settings.tier_code
+    and m.auth_id = (select auth.uid())
+));
+create policy "Tier settings admin write" on public.tier_settings for insert to authenticated with check ((select private.is_admin()));
+create policy "Tier settings admin update" on public.tier_settings for update to authenticated using ((select private.is_admin())) with check ((select private.is_admin()));
+create policy "Tier settings admin delete" on public.tier_settings for delete to authenticated using ((select private.is_admin()));
+
+drop policy if exists "Admin manages member fiscal years" on public.member_fiscal_years;
+drop policy if exists "Members read own fiscal year assignment" on public.member_fiscal_years;
+create policy "Member FY admin or own" on public.member_fiscal_years for select to authenticated
+using ((select private.is_admin()) or exists (
+  select 1 from public.members m
+  where m.id = member_fiscal_years.member_id and m.auth_id = (select auth.uid())
+));
+create policy "Member FY admin write" on public.member_fiscal_years for insert to authenticated with check ((select private.is_admin()));
+create policy "Member FY admin update" on public.member_fiscal_years for update to authenticated using ((select private.is_admin())) with check ((select private.is_admin()));
+create policy "Member FY admin delete" on public.member_fiscal_years for delete to authenticated using ((select private.is_admin()));
