@@ -316,8 +316,8 @@ function AuthenticatedApp({ user, onSignOut }: { user: AuthenticatedUser; onSign
           <>
             {user.role === "admin" && tab === "settings" && <AdminSettingsHome activeFiscalYear={activeFiscalYear} onNavigate={() => setTab("fiscal")} />}
             {user.role === "admin" && tab === "fiscal" && <AdminFiscalSettingsScreen refreshKey={refreshKey} onClose={() => setTab("settings")} onChanged={refreshAll} />}
-            {(!activeFiscalYear && tab !== "settings" && tab !== "account") ? (
-              <FiscalYearRequiredScreen role={user.role} onOpenSettings={() => setTab("settings")} />
+            {(!activeFiscalYear && tab !== "settings" && tab !== "fiscal" && tab !== "account") ? (
+              <FiscalYearRequiredScreen role={user.role} onOpenSettings={() => setTab("fiscal")} />
             ) : null}
             {activeFiscalYear && tab === "home" && <HomeScreen user={user} refreshKey={refreshKey} onNavigate={setTab} />}
             {activeFiscalYear && tab === "loans" && (user.role === "admin" ? <AdminLoansScreen refreshKey={refreshKey} onChanged={refreshAll} /> : <MemberLoansScreen refreshKey={refreshKey} onChanged={refreshAll} />)}
