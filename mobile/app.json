@@ -7,6 +7,9 @@
     "userInterfaceStyle": "light",
     "scheme": "dlmsf",
     "newArchEnabled": true,
+    "plugins": [
+      "expo-secure-store"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.dlmsf.mobile",

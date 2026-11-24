@@ -1,59 +1,46 @@
 # DLMSF Mobile
 
-The DLMSF mobile client is built with React Native, Expo, and TypeScript. It lives in this repository alongside the existing Next.js frontend and Express API.
-
-## Platform targets
-
-- Android 10 (API 29) and newer
-- iOS 16.4 and newer
-- Android is the initial development and testing priority
-
-The Android minimum is intentionally set to API 29. Expo SDK 58 supports older Android versions by default, but DLMSF's configured minimum is Android 10 to match the project's device-support requirement.
+Expo + React Native client for the existing DLMSF application.
 
 ## Requirements
 
 - Node.js 22.13 or newer
-- npm
-- Expo-compatible Android tooling or a physical Android device
-- An Apple development environment for local iOS builds
+- Android 10+ (API 29+) or iOS 16.4+
+- Access to the existing DLMSF Supabase project and Express API
 
-## Install and run
+## Setup
 
 From the repository root:
 
-```sh
-npm --prefix mobile install
-npm --prefix mobile start
+```bash
+cd mobile
+npm install
 ```
 
-Or run the platform-specific Expo commands:
+Create `mobile/.env` using `.env.example` and provide:
 
-```sh
-npm --prefix mobile run android
-npm --prefix mobile run ios
+- `EXPO_PUBLIC_SUPABASE_URL`: the existing DLMSF Supabase project URL
+- `EXPO_PUBLIC_SUPABASE_ANON_KEY`: the existing Supabase anon/public key
+- `EXPO_PUBLIC_API_URL`: the existing Express API base URL (currently `https://dlmsf-api.vercel.app`)
+
+Only public client credentials belong in this file. Never add the Supabase service-role key to the mobile app.
+
+## Run
+
+```bash
+npm start
+npm run android
+npm run ios
+npm run typecheck
 ```
 
-Run the TypeScript check:
+## Authentication architecture
 
-```sh
-npm --prefix mobile run typecheck
-```
+- Members sign in with their existing email and password through Supabase Auth.
+- The app resolves the account role from `public.members.roles`, linked by `auth_id`, matching the web application's source of truth.
+- Supabase sessions are persisted with Expo SecureStore. Values are chunked to avoid the per-item size limits some iOS versions impose.
+- Token refresh is enabled while the app is active.
+- API requests use the current Supabase access token in the `Authorization: Bearer` header.
+- The Express API remains responsible for authorization and all privileged business operations.
 
-## Builds
-
-EAS Build profiles are defined in `eas.json`. Configure the Expo/EAS project and application signing credentials before creating distributable builds.
-
-## Architecture
-
-The mobile app is a separate client, not a replacement for the web application.
-
-- `frontend/` remains the Next.js web client.
-- `mobile/` contains the Expo React Native client.
-- `backend/` remains the shared Express API and business-logic layer.
-- `supabase/` remains the shared database and migration source.
-
-The mobile app must use the existing backend API for DLMSF business operations. Do not embed Supabase service-role credentials or duplicate privileged business logic in the client.
-
-## Development scope
-
-The current commit establishes the Expo project foundation and a temporary launch screen. Authentication, API integration, role-based navigation, and member/administrator workflows will be implemented incrementally on the dedicated `mobile` branch.
+The current mobile milestone provides sign-in, session restoration, role verification, sign-out, and a reusable API client. Dashboard and feature screens will be added in later milestones.
