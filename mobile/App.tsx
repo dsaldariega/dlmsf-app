@@ -1547,7 +1547,7 @@ function tierCardStyle(tier?: string | null) {
 
 function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onChanged: () => void }) {
   const showToast = useToast();
-  const [members, setMembers = useState<Member[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
   const [fiscalYears, setFiscalYears] = useState<FiscalYear[]>([]);
   const [activeFiscalYear, setActiveFiscalYear] = useState<FiscalYear | null>(null);
   const [assignments, setAssignments] = useState<Record<number, { tier_code: string; assigned_heads: number }>>({});
