@@ -10,7 +10,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.dlmsf.mobile",
-      "deploymentTarget": "15.1"
+      "deploymentTarget": "16.4"
     },
     "android": {
       "package": "com.dlmsf.mobile",
