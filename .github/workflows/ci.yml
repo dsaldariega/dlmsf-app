@@ -11,6 +11,7 @@ permissions:
 
 jobs:
   frontend:
+    if: github.ref_name != 'mobile' && github.base_ref != 'mobile'
     name: Frontend build
     runs-on: ubuntu-latest
     steps:
@@ -28,6 +29,7 @@ jobs:
         working-directory: frontend
 
   backend:
+    if: github.ref_name != 'mobile' && github.base_ref != 'mobile'
     name: Backend build and tests
     runs-on: ubuntu-latest
     steps:
@@ -48,6 +50,7 @@ jobs:
         working-directory: backend
 
   mobile:
+    if: github.ref_name == 'mobile' || github.head_ref == 'mobile'
     name: Mobile typecheck and Android bundle
     runs-on: ubuntu-latest
     steps:
