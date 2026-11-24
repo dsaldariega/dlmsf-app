@@ -1978,8 +1978,8 @@ type DraftTier = {
 function createDefaultDraftTiers(): DraftTier[] {
   return [
     { tierCode: "bronze", displayName: "Bronze", enabled: true, maxHeadsPerMember: "", loanEligible: true, loanLimitMode: "total_contribution" },
-    { tierCode: "silver", displayName: "Silver", enabled: true, maxHeadsPerMember: "", loanEligible: true, loanLimitMode: "total_contribution" },
-    { tierCode: "gold", displayName: "Gold", enabled: true, maxHeadsPerMember: "", loanEligible: true, loanLimitMode: "total_contribution" },
+    { tierCode: "silver", displayName: "Silver", enabled: true, maxHeadsPerMember: "", loanEligible: true, loanLimitMode: "member_contribution" },
+    { tierCode: "gold", displayName: "Gold", enabled: true, maxHeadsPerMember: "", loanEligible: true, loanLimitMode: "member_contribution" },
   ];
 }
 function DraftTierSettingsCard({ tier, onChange }: { tier: DraftTier; onChange: (tier: DraftTier) => void }) {
@@ -2006,7 +2006,6 @@ function DraftTierSettingsCard({ tier, onChange }: { tier: DraftTier; onChange: 
 function TierSettingsCard({ tier, saving, onSave }: { tier: TierSetting; saving: boolean; onSave: (tier: TierSetting) => Promise<void> }) {
   const [draft, setDraft] = useState(tier);
   useEffect(() => setDraft(tier), [tier]);
-  const modeLabel = draft.loan_limit_mode === "member_contribution" ? "Member contribution" : "Total contribution";
   return (
     <InfoCard>
       <View style={styles.rowBetween}><View><Text style={styles.cardEyebrow}>TIER</Text><TierBadge tier={draft.tier_code} /></View><TouchableOpacity onPress={() => setDraft({ ...draft, enabled: !draft.enabled })} style={styles.toggleRowCompact}><Text style={styles.toggleText}>{draft.enabled ? "ENABLED" : "DISABLED"}</Text></TouchableOpacity></View>
@@ -2024,7 +2023,6 @@ function TierSettingsCard({ tier, saving, onSave }: { tier: TierSetting; saving:
             ))}
           </View>
           {draft.loan_limit_mode === "member_contribution" ? <Text style={styles.helperText}>Loan limit is based on this member's paid contributions during the fiscal year.</Text> : <Text style={styles.helperText}>Loan limit is based on all paid contributions collected during the fiscal year.</Text>}
-          <Text style={styles.helperText}>{modeLabel}</Text>
           
         </>
       ) : null}
