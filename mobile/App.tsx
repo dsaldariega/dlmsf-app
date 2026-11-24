@@ -1569,7 +1569,8 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
       <FlatList
         data={members}
         keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={styles.memberListContent}
+        ItemSeparatorComponent={() => <View style={styles.memberCardSeparator} />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} tintColor={BLUE} />}
         ListHeaderComponent={
           <View>
@@ -1586,15 +1587,22 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
           const assignment = assignments[item.id];
           return (
             <InfoCard>
-              <View style={styles.rowBetween}>
-                <View style={{ flex: 1 }}>
+              <View style={styles.memberCardBody}>
+                <View style={styles.memberIdentity}>
                   <Text style={styles.cardTitle}>{item.name}</Text>
                   <Text style={styles.mutedSmall}>Member #{item.id}</Text>
-                  {activeFiscalYear && assignment ? <View style={styles.memberTierLine}><TierBadge tier={assignment.tier_code} /><Text style={styles.tierMeta}>{assignment.assigned_heads} FY head{assignment.assigned_heads === 1 ? "" : "s"}</Text></View> : <Text style={styles.tierMeta}>Not assigned to the active FY</Text>}
                 </View>
+                {activeFiscalYear && assignment ? (
+                  <View style={styles.memberTierLine}>
+                    <TierBadge tier={assignment.tier_code} />
+                    <Text style={styles.tierMeta}>{assignment.assigned_heads} FY head{assignment.assigned_heads === 1 ? "" : "s"}</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.tierMeta}>Not assigned to the active FY</Text>
+                )}
                 <View style={styles.memberActions}>
-                  <TouchableOpacity onPress={() => openEdit(item)} style={styles.smallAction}><Text style={styles.smallActionText}>Edit</Text></TouchableOpacity>
-                  <TouchableOpacity onPress={() => confirmDelete(item)} style={styles.smallDelete}><Text style={styles.smallDeleteText}>Delete</Text></TouchableOpacity>
+                  <TouchableOpacity onPress={() => openEdit(item)} style={styles.memberActionButton}><Text style={styles.smallActionText}>Edit</Text></TouchableOpacity>
+                  <TouchableOpacity onPress={() => confirmDelete(item)} style={styles.memberActionButtonDelete}><Text style={styles.smallDeleteText}>Delete</Text></TouchableOpacity>
                 </View>
               </View>
             </InfoCard>
