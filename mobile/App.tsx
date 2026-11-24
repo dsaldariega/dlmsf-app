@@ -141,7 +141,7 @@ export default function App() {
         <View style={styles.brandMark}>
           <Text style={styles.brandInitials}>DL</Text>
         </View>
-        <ActivityIndicator color="#1F604A" size="small" />
+        <ActivityIndicator color="#2563EB" size="small" />
         <Text style={styles.loadingText}>Preparing your account…</Text>
       </View>
     );
@@ -162,11 +162,11 @@ export default function App() {
             <Text style={styles.brandInitials}>DL</Text>
           </View>
           <Text style={styles.eyebrow}>DLMSF MONITORING</Text>
-          <Text style={styles.title}>Sinking Fund</Text>
+          <Text style={styles.title}>DLMSF Monitoring</Text>
           <Text style={styles.subtitle}>
             {user
               ? "Your account is securely connected."
-              : "Sign in to access your members account."}
+              : "Sign in to your account."}
           </Text>
 
           {user ? (
@@ -193,10 +193,6 @@ export default function App() {
           ) : (
             <View style={styles.formCard}>
               <Text style={styles.formTitle}>Welcome back</Text>
-              <Text style={styles.formDescription}>
-                Use the same account you use for DLMSF on the web.
-              </Text>
-
               <Text style={styles.label}>Email address</Text>
               <TextInput
                 autoCapitalize="none"
@@ -243,9 +239,6 @@ export default function App() {
                   <Text style={styles.primaryButtonText}>Sign in</Text>
                 )}
               </TouchableOpacity>
-              <Text style={styles.securityNote}>
-                Your sign-in is handled by Supabase Authentication.
-              </Text>
             </View>
           )}
         </View>
@@ -291,14 +284,12 @@ const styles = StyleSheet.create({
   title: { color: "#1E293B", fontSize: 34, lineHeight: 42, fontWeight: "800", letterSpacing: -0.8, marginTop: 7 },
   subtitle: { color: "#64748B", fontSize: 15, lineHeight: 23, marginTop: 10, marginBottom: 28 },
   formCard: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 22, borderWidth: 1, borderColor: "#E2E8F0" },
-  formTitle: { color: "#1E293B", fontSize: 21, fontWeight: "800" },
-  formDescription: { color: "#64748B", fontSize: 13, lineHeight: 20, marginTop: 6, marginBottom: 22 },
+  formTitle: { color: "#1E293B", fontSize: 21, fontWeight: "800", marginBottom: 2 },
   label: { color: "#334155", fontSize: 12, fontWeight: "700", marginBottom: 8, marginTop: 14 },
   input: { height: 50, borderRadius: 10, borderWidth: 1, borderColor: "#CBD5E1", backgroundColor: "#FFFFFF", paddingHorizontal: 14, color: "#1E293B", fontSize: 14 },
   primaryButton: { height: 52, borderRadius: 10, backgroundColor: "#2563EB", alignItems: "center", justifyContent: "center", marginTop: 22 },
   disabledButton: { opacity: 0.65 },
   primaryButtonText: { color: "#FFFFFF", fontSize: 14, fontWeight: "800" },
-  securityNote: { color: "#94A3B8", fontSize: 11, textAlign: "center", marginTop: 16 },
   errorBox: { backgroundColor: "#FEF2F2", borderColor: "#FECACA", borderWidth: 1, borderRadius: 10, padding: 11, marginTop: 16 },
   errorText: { color: "#B91C1C", fontSize: 12, lineHeight: 18 },
   accountCard: { backgroundColor: "#FFFFFF", borderRadius: 16, padding: 22, borderWidth: 1, borderColor: "#E2E8F0" },
