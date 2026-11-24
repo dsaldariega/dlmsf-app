@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -14,6 +14,8 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Animated,
+  Easing,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { File, Paths } from "expo-file-system";
@@ -632,7 +634,7 @@ function MemberLoansScreen({ refreshKey, onChanged }: { refreshKey: number; onCh
       ))}
       {!requests.length ? <EmptyState title="No requests yet" message="Your loan requests will appear here." /> : null}
 
-      <Modal transparent visible={modal} animationType="slide" onRequestClose={() => setModal(false)}>
+      <Modal transparent visible={modal} animationType="none" onRequestClose={() => setModal(false)}>
         <ModalSheet title="Request a loan" onClose={() => setModal(false)}>
           <FieldLabel text="Amount" />
           <TextInput
@@ -1633,7 +1635,7 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
         ListEmptyComponent={<EmptyState title="No members" message="Member accounts will appear here." />}
       />
 
-      <Modal transparent visible={Boolean(modal)} animationType="slide" onRequestClose={() => setModal(null)}>
+      <Modal transparent visible={Boolean(modal)} animationType="none" onRequestClose={() => setModal(null)}>
         <ModalSheet title={modal === "create" ? "Add member" : modal === "edit" ? "Edit member" : "Assign membership tier"} onClose={() => setModal(null)}>
           {modal === "tier" ? (
             <>
@@ -1724,7 +1726,7 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
   }
 
   function openEditSettings() {
-    if (!settings || settings.fiscalYear.status !== "draft") return;
+    if (!settings) return;
     setCode(settings.fiscalYear.code);
     setStartDate(settings.fiscalYear.start_date);
     setEndDate(settings.fiscalYear.end_date);
@@ -1792,7 +1794,7 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
       setSelectedId(result.fiscalYear.id);
       await loadSettings(result.fiscalYear.id);
       onChanged();
-      Alert.alert("Created", "Fiscal year created with Bronze, Silver, and Gold defaults. Configure it before activation.");
+      Alert.alert("Created", "Fiscal year is now active with Bronze, Silver, and Gold defaults.");
     } catch (e) { Alert.alert("Unable to create", getErrorMessage(e)); }
     finally { setSaving(false); }
   }
@@ -1899,11 +1901,8 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
                         </View>
                       ))}
                     </View>
-                    {settings.fiscalYear.status === "draft"
-                      ? <PrimaryButton label="Edit FY Settings" onPress={openEditSettings} disabled={saving} />
-                      : <Text style={styles.helperText}>Settings are locked after the fiscal year is activated.</Text>}
+                    <PrimaryButton label="Edit FY Settings" onPress={openEditSettings} disabled={saving} />
                     <View style={styles.actionRow}>
-                      {settings.fiscalYear.status === "draft" ? <ActionButton label="Activate" onPress={() => void changeStatus("activate")} disabled={saving} /> : null}
                       {settings.fiscalYear.status === "active" ? <ActionButton label="Close FY" secondary onPress={() => void changeStatus("close")} disabled={saving} /> : null}
                       <ActionButton label={exporting ? "Exporting…" : "Export Excel"} secondary onPress={() => void exportYear()} disabled={exporting} />
                     </View>
@@ -1916,7 +1915,7 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
         ) : <View style={styles.fiscalYearEmptyWrap}><EmptyState title="No fiscal years" message="Create the next FY to start configuring tiers and head limits." /></View>}
       </ScrollView>
 
-      <Modal transparent visible={showCreate} animationType="slide" onRequestClose={() => setShowCreate(false)}>
+      <Modal transparent visible={showCreate} animationType="none" onRequestClose={() => setShowCreate(false)}>
         <ModalSheet title="Create fiscal year" onClose={() => setShowCreate(false)}>
           <FieldLabel text="Fiscal year" />
           <TextInput keyboardType="numeric" onChangeText={setCode} placeholder="2027" placeholderTextColor="#94A3B8" style={styles.input} value={code} />
@@ -1930,7 +1929,7 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
           <TextInput keyboardType="numeric" onChangeText={setRetentionMonths} style={styles.input} value={retentionMonths} />
           <Text style={styles.helperText}>Default is 3 months. Minimum retention is 3 months.</Text>
           <SectionHeader title="Configure Bronze, Silver, and Gold" />
-          <Text style={styles.helperText}>Complete tier rules before creating this draft. Activated settings become read-only.</Text>
+          <Text style={styles.helperText}>Complete tier rules before creating this fiscal year. The new fiscal year will be active immediately.</Text>
           <View style={styles.draftTierList}>
             {draftTiers.map((tier, index) => <DraftTierSettingsCard key={tier.tierCode} tier={tier} onChange={(next) => setDraftTiers((current) => current.map((item, i) => i === index ? next : item))} />)}
           </View>
@@ -1951,10 +1950,10 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
               </View>
             </View>
           </InfoCard>
-          <PrimaryButton label="Create draft fiscal year" loading={saving} onPress={() => void createYear()} />
+          <PrimaryButton label="Create active fiscal year" loading={saving} onPress={() => void createYear()} />
         </ModalSheet>
       </Modal>
-      <Modal transparent visible={showEditSettings} animationType="slide" onRequestClose={() => setShowEditSettings(false)}>
+      <Modal transparent visible={showEditSettings} animationType="none" onRequestClose={() => setShowEditSettings(false)}>
         <ModalSheet title="Edit fiscal year settings" onClose={() => setShowEditSettings(false)}>
           <Text style={styles.modalLead}>Update the fiscal year details and all membership tier rules together. Changes are saved in one operation.</Text>
           <FieldLabel text="Fiscal year code" />
@@ -2231,20 +2230,42 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
 }
 
 function ModalSheet({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  const backdropOpacity = useRef(new Animated.Value(0)).current;
+  const sheetTranslateY = useRef(new Animated.Value(36)).current;
+  const closingRef = useRef(false);
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(backdropOpacity, { toValue: 1, duration: 180, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+      Animated.timing(sheetTranslateY, { toValue: 0, duration: 240, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+    ]).start();
+  }, [backdropOpacity, sheetTranslateY]);
+
+  function closeAnimated() {
+    if (closingRef.current) return;
+    closingRef.current = true;
+    Animated.parallel([
+      Animated.timing(backdropOpacity, { toValue: 0, duration: 140, easing: Easing.in(Easing.ease), useNativeDriver: true }),
+      Animated.timing(sheetTranslateY, { toValue: 36, duration: 180, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+    ]).start(({ finished }) => {
+      if (finished) onClose();
+    });
+  }
+
   return (
-    <View style={styles.modalBackdrop}>
+    <Animated.View style={[styles.modalBackdrop, { opacity: backdropOpacity }]}>
       <KeyboardAvoidingView style={styles.modalKeyboard} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <View style={styles.modalSheet}>
+        <Animated.View style={[styles.modalSheet, { transform: [{ translateY: sheetTranslateY }] }]}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{title}</Text>
-            <TouchableOpacity onPress={onClose}><Text style={styles.closeText}>Close</Text></TouchableOpacity>
+            <TouchableOpacity onPress={closeAnimated}><Text style={styles.closeText}>Close</Text></TouchableOpacity>
           </View>
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.modalContent, title === "Create fiscal year" && styles.createFiscalYearModalContent]}>
             {children}
           </ScrollView>
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -2282,10 +2303,10 @@ const styles = StyleSheet.create({
   topTitle: { color: DARK, fontSize: 20, fontWeight: "800", marginTop: 3 },
   roleBadge: { backgroundColor: "#DBEAFE", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20 },
   roleBadgeText: { color: "#1D4ED8", fontSize: 9, fontWeight: "900", letterSpacing: 1 },
-  tabBar: { flexGrow: 0, backgroundColor: WHITE, borderTopWidth: 1, borderTopColor: BORDER, elevation: 10, shadowColor: "#0F172A", shadowOpacity: 0.07, shadowRadius: 12, shadowOffset: { width: 0, height: -3 } },
-  tabBarScroll: { paddingHorizontal: 4, paddingBottom: Platform.OS === "ios" ? 20 : 8, paddingTop: 8 },
-  tabButton: { minWidth: 78, alignItems: "center", paddingVertical: 10, paddingHorizontal: 7 },
-  tabLabel: { color: "#94A3B8", fontSize: 11, fontWeight: "700" },
+  tabBar: { flexGrow: 0, backgroundColor: WHITE, borderTopWidth: 1, borderTopColor: BORDER, elevation: 10, shadowColor: "#0F172A", shadowOpacity: 0.09, shadowRadius: 14, shadowOffset: { width: 0, height: -4 } },
+  tabBarScroll: { paddingHorizontal: 6, paddingBottom: Platform.OS === "ios" ? 26 : 14, paddingTop: 10, minHeight: Platform.OS === "ios" ? 74 : 66 },
+  tabButton: { minWidth: 88, minHeight: 50, alignItems: "center", justifyContent: "center", paddingVertical: 13, paddingHorizontal: 9, borderRadius: 12 },
+  tabLabel: { color: "#94A3B8", fontSize: 12, fontWeight: "800" },
   tabLabelActive: { color: BLUE },
   scrollContent: { paddingHorizontal: 20, paddingTop: 22, paddingBottom: 36, gap: 14 },
   listContent: { paddingHorizontal: 20, paddingTop: 22, paddingBottom: 36, gap: 12 },

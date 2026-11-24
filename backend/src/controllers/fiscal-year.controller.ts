@@ -39,8 +39,6 @@ export async function getActiveFiscalYear(req: Request, res: Response, next: Nex
       .from("fiscal_years")
       .select("id,code,start_date,end_date,status")
       .eq("status", "active")
-      .lte("start_date", today)
-      .gte("end_date", today)
       .maybeSingle();
     if (error) throw error;
     res.json({ success: true, data: data ?? null });
@@ -69,8 +67,12 @@ export async function createFiscalYear(req: Request, res: Response, next: NextFu
     if (startDate > endDate) throw Object.assign(new Error("Start date must be before or equal to end date."), { status: 400 });
 
     const client = db(req);
+    const { data: activeFiscalYear, error: activeFiscalYearError } = await client.from("fiscal_years").select("id").eq("status", "active").maybeSingle();
+    if (activeFiscalYearError) throw activeFiscalYearError;
+    if (activeFiscalYear) throw Object.assign(new Error("An active fiscal year already exists. Close it before creating another fiscal year."), { status: 409 });
+
     const { data: fy, error } = await client.from("fiscal_years").insert({
-      code, start_date: startDate, end_date: endDate, max_total_heads: maxTotalHeads,
+      code, start_date: startDate, end_date: endDate, status: "active", max_total_heads: maxTotalHeads,
       max_heads_per_member: maxHeadsPerMember, head_restrictions_enabled: req.body?.headRestrictionsEnabled !== false,
       retention_months: retentionMonths
     }).select("*").single();
@@ -103,7 +105,7 @@ export async function createFiscalYear(req: Request, res: Response, next: NextFu
     }
     const { data: settings, error: settingsError } = await client.from("tier_settings").select("*").eq("fiscal_year_id", fy.id).order("tier_code");
     if (settingsError) throw settingsError;
-    res.status(201).json({ success: true, data: { fiscalYear: fy, tiers: settings }, message: "Draft fiscal year created with configured Bronze, Silver, and Gold settings." });
+    res.status(201).json({ success: true, data: { fiscalYear: fy, tiers: settings }, message: "Active fiscal year created with configured Bronze, Silver, and Gold settings." });
   } catch (error) { next(error); }
 }
 
@@ -114,7 +116,6 @@ export async function updateFiscalYear(req: Request, res: Response, next: NextFu
     const { data: existing, error: existingError } = await client.from("fiscal_years").select("status").eq("id", id).maybeSingle();
     if (existingError) throw existingError;
     if (!existing) throw Object.assign(new Error("Fiscal year not found."), { status: 404 });
-    if (existing.status !== "draft") throw Object.assign(new Error("Only draft fiscal years can be edited. Activated and closed fiscal years are preserved as historical snapshots."), { status: 409 });
     const updates: Record<string, unknown> = {};
     if (req.body?.code !== undefined) {
       if (typeof req.body.code !== "string" || !req.body.code.trim() || req.body.code.trim().length > 40) throw Object.assign(new Error("Enter a valid fiscal year code."), { status: 400 });
