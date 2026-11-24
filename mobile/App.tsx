@@ -1288,6 +1288,7 @@ function AdminAuditScreen({ refreshKey, onChanged }: { refreshKey: number; onCha
       data={records}
       keyExtractor={(item) => `${tab}-${item.id}`}
       contentContainerStyle={styles.listContent}
+      ItemSeparatorComponent={() => <View style={styles.cardSeparator} />}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} tintColor={BLUE} />}
       ListHeaderComponent={
         <View>
