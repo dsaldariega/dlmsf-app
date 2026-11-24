@@ -22,7 +22,7 @@ import { apiRequest, ApiError } from "./lib/api";
 import { currency, dateLabel, shortDate, statusTone, wholeCurrency } from "./lib/format";
 
 type AuthenticatedUser = { id: string; email: string; role: MemberRole };
-type Tab = "home" | "loans" | "payments" | "requests" | "members" | "account";
+type Tab = "home" | "loans" | "payments" | "requests" | "audit" | "members" | "account";
 
 type Dashboard = {
   member?: { id: number; name: string; heads: number };
@@ -62,6 +62,22 @@ type PaymentSubmission = {
 };
 
 type Member = { id: number; name: string; heads: number; auth_id?: string | null; roles?: string[] };
+type AuditRecord = {
+  id: number;
+  synthetic?: boolean;
+  member_id?: number;
+  borrower_name?: string;
+  amount?: number;
+  interest?: number;
+  total?: number;
+  monthly?: number;
+  week_start?: string | null;
+  action?: string;
+  remarks?: string | null;
+  created_date?: string;
+  actor_role?: string | null;
+  loan_request_id?: number;
+};
 
 const BLUE = "#2563EB";
 const DARK = "#1E293B";
@@ -245,6 +261,8 @@ function AuthenticatedApp({ user, onSignOut }: { user: AuthenticatedUser; onSign
   ];
   const adminTabs: { key: Tab; label: string }[] = [
     { key: "home", label: "Home" },
+    { key: "loans", label: "Loans" },
+    { key: "audit", label: "Audit" },
     { key: "requests", label: "Requests" },
     { key: "members", label: "Members" },
     { key: "account", label: "Account" },
@@ -266,20 +284,21 @@ function AuthenticatedApp({ user, onSignOut }: { user: AuthenticatedUser; onSign
 
       <View style={styles.content}>
         {tab === "home" && <HomeScreen user={user} refreshKey={refreshKey} onNavigate={setTab} />}
-        {tab === "loans" && <MemberLoansScreen refreshKey={refreshKey} onChanged={refreshAll} />}
+        {tab === "loans" && (user.role === "admin" ? <AdminLoansScreen refreshKey={refreshKey} onChanged={refreshAll} /> : <MemberLoansScreen refreshKey={refreshKey} onChanged={refreshAll} />)}
         {tab === "payments" && <MemberPaymentsScreen refreshKey={refreshKey} onChanged={refreshAll} />}
         {tab === "requests" && <AdminRequestsScreen refreshKey={refreshKey} onChanged={refreshAll} />}
+        {tab === "audit" && <AdminAuditScreen refreshKey={refreshKey} onChanged={refreshAll} />}
         {tab === "members" && <AdminMembersScreen refreshKey={refreshKey} onChanged={refreshAll} />}
         {tab === "account" && <AccountScreen user={user} onSignOut={onSignOut} />}
       </View>
 
-      <View style={styles.tabBar}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabBarScroll}>
         {tabs.map((item) => (
           <TouchableOpacity key={item.key} onPress={() => setTab(item.key)} style={styles.tabButton}>
             <Text style={[styles.tabLabel, tab === item.key && styles.tabLabelActive]}>{item.label}</Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -732,6 +751,281 @@ function MemberPaymentsScreen({ refreshKey, onChanged }: { refreshKey: number; o
         </ModalSheet>
       </Modal>
     </ScrollView>
+  );
+}
+
+
+function AdminLoansScreen({ refreshKey, onChanged }: { refreshKey: number; onChanged: () => void }) {
+  const [loans, setLoans] = useState<any[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState("");
+  const [modal, setModal] = useState(false);
+  const [borrowerId, setBorrowerId] = useState("");
+  const [amount, setAmount] = useState("");
+  const [months, setMonths] = useState("3");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { void load(); }, [refreshKey]);
+
+  async function load(pull = false) {
+    if (pull) setRefreshing(true); else setLoading(true);
+    setError("");
+    try {
+      const [loanData, memberData] = await Promise.all([
+        apiRequest<any[]>("/api/loans"),
+        apiRequest<Member[]>("/api/members"),
+      ]);
+      setLoans(loanData);
+      setMembers(memberData);
+    } catch (e) {
+      setError(getErrorMessage(e));
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }
+
+  async function createLoan() {
+    const value = Number(amount.replace(/,/g, ""));
+    const term = Number(months);
+    const borrower = Number(borrowerId);
+    if (!Number.isInteger(borrower) || borrower < 1) {
+      Alert.alert("Borrower required", "Select a valid member.");
+      return;
+    }
+    if (!Number.isFinite(value) || value < 500 || value % 500 !== 0) {
+      Alert.alert("Invalid amount", "Enter a loan amount of at least ₱500 in ₱500 increments.");
+      return;
+    }
+    if (![1, 2, 3, 4, 5, 6, 9, 12, 18, 24].includes(term)) {
+      Alert.alert("Invalid term", "Choose a valid repayment duration.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await apiRequest("/api/loans", {
+        method: "POST",
+        body: JSON.stringify({ borrowerId: borrower, amount: value, months: term }),
+      });
+      setModal(false);
+      setAmount("");
+      setBorrowerId("");
+      Alert.alert("Loan created", "The loan has been added to the loan records.");
+      onChanged();
+    } catch (e) {
+      Alert.alert("Unable to create loan", getErrorMessage(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function markPaid(loan: any) {
+    Alert.alert("Mark loan as paid?", `Loan #${loan.id} will be marked as Paid.`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Mark paid",
+        onPress: async () => {
+          try {
+            await apiRequest(`/api/loans/${loan.id}`, { method: "PATCH", body: JSON.stringify({ status: "Paid" }) });
+            Alert.alert("Updated", "The loan has been marked as paid.");
+            onChanged();
+          } catch (e) {
+            Alert.alert("Unable to update", getErrorMessage(e));
+          }
+        },
+      },
+    ]);
+  }
+
+  async function deleteLoan(loan: any) {
+    Alert.alert("Delete loan?", `Delete loan #${loan.id}? This cannot be undone.`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await apiRequest(`/api/loans/${loan.id}`, { method: "DELETE" });
+            Alert.alert("Deleted", "The loan was deleted and its audit record was created.");
+            onChanged();
+          } catch (e) {
+            Alert.alert("Unable to delete", getErrorMessage(e));
+          }
+        },
+      },
+    ]);
+  }
+
+  const active = loans.filter((loan) => String(loan.status).toLowerCase() !== "paid");
+  const paid = loans.filter((loan) => String(loan.status).toLowerCase() === "paid");
+  const principal = loans.reduce((sum, loan) => sum + Number(loan.amount || 0), 0);
+  const interest = loans.reduce((sum, loan) => sum + Number(loan.interest || 0), 0);
+  const total = loans.reduce((sum, loan) => sum + Number(loan.total || 0), 0);
+
+  if (loading && !loans.length) return <ScreenLoader />;
+  if (error && !loans.length) return <ErrorState message={error} onRetry={() => void load()} />;
+
+  return (
+    <FlatList
+      data={loans}
+      keyExtractor={(item) => String(item.id)}
+      contentContainerStyle={styles.listContent}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} tintColor={BLUE} />}
+      ListHeaderComponent={
+        <View>
+          <Text style={styles.sectionEyebrow}>LOAN MANAGEMENT</Text>
+          <Text style={styles.pageTitle}>Loan dashboard</Text>
+          <Text style={styles.muted}>Manage issued loans, balances, and repayment status.</Text>
+
+          <View style={styles.statGrid}>
+            <StatCard label="Total Loans" value={String(loans.length)} />
+            <StatCard label="Active Loans" value={String(active.length)} />
+            <StatCard label="Principal" value={wholeCurrency(principal)} />
+            <StatCard label="Interest" value={wholeCurrency(interest)} />
+            <StatCard label="Loan Total" value={wholeCurrency(total)} />
+            <StatCard label="Paid Loans" value={String(paid.length)} />
+          </View>
+
+          <PrimaryButton label="Create loan" onPress={() => setModal(true)} />
+          <SectionHeader title="Loan records" />
+        </View>
+      }
+      renderItem={({ item }) => (
+        <InfoCard>
+          <View style={styles.rowBetween}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.cardTitle}>Loan #{item.id}</Text>
+              <Text style={styles.mutedSmall}>{item.borrower?.name ?? "Member"}</Text>
+            </View>
+            <StatusPill status={item.status} />
+          </View>
+          <View style={styles.detailGrid}>
+            <Detail label="Principal" value={wholeCurrency(item.amount)} />
+            <Detail label="Interest" value={wholeCurrency(item.interest)} />
+            <Detail label="Total" value={wholeCurrency(item.total)} />
+            <Detail label="Monthly" value={wholeCurrency(item.monthly)} />
+            <Detail label="Term" value={`${item.months} mo.`} />
+            <Detail label="Loan ID" value={String(item.id)} />
+          </View>
+          <View style={styles.actionRow}>
+            {String(item.status).toLowerCase() !== "paid" ? <ActionButton label="Mark paid" onPress={() => void markPaid(item)} /> : null}
+            <ActionButton label="Delete" secondary onPress={() => void deleteLoan(item)} />
+          </View>
+        </InfoCard>
+      )}
+      ListEmptyComponent={<EmptyState title="No loans" message="Issued loans will appear here." />}
+    >
+      <Modal transparent visible={modal} animationType="slide" onRequestClose={() => setModal(false)}>
+        <ModalSheet title="Create loan" onClose={() => setModal(false)}>
+          <FieldLabel text="Member ID" />
+          <TextInput keyboardType="numeric" onChangeText={setBorrowerId} placeholder={members[0] ? String(members[0].id) : "Member ID"} placeholderTextColor="#94A3B8" style={styles.input} value={borrowerId} />
+          <Text style={styles.helperText}>{members.length ? `Members available: ${members.map((m) => `#${m.id} ${m.name}`).join(", ")}` : "No members available."}</Text>
+          <FieldLabel text="Amount" />
+          <TextInput keyboardType="numeric" onChangeText={setAmount} placeholder="e.g. 5000" placeholderTextColor="#94A3B8" style={styles.input} value={amount} />
+          <FieldLabel text="Repayment duration" />
+          <TextInput keyboardType="numeric" onChangeText={setMonths} placeholder="Months" placeholderTextColor="#94A3B8" style={styles.input} value={months} />
+          <PrimaryButton label="Create loan" loading={saving} onPress={() => void createLoan()} />
+        </ModalSheet>
+      </Modal>
+    </FlatList>
+  );
+}
+
+function AdminAuditScreen({ refreshKey, onChanged }: { refreshKey: number; onChanged: () => void }) {
+  const [audit, setAudit] = useState<{ loans: AuditRecord[]; payments: AuditRecord[] }>({ loans: [], payments: [] });
+  const [tab, setTab] = useState<"loans" | "payments">("loans");
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => { void load(); }, [refreshKey]);
+
+  async function load(pull = false) {
+    if (pull) setRefreshing(true); else setLoading(true);
+    setError("");
+    try {
+      setAudit(await apiRequest<{ loans: AuditRecord[]; payments: AuditRecord[] }>("/api/audit"));
+    } catch (e) {
+      setError(getErrorMessage(e));
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }
+
+  async function removeRecord(type: "loan" | "payment", record: AuditRecord) {
+    if (record.synthetic) {
+      Alert.alert("Audit record", "This workflow event is part of the submission history and cannot be deleted here.");
+      return;
+    }
+    Alert.alert("Delete audit record?", "This removes the audit entry from the audit log.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await apiRequest(`/api/audit/${type === "loans" ? "loans" : "payments"}/${record.id}`, { method: "DELETE" });
+            Alert.alert("Deleted", "The audit record was deleted.");
+            onChanged();
+          } catch (e) {
+            Alert.alert("Unable to delete", getErrorMessage(e));
+          }
+        },
+      },
+    ]);
+  }
+
+  const records = tab === "loans" ? audit.loans : audit.payments;
+
+  if (loading && !audit.loans.length && !audit.payments.length) return <ScreenLoader />;
+  if (error && !audit.loans.length && !audit.payments.length) return <ErrorState message={error} onRetry={() => void load()} />;
+
+  return (
+    <FlatList
+      data={records}
+      keyExtractor={(item) => `${tab}-${item.id}`}
+      contentContainerStyle={styles.listContent}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} tintColor={BLUE} />}
+      ListHeaderComponent={
+        <View>
+          <Text style={styles.sectionEyebrow}>AUDIT</Text>
+          <Text style={styles.pageTitle}>Audit dashboard</Text>
+          <Text style={styles.muted}>Review financial and workflow activity recorded by DLMSF.</Text>
+          <View style={styles.segment}>
+            <TouchableOpacity onPress={() => setTab("loans")} style={[styles.segmentButton, tab === "loans" && styles.segmentActive]}>
+              <Text style={[styles.segmentText, tab === "loans" && styles.segmentTextActive]}>Loan audit ({audit.loans.length})</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setTab("payments")} style={[styles.segmentButton, tab === "payments" && styles.segmentActive]}>
+              <Text style={[styles.segmentText, tab === "payments" && styles.segmentTextActive]}>Payment audit ({audit.payments.length})</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      }
+      renderItem={({ item }) => (
+        <InfoCard>
+          <View style={styles.rowBetween}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.cardTitle}>{item.action || "Audit activity"}</Text>
+              <Text style={styles.mutedSmall}>{item.borrower_name || (item.member_id ? `Member #${item.member_id}` : "DLMSF")}</Text>
+            </View>
+            <Text style={styles.activityAmount}>{item.amount != null ? wholeCurrency(item.amount) : ""}</Text>
+          </View>
+          <View style={styles.detailGrid}>
+            <Detail label="Date" value={dateLabel(item.created_date)} />
+            <Detail label="Actor" value={item.actor_role || "System"} />
+            {item.week_start ? <Detail label="Week" value={dateLabel(item.week_start)} /> : null}
+            {item.loan_request_id ? <Detail label="Request" value={`#${item.loan_request_id}`} /> : null}
+          </View>
+          {item.remarks ? <Text style={styles.note}>{item.remarks}</Text> : null}
+          {!item.synthetic ? <TouchableOpacity style={styles.smallDelete} onPress={() => void removeRecord(tab, item)}><Text style={styles.smallDeleteText}>Delete audit entry</Text></TouchableOpacity> : null}
+        </InfoCard>
+      )}
+      ListEmptyComponent={<EmptyState title="No audit records" message="Recorded activity will appear here." />}
+    />
   );
 }
 
@@ -1239,8 +1533,8 @@ const styles = StyleSheet.create({
   topTitle: { color: DARK, fontSize: 20, fontWeight: "800", marginTop: 3 },
   roleBadge: { backgroundColor: "#DBEAFE", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20 },
   roleBadgeText: { color: "#1D4ED8", fontSize: 9, fontWeight: "900", letterSpacing: 1 },
-  tabBar: { backgroundColor: WHITE, borderTopWidth: 1, borderTopColor: BORDER, flexDirection: "row", paddingBottom: Platform.OS === "ios" ? 20 : 8, paddingTop: 8 },
-  tabButton: { flex: 1, alignItems: "center", paddingVertical: 8 },
+  tabBarScroll: { backgroundColor: WHITE, borderTopWidth: 1, borderTopColor: BORDER, paddingBottom: Platform.OS === "ios" ? 20 : 8, paddingTop: 8 },
+  tabButton: { minWidth: 78, alignItems: "center", paddingVertical: 8, paddingHorizontal: 6 },
   tabLabel: { color: "#94A3B8", fontSize: 11, fontWeight: "700" },
   tabLabelActive: { color: BLUE },
   scrollContent: { padding: 20, paddingBottom: 36 },
