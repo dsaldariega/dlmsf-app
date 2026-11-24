@@ -373,7 +373,7 @@ function HomeScreen({
 
       <SectionHeader title="Quick actions" />
       <View style={styles.actionRow}>
-        <ActionButton label="Review Requests" onPress={() => onNavigate("requests")} />
+        <ActionButton label="Review Loan Requests" onPress={() => onNavigate("loans")} />
         <ActionButton label="Members" secondary onPress={() => onNavigate("members")} />
       </View>
 
@@ -758,6 +758,7 @@ function MemberPaymentsScreen({ refreshKey, onChanged }: { refreshKey: number; o
 function AdminLoansScreen({ refreshKey, onChanged }: { refreshKey: number; onChanged: () => void }) {
   const [loans, setLoans] = useState<any[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
+  const [requests, setRequests] = useState<LoanRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
@@ -776,14 +777,29 @@ function AdminLoansScreen({ refreshKey, onChanged }: { refreshKey: number; onCha
       const [loanData, memberData] = await Promise.all([
         apiRequest<any[]>("/api/loans"),
         apiRequest<Member[]>("/api/members"),
+        apiRequest<LoanRequest[]>("/api/loans/requests"),
       ]);
       setLoans(loanData);
       setMembers(memberData);
+      setRequests(requestData);
     } catch (e) {
       setError(getErrorMessage(e));
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  }
+
+  async function reviewLoanRequest(request: LoanRequest, decision: "Approved" | "Rejected") {
+    try {
+      await apiRequest(`/api/loans/requests/${request.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ decision }),
+      });
+      Alert.alert("Updated", decision === "Approved" ? "Loan request approved." : "Loan request rejected.");
+      onChanged();
+    } catch (e) {
+      Alert.alert("Unable to update", getErrorMessage(e));
     }
   }
 
@@ -891,6 +907,26 @@ function AdminLoansScreen({ refreshKey, onChanged }: { refreshKey: number; onCha
           </View>
 
           <PrimaryButton label="Create loan" onPress={() => setModal(true)} />
+          <SectionHeader title="Loan requests" />
+          {requests.map((request) => (
+            <InfoCard key={`request-${request.id}`}>
+              <View style={styles.rowBetween}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cardTitle}>{request.member?.name ?? "Member"} · {wholeCurrency(request.amount)}</Text>
+                  <Text style={styles.mutedSmall}>Request #{request.id} · {request.months} months · {dateLabel(request.requested_at)}</Text>
+                </View>
+                <StatusPill status={request.status} />
+              </View>
+              {String(request.status).toLowerCase() === "pending" ? (
+                <View style={styles.actionRow}>
+                  <ActionButton label="Approve" onPress={() => void reviewLoanRequest(request, "Approved")} />
+                  <ActionButton label="Reject" secondary onPress={() => void reviewLoanRequest(request, "Rejected")} />
+                </View>
+              ) : null}
+              {request.admin_remarks ? <Text style={styles.note}>{request.admin_remarks}</Text> : null}
+            </InfoCard>
+          ))}
+          {!requests.length ? <EmptyState title="No loan requests" message="Member loan requests will appear here." /> : null}
           <SectionHeader title="Loan records" />
         </View>
       }
