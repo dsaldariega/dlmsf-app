@@ -2,12 +2,13 @@ import { Router } from "express";
 import { authenticate } from "../middleware/auth.middleware.js";
 import { authorize } from "../middleware/role.middleware.js";
 import {
-  listFiscalYears, createFiscalYear, updateFiscalYear, activateFiscalYear, closeFiscalYear,
+  getActiveFiscalYear, listFiscalYears, createFiscalYear, updateFiscalYear, activateFiscalYear, closeFiscalYear,
   listFiscalYearSettings, updateTierSetting, assignMemberToFiscalYear, exportFiscalYear, purgeFiscalYear
 } from "../controllers/fiscal-year.controller.js";
 
 const router = Router();
 router.use(authenticate);
+router.get("/current", getActiveFiscalYear);
 router.use(authorize("admin"));
 router.get("/", listFiscalYears);
 router.post("/", createFiscalYear);

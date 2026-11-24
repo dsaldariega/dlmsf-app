@@ -25,10 +25,10 @@ import { currency, dateLabel, shortDate, statusTone, wholeCurrency } from "./lib
 import type { FiscalYear, FiscalYearSettings, TierSetting } from "./lib/fiscal";
 
 type AuthenticatedUser = { id: string; email: string; role: MemberRole };
-type Tab = "home" | "loans" | "payments" | "requests" | "audit" | "members" | "account";
+type Tab = "home" | "loans" | "payments" | "requests" | "audit" | "members" | "settings" | "fiscal" | "account";
 
 type Dashboard = {
-  member?: { id: number; name: string; heads: number };
+  member?: { id: number; name: string; heads: number; tier_code?: string | null };
   members?: Array<{ id: number; name: string; heads: number }>;
   payments: Array<{ id: number; week_start: string; amount: number }>;
   loans: Array<any>;
@@ -249,25 +249,57 @@ function SignInScreen({
 }
 
 function AuthenticatedApp({ user, onSignOut }: { user: AuthenticatedUser; onSignOut: () => Promise<void> }) {
-  const [tab, setTab] = useState<Tab>(user.role === "admin" ? "home" : "home");
+  const [tab, setTab] = useState<Tab>("home");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [activeFiscalYear, setActiveFiscalYear] = useState<FiscalYear | null>(null);
+  const [fyLoading, setFyLoading] = useState(true);
+  const [fyError, setFyError] = useState("");
 
   function refreshAll() {
     setRefreshKey((value) => value + 1);
   }
 
-  const memberTabs: { key: Tab; label: string }[] = [
+  useEffect(() => {
+    let mounted = true;
+    async function loadActiveFiscalYear() {
+      setFyLoading(true);
+      try {
+        const fiscalYear = await apiRequest<FiscalYear | null>("/api/fiscal-years/current");
+        if (!mounted) return;
+        setActiveFiscalYear(fiscalYear);
+        setFyError("");
+        if (!fiscalYear && user.role === "admin") setTab("settings");
+      } catch (error) {
+        if (!mounted) return;
+        setActiveFiscalYear(null);
+        setFyError(getErrorMessage(error));
+      } finally {
+        if (mounted) setFyLoading(false);
+      }
+    }
+    void loadActiveFiscalYear();
+    return () => { mounted = false; };
+  }, [refreshKey, user.role]);
+
+  const memberTabs: { key: Tab; label: string }[] = activeFiscalYear ? [
     { key: "home", label: "Dashboard" },
     { key: "loans", label: "Loans" },
     { key: "payments", label: "Payments" },
     { key: "account", label: "Account" },
+  ] : [
+    { key: "home", label: "Dashboard" },
+    { key: "account", label: "Account" },
   ];
-  const adminTabs: { key: Tab; label: string }[] = [
+  const adminTabs: { key: Tab; label: string }[] = activeFiscalYear ? [
     { key: "home", label: "Dashboard" },
     { key: "members", label: "Members" },
     { key: "loans", label: "Loans" },
     { key: "payments", label: "Payments" },
     { key: "audit", label: "Audit" },
+    { key: "settings", label: "Settings" },
+    { key: "account", label: "Account" },
+  ] : [
+    { key: "settings", label: "Settings" },
     { key: "account", label: "Account" },
   ];
   const tabs = user.role === "admin" ? adminTabs : memberTabs;
@@ -279,6 +311,7 @@ function AuthenticatedApp({ user, onSignOut }: { user: AuthenticatedUser; onSign
         <View>
           <Text style={styles.topEyebrow}>DLMSF MONITORING</Text>
           <Text style={styles.topTitle}>{user.role === "admin" ? "Administration" : "Member Portal"}</Text>
+          {activeFiscalYear ? <Text style={styles.mutedSmall}>Current period · {activeFiscalYear.code}</Text> : null}
         </View>
         <View style={styles.roleBadge}>
           <Text style={styles.roleBadgeText}>{user.role === "admin" ? "ADMIN" : "MEMBER"}</Text>
@@ -286,13 +319,21 @@ function AuthenticatedApp({ user, onSignOut }: { user: AuthenticatedUser; onSign
       </View>
 
       <View style={styles.content}>
-        {tab === "home" && <HomeScreen user={user} refreshKey={refreshKey} onNavigate={setTab} />}
-        {tab === "loans" && (user.role === "admin" ? <AdminLoansScreen refreshKey={refreshKey} onChanged={refreshAll} /> : <MemberLoansScreen refreshKey={refreshKey} onChanged={refreshAll} />)}
-        {tab === "payments" && (user.role === "admin" ? <AdminPaymentsScreen refreshKey={refreshKey} onChanged={refreshAll} /> : <MemberPaymentsScreen refreshKey={refreshKey} onChanged={refreshAll} />)}
-        
-        {tab === "audit" && <AdminAuditScreen refreshKey={refreshKey} onChanged={refreshAll} />}
-        {tab === "members" && <AdminMembersScreen refreshKey={refreshKey} onChanged={refreshAll} />}
-        {tab === "account" && <AccountScreen user={user} onSignOut={onSignOut} />}
+        {fyLoading ? <ScreenLoader /> : fyError ? <ErrorState message={fyError} onRetry={refreshAll} /> : (
+          <>
+            {user.role === "admin" && tab === "settings" && <AdminSettingsHome activeFiscalYear={activeFiscalYear} onNavigate={() => setTab("fiscal")} />}
+            {user.role === "admin" && tab === "fiscal" && <AdminFiscalSettingsScreen refreshKey={refreshKey} onClose={() => setTab("settings")} onChanged={refreshAll} />}
+            {(!activeFiscalYear && tab !== "settings" && tab !== "account") ? (
+              <FiscalYearRequiredScreen role={user.role} onOpenSettings={() => setTab("settings")} />
+            ) : null}
+            {activeFiscalYear && tab === "home" && <HomeScreen user={user} refreshKey={refreshKey} onNavigate={setTab} />}
+            {activeFiscalYear && tab === "loans" && (user.role === "admin" ? <AdminLoansScreen refreshKey={refreshKey} onChanged={refreshAll} /> : <MemberLoansScreen refreshKey={refreshKey} onChanged={refreshAll} />)}
+            {activeFiscalYear && tab === "payments" && (user.role === "admin" ? <AdminPaymentsScreen refreshKey={refreshKey} onChanged={refreshAll} /> : <MemberPaymentsScreen refreshKey={refreshKey} onChanged={refreshAll} />)}
+            {activeFiscalYear && user.role === "admin" && tab === "audit" && <AdminAuditScreen refreshKey={refreshKey} onChanged={refreshAll} />}
+            {activeFiscalYear && user.role === "admin" && tab === "members" && <AdminMembersScreen refreshKey={refreshKey} onChanged={refreshAll} />}
+            {tab === "account" && <AccountScreen user={user} onSignOut={onSignOut} />}
+          </>
+        )}
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabBar} contentContainerStyle={styles.tabBarScroll}>
@@ -421,6 +462,7 @@ function MemberHome({
       <Text style={styles.sectionEyebrow}>MEMBER DASHBOARD</Text>
       <Text style={styles.pageTitle}>Hello, {member?.name ?? "Member"}</Text>
       <Text style={styles.muted}>Your DLMSF contributions and loan status.</Text>
+      {member?.tier_code ? <View style={styles.memberTierLine}><TierBadge tier={member.tier_code} /></View> : null}
 
       <View style={styles.heroCard}>
         <Text style={styles.cardEyebrow}>WEEKLY OBLIGATION</Text>
@@ -1369,6 +1411,68 @@ function AdminRequestsScreen({ refreshKey, onChanged }: { refreshKey: number; on
   );
 }
 
+function AdminSettingsHome({ activeFiscalYear, onNavigate }: { activeFiscalYear: FiscalYear | null; onNavigate: () => void }) {
+  return (
+    <ScrollView contentContainerStyle={styles.scrollContent}>
+      <Text style={styles.sectionEyebrow}>APP PREFERENCES</Text>
+      <Text style={styles.pageTitle}>Settings</Text>
+      <Text style={styles.muted}>Manage DLMSF-wide configuration and fiscal-year rules.</Text>
+      <TouchableOpacity activeOpacity={0.85} onPress={onNavigate} style={styles.settingsCard}>
+        <View style={styles.settingsIcon}><Text style={styles.settingsIconText}>FY</Text></View>
+        <View style={styles.settingsCardBody}>
+          <Text style={styles.cardTitle}>Fiscal Year Management</Text>
+          <Text style={styles.mutedSmall}>Create fiscal years, configure membership tiers, head limits, retention, and exports.</Text>
+          {activeFiscalYear ? (
+            <View style={styles.settingsMetaRow}><View style={styles.activeDot} /><Text style={styles.settingsMetaText}>{activeFiscalYear.code} · {activeFiscalYear.start_date} to {activeFiscalYear.end_date}</Text></View>
+          ) : <Text style={styles.settingsRequiredText}>Required before members and financial activity can be managed.</Text>}
+        </View>
+        <Text style={styles.settingsChevron}>›</Text>
+      </TouchableOpacity>
+      <InfoCard>
+        <Text style={styles.cardTitle}>More app settings</Text>
+        <Text style={styles.mutedSmall}>Additional application preferences can be added here as DLMSF grows.</Text>
+        <Text style={styles.helperText}>Coming later · notifications, security, and data preferences.</Text>
+      </InfoCard>
+    </ScrollView>
+  );
+}
+
+function FiscalYearRequiredScreen({ role, onOpenSettings }: { role: MemberRole; onOpenSettings: () => void }) {
+  return (
+    <ScrollView contentContainerStyle={styles.scrollContent}>
+      <View style={styles.fyRequiredIcon}><Text style={styles.fyRequiredIconText}>FY</Text></View>
+      <Text style={styles.sectionEyebrow}>FISCAL YEAR REQUIRED</Text>
+      <Text style={styles.pageTitle}>Set up the fiscal year first</Text>
+      <Text style={styles.muted}>DLMSF needs an active fiscal year before member assignments, contributions, loan requests, or other financial activity can be created.</Text>
+      <InfoCard>
+        <Text style={styles.cardTitle}>What needs to happen?</Text>
+        <Text style={styles.mutedSmall}>1. Create a fiscal year and choose its date range.</Text>
+        <Text style={styles.mutedSmall}>2. Configure Bronze, Silver, and Gold tier rules.</Text>
+        <Text style={styles.mutedSmall}>3. Activate the fiscal year.</Text>
+      </InfoCard>
+      {role === "admin" ? <PrimaryButton label="Open Settings" onPress={onOpenSettings} /> : (
+        <Text style={styles.helperText}>Please contact your DLMSF administrator. Member features will become available once the fiscal year is activated and your membership is assigned.</Text>
+      )}
+    </ScrollView>
+  );
+}
+
+function TierBadge({ tier, detail }: { tier: string; detail?: string }) {
+  const code = tier.toLowerCase();
+  const palette = code === "gold"
+    ? { backgroundColor: "#FFF7DB", borderColor: "#E8C45B", color: "#8A5A00", mark: "★" }
+    : code === "silver"
+      ? { backgroundColor: "#F1F5F9", borderColor: "#B8C3D1", color: "#475569", mark: "✦" }
+      : { backgroundColor: "#F8E9DF", borderColor: "#C58B65", color: "#8A4B2D", mark: "◆" };
+  return (
+    <View style={[styles.tierBadge, { backgroundColor: palette.backgroundColor, borderColor: palette.borderColor }]}>
+      <Text style={[styles.tierBadgeMark, { color: palette.color }]}>{palette.mark}</Text>
+      <Text style={[styles.tierBadgeText, { color: palette.color }]}>{code.toUpperCase()}</Text>
+      {detail ? <Text style={[styles.tierBadgeDetail, { color: palette.color }]}> · {detail}</Text> : null}
+    </View>
+  );
+}
+
 function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onChanged: () => void }) {
   const [members, setMembers] = useState<Member[]>([]);
   const [fiscalYears, setFiscalYears] = useState<FiscalYear[]>([]);
@@ -1378,10 +1482,8 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [modal, setModal] = useState<"create" | "edit" | "tier" | null>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [selected, setSelected] = useState<Member | null>(null);
   const [name, setName] = useState("");
-  const [heads, setHeads] = useState("1");
   const [tier, setTier] = useState("bronze");
   const [tierHeads, setTierHeads] = useState("1");
   const [saving, setSaving] = useState(false);
@@ -1417,10 +1519,11 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
   }
 
   function openCreate() {
-    setSelected(null); setName(""); setHeads("1"); setTier("bronze"); setTierHeads("1"); setModal("create");
+    if (!activeFiscalYear) { Alert.alert("Fiscal year required", "Create and activate a fiscal year before adding members."); return; }
+    setSelected(null); setName(""); setTier("bronze"); setTierHeads("1"); setModal("create");
   }
   function openEdit(member: Member) {
-    setSelected(member); setName(member.name); setHeads(String(member.heads)); setModal("edit");
+    setSelected(member); setName(member.name); setModal("edit");
     const assignment = assignments[member.id];
     setTier(assignment?.tier_code ?? "bronze"); setTierHeads(String(assignment?.assigned_heads ?? member.heads ?? 1));
   }
@@ -1433,8 +1536,9 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
   }
 
   async function saveMember() {
+    if (!activeFiscalYear) { Alert.alert("Fiscal year required", "Create and activate a fiscal year before managing members."); return; }
     const trimmed = name.trim();
-    const headCount = Number(heads);
+    const headCount = Number(tierHeads);
     if (!trimmed || !Number.isInteger(headCount) || headCount < 1) {
       Alert.alert("Invalid member", "Enter a name and a whole number of heads.");
       return;
@@ -1510,7 +1614,6 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
             <Text style={styles.muted}>Manage members, FY assignments, and linked logins.</Text>
             <View style={styles.actionRow}>
               <ActionButton label="Add member" onPress={openCreate} />
-              <ActionButton label="FY Settings" secondary onPress={() => setSettingsOpen(true)} />
             </View>
             {activeFiscalYear ? <InfoCard><Text style={styles.cardEyebrow}>ACTIVE FISCAL YEAR</Text><Text style={styles.cardTitle}>{activeFiscalYear.code}</Text><Text style={styles.mutedSmall}>{activeFiscalYear.start_date} → {activeFiscalYear.end_date}</Text></InfoCard> : <EmptyState title="No fiscal year configured" message="Create and configure the next fiscal year before assigning tiers." />}
           </View>
@@ -1522,8 +1625,8 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
               <View style={styles.rowBetween}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.cardTitle}>{item.name}</Text>
-                  <Text style={styles.mutedSmall}>{item.heads} current head{item.heads === 1 ? "" : "s"} · Member #{item.id}</Text>
-                  {activeFiscalYear && assignment ? <Text style={styles.tierMeta}>{assignment.tier_code.toUpperCase()} · {assignment.assigned_heads} FY head{assignment.assigned_heads === 1 ? "" : "s"}</Text> : null}
+                  <Text style={styles.mutedSmall}>Member #{item.id}</Text>
+                  {activeFiscalYear && assignment ? <View style={styles.memberTierLine}><TierBadge tier={assignment.tier_code} /><Text style={styles.tierMeta}>{assignment.assigned_heads} FY head{assignment.assigned_heads === 1 ? "" : "s"}</Text></View> : <Text style={styles.tierMeta}>Not assigned to the active FY</Text>}
                 </View>
                 <View style={styles.memberActions}>
                   <TouchableOpacity onPress={() => openTier(item)} style={styles.smallAction}><Text style={styles.smallActionText}>Tier</Text></TouchableOpacity>
@@ -1553,13 +1656,11 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
             <>
               <FieldLabel text="Name" />
               <TextInput onChangeText={setName} placeholder="Member name" placeholderTextColor="#94A3B8" style={styles.input} value={name} />
-              <FieldLabel text="Current heads" />
-              <TextInput keyboardType="numeric" onChangeText={setHeads} placeholder="1" placeholderTextColor="#94A3B8" style={styles.input} value={heads} />
               {activeFiscalYear ? (
                 <>
-                  <FieldLabel text={`Assign for ${activeFiscalYear.code}`} />
+                  <FieldLabel text={`Membership tier · ${activeFiscalYear.code}`} />
                   <TierPicker value={tier} onChange={setTier} />
-                  <FieldLabel text="FY heads" />
+                  <FieldLabel text={`Assigned heads · ${activeFiscalYear.code}`} />
                   <TextInput keyboardType="numeric" onChangeText={setTierHeads} placeholder="1" placeholderTextColor="#94A3B8" style={styles.input} value={tierHeads} />
                 </>
               ) : null}
@@ -1570,13 +1671,6 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
         </ModalSheet>
       </Modal>
 
-      <Modal transparent visible={settingsOpen} animationType="slide" onRequestClose={() => setSettingsOpen(false)}>
-        <View style={styles.fullModalBackdrop}>
-          <View style={styles.fullModalSheet}>
-            <AdminFiscalSettingsScreen refreshKey={refreshKey} onClose={() => setSettingsOpen(false)} onChanged={onChanged} />
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -1586,7 +1680,7 @@ function TierPicker({ value, onChange }: { value: string; onChange: (value: stri
     <View style={styles.tierPicker}>
       {["bronze", "silver", "gold"].map((item) => (
         <TouchableOpacity key={item} onPress={() => onChange(item)} style={[styles.tierOption, value === item && styles.tierOptionActive]}>
-          <Text style={[styles.tierOptionText, value === item && styles.tierOptionTextActive]}>{item[0].toUpperCase() + item.slice(1)}</Text>
+          <TierBadge tier={item} />
         </TouchableOpacity>
       ))}
     </View>
@@ -1870,7 +1964,7 @@ function DraftTierSettingsCard({ tier, onChange }: { tier: DraftTier; onChange: 
   const patch = (values: Partial<DraftTier>) => onChange({ ...tier, ...values });
   return <InfoCard>
     <View style={styles.rowBetween}>
-      <Text style={styles.cardTitle}>{tier.displayName}</Text>
+      <TierBadge tier={tier.tierCode} />
       <TouchableOpacity onPress={() => patch({ enabled: !tier.enabled })} style={styles.toggleRowCompact}><Text style={styles.toggleText}>{tier.enabled ? "ENABLED" : "DISABLED"}</Text></TouchableOpacity>
     </View>
     <TouchableOpacity onPress={() => patch({ loanEligible: !tier.loanEligible })} style={styles.toggleRow}><Text style={styles.cardTitle}>Loan eligibility</Text><Text style={styles.toggleText}>{tier.loanEligible ? "ON" : "OFF"}</Text></TouchableOpacity>
@@ -1889,7 +1983,7 @@ function TierSettingsCard({ tier, saving, onSave }: { tier: TierSetting; saving:
   const modeLabel = draft.loan_limit_mode === "contributions_only" ? "Paid contributions only" : draft.loan_limit_mode === "tier_maximum" ? "Multiplier / maximum" : "No contribution limit";
   return (
     <InfoCard>
-      <View style={styles.rowBetween}><View><Text style={styles.cardEyebrow}>TIER</Text><Text style={styles.cardTitle}>{draft.display_name}</Text></View><TouchableOpacity onPress={() => setDraft({ ...draft, enabled: !draft.enabled })} style={styles.toggleRowCompact}><Text style={styles.toggleText}>{draft.enabled ? "ENABLED" : "DISABLED"}</Text></TouchableOpacity></View>
+      <View style={styles.rowBetween}><View><Text style={styles.cardEyebrow}>TIER</Text><TierBadge tier={draft.tier_code} /></View><TouchableOpacity onPress={() => setDraft({ ...draft, enabled: !draft.enabled })} style={styles.toggleRowCompact}><Text style={styles.toggleText}>{draft.enabled ? "ENABLED" : "DISABLED"}</Text></TouchableOpacity></View>
       <TouchableOpacity onPress={() => setDraft({ ...draft, loan_eligible: !draft.loan_eligible })} style={styles.toggleRow}><Text style={styles.cardTitle}>Loan eligibility</Text><Text style={styles.toggleText}>{draft.loan_eligible ? "ON" : "OFF"}</Text></TouchableOpacity>
       <FieldLabel text="Maximum heads per member" />
       <TextInput keyboardType="numeric" onChangeText={(v) => setDraft({ ...draft, max_heads_per_member: v === "" ? null : Number(v) })} placeholder="Optional" placeholderTextColor="#94A3B8" style={styles.input} value={draft.max_heads_per_member == null ? "" : String(draft.max_heads_per_member)} />
@@ -2175,7 +2269,23 @@ const styles = StyleSheet.create({
   actionButtonText: { color: WHITE, fontSize: 11, fontWeight: "800", textAlign: "center" },
   actionButtonTextSecondary: { color: "#1D4ED8" },
   helperText: { color: SLATE, fontSize: 11, lineHeight: 17, marginTop: 9 },
-  tierMeta: { color: "#1D4ED8", fontSize: 10, fontWeight: "800", marginTop: 5 },
+  tierMeta: { color: SLATE, fontSize: 10, fontWeight: "700", marginTop: 5 },
+  memberTierLine: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 7 },
+  tierBadge: { alignSelf: "flex-start", flexDirection: "row", alignItems: "center", borderWidth: 1, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5 },
+  tierBadgeMark: { fontSize: 9, fontWeight: "900", marginRight: 5 },
+  tierBadgeText: { fontSize: 9, fontWeight: "900", letterSpacing: 0.9 },
+  tierBadgeDetail: { fontSize: 9, fontWeight: "700" },
+  settingsCard: { backgroundColor: WHITE, borderRadius: 16, borderWidth: 1, borderColor: BORDER, padding: 16, marginTop: 18, marginBottom: 12, flexDirection: "row", alignItems: "center", gap: 12 },
+  settingsIcon: { width: 44, height: 44, borderRadius: 13, backgroundColor: "#DBEAFE", alignItems: "center", justifyContent: "center" },
+  settingsIconText: { color: "#1D4ED8", fontSize: 12, fontWeight: "900" },
+  settingsCardBody: { flex: 1 },
+  settingsMetaRow: { flexDirection: "row", alignItems: "center", marginTop: 9, gap: 6 },
+  activeDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: GREEN },
+  settingsMetaText: { color: "#166534", fontSize: 10, fontWeight: "700" },
+  settingsRequiredText: { color: AMBER, fontSize: 10, fontWeight: "700", marginTop: 8 },
+  settingsChevron: { color: SLATE, fontSize: 26, fontWeight: "300" },
+  fyRequiredIcon: { width: 58, height: 58, borderRadius: 18, backgroundColor: "#DBEAFE", alignItems: "center", justifyContent: "center", marginBottom: 20 },
+  fyRequiredIconText: { color: "#1D4ED8", fontSize: 18, fontWeight: "900" },
   tierPicker: { flexDirection: "row", gap: 7, marginTop: 2 },
   tierOption: { flex: 1, minHeight: 42, borderRadius: 9, borderWidth: 1, borderColor: "#CBD5E1", alignItems: "center", justifyContent: "center", backgroundColor: WHITE },
   tierOptionActive: { borderColor: BLUE, backgroundColor: "#EFF6FF" },

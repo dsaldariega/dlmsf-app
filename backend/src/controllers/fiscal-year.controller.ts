@@ -26,6 +26,27 @@ function numericValue(value: unknown, label: string, min = 0) {
   return n;
 }
 
+export async function getActiveFiscalYear(req: Request, res: Response, next: NextFunction) {
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit"
+    }).formatToParts(new Date());
+    const part = (type: string) => parts.find((item) => item.type === type)?.value ?? "";
+    const today = `${part("year")}-${part("month")}-${part("day")}`;
+    // This is a normal authenticated read. Use the caller's JWT and RLS;
+    // the service-role client is reserved for Auth account administration.
+    const { data, error } = await db(req)
+      .from("fiscal_years")
+      .select("id,code,start_date,end_date,status")
+      .eq("status", "active")
+      .lte("start_date", today)
+      .gte("end_date", today)
+      .maybeSingle();
+    if (error) throw error;
+    res.json({ success: true, data: data ?? null });
+  } catch (error) { next(error); }
+}
+
 export async function listFiscalYears(req: Request, res: Response, next: NextFunction) {
   try {
     const { data, error } = await db(req).from("fiscal_years").select("*").order("start_date", { ascending: false });
