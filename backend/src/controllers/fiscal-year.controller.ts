@@ -61,8 +61,6 @@ export async function getActiveFiscalYear(
       .from("fiscal_years")
       .select("id,code,start_date,end_date,status")
       .eq("status", "active")
-      .lte("start_date", today)
-      .gte("end_date", today)
       .maybeSingle();
     if (error) throw error;
     res.json({ success: true, data: data ?? null });
@@ -132,12 +130,28 @@ export async function createFiscalYear(
       );
 
     const client = db(req);
+    const { data: activeFiscalYear, error: activeFiscalYearError } =
+      await client
+        .from("fiscal_years")
+        .select("id")
+        .eq("status", "active")
+        .maybeSingle();
+    if (activeFiscalYearError) throw activeFiscalYearError;
+    if (activeFiscalYear)
+      throw Object.assign(
+        new Error(
+          "An active fiscal year already exists. Close it before creating another fiscal year.",
+        ),
+        { status: 409 },
+      );
+
     const { data: fy, error } = await client
       .from("fiscal_years")
       .insert({
         code,
         start_date: startDate,
         end_date: endDate,
+        status: "active",
         max_total_heads: maxTotalHeads,
         max_heads_per_member: maxHeadsPerMember,
         head_restrictions_enabled: req.body?.headRestrictionsEnabled !== false,
@@ -224,12 +238,14 @@ export async function createFiscalYear(
       .eq("fiscal_year_id", fy.id)
       .order("tier_code");
     if (settingsError) throw settingsError;
-    res.status(201).json({
-      success: true,
-      data: { fiscalYear: fy, tiers: settings },
-      message:
-        "Draft fiscal year created with configured Bronze, Silver, and Gold settings.",
-    });
+    res
+      .status(201)
+      .json({
+        success: true,
+        data: { fiscalYear: fy, tiers: settings },
+        message:
+          "Active fiscal year created with configured Bronze, Silver, and Gold settings.",
+      });
   } catch (error) {
     next(error);
   }
@@ -251,13 +267,6 @@ export async function updateFiscalYear(
     if (existingError) throw existingError;
     if (!existing)
       throw Object.assign(new Error("Fiscal year not found."), { status: 404 });
-    if (existing.status !== "draft")
-      throw Object.assign(
-        new Error(
-          "Only draft fiscal years can be edited. Activated and closed fiscal years are preserved as historical snapshots.",
-        ),
-        { status: 409 },
-      );
     const updates: Record<string, unknown> = {};
     if (req.body?.code !== undefined) {
       if (
@@ -1054,22 +1063,55 @@ export async function purgeFiscalYear(
   }
 }
 
-export async function updateFiscalYearSettings(req: Request, res: Response, next: NextFunction) {
+export async function updateFiscalYearSettings(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
   try {
     const fiscalYearId = idParam(req.params.id);
-    const { data, error } = await db(req).rpc("update_fiscal_year_settings", { p_fiscal_year_id: fiscalYearId, p_settings: req.body ?? {} });
+    const { data, error } = await db(req).rpc("update_fiscal_year_settings", {
+      p_fiscal_year_id: fiscalYearId,
+      p_settings: req.body ?? {},
+    });
     if (error) throw error;
-    res.json({ success: true, data, message: "Fiscal year details and tier settings updated." });
-  } catch (error) { next(error); }
+    res.json({
+      success: true,
+      data,
+      message: "Fiscal year details and tier settings updated.",
+    });
+  } catch (error) {
+    next(error);
+  }
 }
 
-export async function deleteFiscalYear(req: Request, res: Response, next: NextFunction) {
+export async function deleteFiscalYear(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
   try {
     const fiscalYearId = idParam(req.params.id);
-    const confirmation = typeof req.body?.confirmation === "string" ? req.body.confirmation.trim() : "";
-    if (!confirmation) throw Object.assign(new Error("Type the required delete confirmation phrase."), { status: 400 });
-    const { data, error } = await db(req).rpc("delete_fiscal_year", { p_fiscal_year_id: fiscalYearId, p_confirmation: confirmation });
+    const confirmation =
+      typeof req.body?.confirmation === "string"
+        ? req.body.confirmation.trim()
+        : "";
+    if (!confirmation)
+      throw Object.assign(
+        new Error("Type the required delete confirmation phrase."),
+        { status: 400 },
+      );
+    const { data, error } = await db(req).rpc("delete_fiscal_year", {
+      p_fiscal_year_id: fiscalYearId,
+      p_confirmation: confirmation,
+    });
     if (error) throw error;
-    res.json({ success: true, data, message: "Fiscal year and associated records permanently deleted." });
-  } catch (error) { next(error); }
+    res.json({
+      success: true,
+      data,
+      message: "Fiscal year and associated records permanently deleted.",
+    });
+  } catch (error) {
+    next(error);
+  }
 }
