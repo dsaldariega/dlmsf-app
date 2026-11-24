@@ -77,9 +77,9 @@ export async function createFiscalYear(req: Request, res: Response, next: NextFu
     if (error) throw error;
 
     const defaults = [
-      { tierCode: "bronze", displayName: "Bronze", enabled: true, loanEligible: true, loanLimitMode: "contributions_only", contributionMultiplier: 1, maxLoanAmount: null },
-      { tierCode: "silver", displayName: "Silver", enabled: true, loanEligible: true, loanLimitMode: "tier_maximum", contributionMultiplier: 1.25, maxLoanAmount: null },
-      { tierCode: "gold", displayName: "Gold", enabled: true, loanEligible: true, loanLimitMode: "tier_maximum", contributionMultiplier: 2, maxLoanAmount: null }
+      { tierCode: "bronze", displayName: "Bronze", enabled: true, loanEligible: true, loanLimitMode: "member_contribution" },
+      { tierCode: "silver", displayName: "Silver", enabled: true, loanEligible: true, loanLimitMode: "member_contribution" },
+      { tierCode: "gold", displayName: "Gold", enabled: true, loanEligible: true, loanLimitMode: "member_contribution" }
     ];
     const configured = tierInput ?? defaults;
     const codes = ["bronze", "silver", "gold"];
@@ -88,14 +88,12 @@ export async function createFiscalYear(req: Request, res: Response, next: NextFu
       throw Object.assign(new Error("Bronze, Silver, and Gold must each be configured exactly once."), { status: 400 });
     }
     const tiers = configured.map((tier: any) => {
-      if (!codes.includes(tier.tierCode) || !["contributions_only", "tier_maximum", "unlimited"].includes(tier.loanLimitMode)) throw Object.assign(new Error("Invalid tier configuration."), { status: 400 });
+      if (!codes.includes(tier.tierCode) || !["member_contribution", "total_contribution"].includes(tier.loanLimitMode)) throw Object.assign(new Error("Invalid tier configuration."), { status: 400 });
       return {
         fiscal_year_id: fy.id, tier_code: tier.tierCode, display_name: tier.displayName,
         enabled: Boolean(tier.enabled),
         max_heads_per_member: tier.maxHeadsPerMember === null || tier.maxHeadsPerMember === "" || tier.maxHeadsPerMember === undefined ? maxHeadsPerMember : integerValue(tier.maxHeadsPerMember, "Tier maximum heads"),
-        loan_eligible: Boolean(tier.loanEligible), loan_limit_mode: tier.loanLimitMode,
-        contribution_multiplier: numericValue(tier.contributionMultiplier ?? 1, "Contribution multiplier"),
-        max_loan_amount: tier.maxLoanAmount === null || tier.maxLoanAmount === "" || tier.maxLoanAmount === undefined ? null : numericValue(tier.maxLoanAmount, "Maximum loan amount")
+        loan_eligible: Boolean(tier.loanEligible), loan_limit_mode: tier.loanLimitMode
       };
     });
     const { error: tierError } = await client.from("tier_settings").insert(tiers);
@@ -190,11 +188,9 @@ export async function updateTierSetting(req: Request, res: Response, next: NextF
     if (req.body?.maxHeadsPerMember !== undefined) updates.max_heads_per_member = req.body.maxHeadsPerMember === null || req.body.maxHeadsPerMember === "" ? null : integerValue(req.body.maxHeadsPerMember, "Tier maximum heads");
     if (req.body?.loanEligible !== undefined) updates.loan_eligible = Boolean(req.body.loanEligible);
     if (req.body?.loanLimitMode !== undefined) {
-      if (!["contributions_only", "tier_maximum", "unlimited"].includes(req.body.loanLimitMode)) throw Object.assign(new Error("Invalid loan limit mode."), { status: 400 });
+      if (!["member_contribution", "total_contribution"].includes(req.body.loanLimitMode)) throw Object.assign(new Error("Invalid loan limit mode."), { status: 400 });
       updates.loan_limit_mode = req.body.loanLimitMode;
     }
-    if (req.body?.contributionMultiplier !== undefined) updates.contribution_multiplier = numericValue(req.body.contributionMultiplier, "Contribution multiplier");
-    if (req.body?.maxLoanAmount !== undefined) updates.max_loan_amount = req.body.maxLoanAmount === null || req.body.maxLoanAmount === "" ? null : numericValue(req.body.maxLoanAmount, "Maximum loan amount");
     if (!Object.keys(updates).length) throw Object.assign(new Error("No tier changes were provided."), { status: 400 });
     const client = db(req);
     const { data: fy, error: fyError } = await client.from("fiscal_years").select("status").eq("id", fiscalYearId).maybeSingle();
