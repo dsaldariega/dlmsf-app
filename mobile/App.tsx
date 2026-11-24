@@ -260,11 +260,11 @@ function AuthenticatedApp({ user, onSignOut }: { user: AuthenticatedUser; onSign
     { key: "account", label: "Account" },
   ];
   const adminTabs: { key: Tab; label: string }[] = [
-    { key: "home", label: "Home" },
-    { key: "loans", label: "Loans" },
-    { key: "audit", label: "Audit" },
-    { key: "requests", label: "Requests" },
+    { key: "home", label: "Dashboard" },
     { key: "members", label: "Members" },
+    { key: "loans", label: "Loans" },
+    { key: "payments", label: "Payments" },
+    { key: "audit", label: "Audit" },
     { key: "account", label: "Account" },
   ];
   const tabs = user.role === "admin" ? adminTabs : memberTabs;
