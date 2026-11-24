@@ -1742,7 +1742,7 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
     try {
       await apiRequest(`/api/fiscal-years/${tierSetting.fiscal_year_id}/tiers/${tierSetting.tier_code}`, {
         method: "PATCH", body: JSON.stringify({
-          enabled: tierSetting.enabled,
+          enabled: true,
           maxHeadsPerMember: tierSetting.max_heads_per_member,
           loanEligible: tierSetting.loan_eligible,
           loanLimitMode: tierSetting.loan_limit_mode,
@@ -1768,7 +1768,7 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
           maxTotalHeads: maxTotalHeads === "" ? null : Number(maxTotalHeads),
           retentionMonths: Number(retentionMonths),
           tiers: draftTiers.map((tier) => ({
-            tierCode: tier.tierCode, displayName: tier.displayName, enabled: tier.enabled,
+            tierCode: tier.tierCode, displayName: tier.displayName, enabled: true,
             maxHeadsPerMember: tier.maxHeadsPerMember === "" ? null : Number(tier.maxHeadsPerMember),
             loanEligible: tier.loanEligible, loanLimitMode: tier.loanLimitMode,
             
@@ -1903,7 +1903,9 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
           <Text style={styles.helperText}>Default is 3 months. Minimum retention is 3 months.</Text>
           <SectionHeader title="Configure Bronze, Silver, and Gold" />
           <Text style={styles.helperText}>Complete tier rules before creating this draft. Activated settings become read-only.</Text>
-          {draftTiers.map((tier, index) => <DraftTierSettingsCard key={tier.tierCode} tier={tier} onChange={(next) => setDraftTiers((current) => current.map((item, i) => i === index ? next : item))} />)}
+          <View style={styles.draftTierList}>
+            {draftTiers.map((tier, index) => <DraftTierSettingsCard key={tier.tierCode} tier={tier} onChange={(next) => setDraftTiers((current) => current.map((item, i) => i === index ? next : item))} />)}
+          </View>
           <SectionHeader title="Review configuration" />
           <InfoCard>
             <View style={styles.reviewConfiguration}>
@@ -1914,7 +1916,7 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
                 {draftTiers.map((tier) => (
                   <View key={tier.tierCode} style={styles.reviewTierRow}>
                     <Text style={styles.reviewTierName}>{tier.displayName}</Text>
-                    <Text style={styles.reviewTierDetail}>{tier.enabled ? "Enabled" : "Disabled"} · {tier.loanEligible ? "Loan eligible" : "Not loan eligible"}</Text>
+                    <Text style={styles.reviewTierDetail}>{tier.loanEligible ? "Loan eligible" : "Not loan eligible"}</Text>
                     {tier.loanEligible ? <Text style={styles.reviewTierDetail}>{tier.loanLimitMode === "member_contribution" ? "Member contribution" : "Total contributions"}</Text> : null}
                   </View>
                 ))}
@@ -1995,11 +1997,11 @@ function createDefaultDraftTiers(): DraftTier[] {
   ];
 }
 function DraftTierSettingsCard({ tier, onChange }: { tier: DraftTier; onChange: (tier: DraftTier) => void }) {
-  const patch = (values: Partial<DraftTier>) => onChange({ ...tier, ...values });
+  const patch = (values: Partial<DraftTier>) => onChange({ ...tier, enabled: true, ...values });
   return <InfoCard>
-    <View style={styles.rowBetween}>
+    <View style={styles.tierCardHeading}>
       <TierBadge tier={tier.tierCode} />
-      <TouchableOpacity onPress={() => patch({ enabled: !tier.enabled })} style={styles.toggleRowCompact}><Text style={styles.toggleText}>{tier.enabled ? "ENABLED" : "DISABLED"}</Text></TouchableOpacity>
+      <Text style={styles.tierCardSubtitle}>Membership tier</Text>
     </View>
     <TouchableOpacity onPress={() => patch({ loanEligible: !tier.loanEligible })} style={styles.toggleRow}><Text style={styles.cardTitle}>Loan eligibility</Text><Text style={styles.toggleText}>{tier.loanEligible ? "ON" : "OFF"}</Text></TouchableOpacity>
     {tier.loanEligible ? (
@@ -2020,7 +2022,7 @@ function TierSettingsCard({ tier, saving, onSave }: { tier: TierSetting; saving:
   useEffect(() => setDraft(tier), [tier]);
   return (
     <InfoCard>
-      <View style={styles.rowBetween}><View><Text style={styles.cardEyebrow}>TIER</Text><TierBadge tier={draft.tier_code} /></View><TouchableOpacity onPress={() => setDraft({ ...draft, enabled: !draft.enabled })} style={styles.toggleRowCompact}><Text style={styles.toggleText}>{draft.enabled ? "ENABLED" : "DISABLED"}</Text></TouchableOpacity></View>
+      <View style={styles.tierCardHeading}><View><Text style={styles.cardEyebrow}>TIER</Text><TierBadge tier={draft.tier_code} /></View><Text style={styles.tierCardSubtitle}>Membership tier</Text></View>
       <TouchableOpacity onPress={() => setDraft({ ...draft, loan_eligible: !draft.loan_eligible })} style={styles.toggleRow}><Text style={styles.cardTitle}>Loan eligibility</Text><Text style={styles.toggleText}>{draft.loan_eligible ? "ON" : "OFF"}</Text></TouchableOpacity>
       {draft.loan_eligible ? (
         <>
@@ -2210,7 +2212,7 @@ function ModalSheet({ title, onClose, children }: { title: string; onClose: () =
             <Text style={styles.modalTitle}>{title}</Text>
             <TouchableOpacity onPress={onClose}><Text style={styles.closeText}>Close</Text></TouchableOpacity>
           </View>
-          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.modalContent}>
+          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.modalContent, title === "Create fiscal year" && styles.createFiscalYearModalContent]}>
             {children}
           </ScrollView>
         </View>
@@ -2367,11 +2369,15 @@ const styles = StyleSheet.create({
   errorStateMessage: { color: SLATE, fontSize: 12, lineHeight: 19, textAlign: "center", marginTop: 8, marginBottom: 10 },
   modalBackdrop: { flex: 1, backgroundColor: "rgba(15,23,42,0.45)", justifyContent: "flex-end" },
   modalKeyboard: { width: "100%" },
-  modalSheet: { maxHeight: "90%", backgroundColor: WHITE, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: Platform.OS === "ios" ? 26 : 18 },
+  modalSheet: { maxHeight: "90%", marginBottom: 10, backgroundColor: WHITE, borderRadius: 24, overflow: "hidden", paddingBottom: Platform.OS === "ios" ? 26 : 18 },
   modalHeader: { paddingHorizontal: 22, paddingTop: 22, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: BORDER, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   modalTitle: { color: DARK, fontSize: 19, fontWeight: "800" },
   closeText: { color: BLUE, fontSize: 12, fontWeight: "800" },
   modalContent: { paddingHorizontal: 20, paddingTop: 18, paddingBottom: 34 },
+  createFiscalYearModalContent: { gap: 12 },
+  draftTierList: { gap: 14 },
+  tierCardHeading: { gap: 6 },
+  tierCardSubtitle: { color: SLATE, fontSize: 10, fontWeight: "700" },
   modalLead: { color: SLATE, fontSize: 13, lineHeight: 20, marginTop: 4 },
   dateModalBackdrop: { flex: 1, backgroundColor: "rgba(15,23,42,0.48)", justifyContent: "center", padding: 22 },
   dateModalCard: { backgroundColor: WHITE, borderRadius: 20, padding: 20, borderWidth: 1, borderColor: BORDER, shadowColor: "#0F172A", shadowOpacity: 0.12, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 5 },
