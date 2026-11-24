@@ -774,7 +774,7 @@ function AdminLoansScreen({ refreshKey, onChanged }: { refreshKey: number; onCha
     if (pull) setRefreshing(true); else setLoading(true);
     setError("");
     try {
-      const [loanData, memberData] = await Promise.all([
+      const [loanData, memberData, requestData] = await Promise.all([
         apiRequest<any[]>("/api/loans"),
         apiRequest<Member[]>("/api/members"),
         apiRequest<LoanRequest[]>("/api/loans/requests"),
