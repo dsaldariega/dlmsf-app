@@ -268,7 +268,6 @@ function AuthenticatedApp({ user, onSignOut }: { user: AuthenticatedUser; onSign
         if (!mounted) return;
         setActiveFiscalYear(fiscalYear);
         setFyError("");
-        if (!fiscalYear && user.role === "admin") setTab("settings");
       } catch (error) {
         if (!mounted) return;
         setActiveFiscalYear(null);
@@ -281,24 +280,18 @@ function AuthenticatedApp({ user, onSignOut }: { user: AuthenticatedUser; onSign
     return () => { mounted = false; };
   }, [refreshKey, user.role]);
 
-  const memberTabs: { key: Tab; label: string }[] = activeFiscalYear ? [
+  const memberTabs: { key: Tab; label: string }[] = [
     { key: "home", label: "Dashboard" },
     { key: "loans", label: "Loans" },
     { key: "payments", label: "Payments" },
     { key: "account", label: "Account" },
-  ] : [
-    { key: "home", label: "Dashboard" },
-    { key: "account", label: "Account" },
   ];
-  const adminTabs: { key: Tab; label: string }[] = activeFiscalYear ? [
+  const adminTabs: { key: Tab; label: string }[] = [
     { key: "home", label: "Dashboard" },
     { key: "members", label: "Members" },
     { key: "loans", label: "Loans" },
     { key: "payments", label: "Payments" },
     { key: "audit", label: "Audit" },
-    { key: "settings", label: "Settings" },
-    { key: "account", label: "Account" },
-  ] : [
     { key: "settings", label: "Settings" },
     { key: "account", label: "Account" },
   ];
@@ -1450,7 +1443,7 @@ function FiscalYearRequiredScreen({ role, onOpenSettings }: { role: MemberRole; 
         <Text style={styles.mutedSmall}>2. Configure Bronze, Silver, and Gold tier rules.</Text>
         <Text style={styles.mutedSmall}>3. Activate the fiscal year.</Text>
       </InfoCard>
-      {role === "admin" ? <PrimaryButton label="Open Settings" onPress={onOpenSettings} /> : (
+      {role === "admin" ? <PrimaryButton label="Set up fiscal year" onPress={onOpenSettings} /> : (
         <Text style={styles.helperText}>Please contact your DLMSF administrator. Member features will become available once the fiscal year is activated and your membership is assigned.</Text>
       )}
     </ScrollView>
@@ -1858,7 +1851,7 @@ function AdminFiscalSettingsScreen({ refreshKey, onClose, onChanged }: { refresh
         <TouchableOpacity onPress={onClose}><Text style={styles.closeText}>Close</Text></TouchableOpacity>
       </View>
       <ScrollView contentContainerStyle={styles.modalContent}>
-        <PrimaryButton label="Create new fiscal year" onPress={() => {
+        <PrimaryButton label={fiscalYears.length ? "Create new fiscal year" : "Create your first fiscal year"} onPress={() => {
           setCode(""); setStartDate(""); setEndDate(""); setMaxTotalHeads(""); setMaxHeadsPerMember(""); setHeadRestrictionsEnabled(true); setRetentionMonths("3"); setDraftTiers(createDefaultDraftTiers()); setShowCreate(true);
         }} />
         {fiscalYears.length ? (
