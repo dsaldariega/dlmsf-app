@@ -78,17 +78,6 @@ export async function createMemberWithLogin(req: Request, res: Response, next: N
     const email = memberEmail(name);
     const { data: usersPage, error: listError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
     if (listError) throw listError;
-    const existingUser = usersPage.users.find((user) => user.email?.toLowerCase() === email);
-    let authId = existingUser?.id ?? null;
-
-    if (authId) {
-      const { data: linkedMember, error: linkedError } = await admin
-        .from("members").select("id").eq("auth_id", authId).maybeSingle();
-      if (linkedError) throw linkedError;
-      if (linkedMember) throw Object.assign(new Error("That login email is already linked to another member."), { status: 409 });
-      throw Object.assign(new Error("A Supabase login already exists for this generated email but is not linked to a member. Resolve that account before creating this member."), { status: 409 });
-    }
-
     const generatedPassword = randomBytes(24).toString("base64url");
     temporaryPassword = generatedPassword;
     const { data: created, error: createError } = await admin.auth.admin.createUser({
