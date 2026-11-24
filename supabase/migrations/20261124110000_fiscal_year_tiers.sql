@@ -267,3 +267,89 @@ using ((select private.is_admin()) or exists (
 create policy "Member FY admin write" on public.member_fiscal_years for insert to authenticated with check ((select private.is_admin()));
 create policy "Member FY admin update" on public.member_fiscal_years for update to authenticated using ((select private.is_admin())) with check ((select private.is_admin()));
 create policy "Member FY admin delete" on public.member_fiscal_years for delete to authenticated using ((select private.is_admin()));
+
+-- Apply the active FY tier loan limit to administrator-created loans as well.
+create or replace function private.active_member_loan_limit(p_member_id bigint)
+returns table(active boolean, eligible boolean, limit_amount numeric)
+language plpgsql
+stable
+set search_path = ''
+as $$
+declare
+  v_fy public.fiscal_years;
+  v_assignment public.member_fiscal_years;
+  v_tier public.tier_settings;
+  v_paid numeric := 0;
+  v_limit numeric := 0;
+begin
+  select * into v_fy from public.fiscal_years
+  where status = 'active' and current_date between start_date and end_date
+  order by id desc limit 1;
+  if not found then return query select false, true, null::numeric; return; end if;
+  select * into v_assignment from public.member_fiscal_years where fiscal_year_id = v_fy.id and member_id = p_member_id;
+  if not found then return query select true, false, 0::numeric; return; end if;
+  select * into v_tier from public.tier_settings where fiscal_year_id = v_fy.id and tier_code = v_assignment.tier_code;
+  if not found or not v_tier.enabled or not v_tier.loan_eligible then return query select true, false, 0::numeric; return; end if;
+  select coalesce(sum(wca.amount),0) into v_paid from public.weekly_contribution_allocations wca
+  where wca.member_id = p_member_id and wca.week_start between v_fy.start_date and v_fy.end_date;
+  if v_tier.loan_limit_mode = 'contributions_only' then
+    v_limit := v_paid;
+  elsif v_tier.loan_limit_mode = 'tier_maximum' then
+    v_limit := v_paid * v_tier.contribution_multiplier;
+    if v_tier.max_loan_amount is not null then v_limit := least(v_limit, v_tier.max_loan_amount); end if;
+  else
+    v_limit := coalesce(v_tier.max_loan_amount, 999999999999);
+  end if;
+  return query select true, true, greatest(v_limit,0);
+end;
+$$;
+
+revoke execute on function private.active_member_loan_limit(bigint) from public, anon, authenticated;
+
+create or replace function public.create_loan(p_borrower_id bigint, p_amount numeric, p_months integer)
+returns public.loans
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_loan public.loans;
+  v_borrower_name text;
+  v_interest numeric(12,2);
+  v_total numeric(12,2);
+  v_monthly numeric(12,2);
+  v_available numeric;
+  v_tier_active boolean;
+  v_tier_eligible boolean;
+  v_tier_limit numeric;
+begin
+  if auth.uid() is null or not private.is_admin() then raise exception 'Only authenticated administrators can create loans' using errcode = '42501'; end if;
+  if p_borrower_id is null or p_amount is null or p_months is null then raise exception 'Borrower, amount, and duration are required' using errcode = '22023'; end if;
+  if p_amount < 500 or mod(p_amount, 500) <> 0 or p_months not in (1,2,3,4,5,6,9,12,18,24) then raise exception 'Invalid loan amount or duration' using errcode = '22023'; end if;
+  select name into v_borrower_name from public.members where id = p_borrower_id;
+  if not found then raise exception 'Borrower does not exist' using errcode = '23503'; end if;
+  select active, eligible, limit_amount into v_tier_active, v_tier_eligible, v_tier_limit from private.active_member_loan_limit(p_borrower_id);
+  if v_tier_active and not v_tier_eligible then raise exception 'Borrower is not eligible for loans under the active fiscal year tier settings' using errcode = '22023'; end if;
+  if v_tier_active and p_amount > greatest(v_tier_limit,0) then raise exception 'Loan amount exceeds the borrower tier loan limit of %', v_tier_limit using errcode = '22023'; end if;
+  perform pg_advisory_xact_lock(2026110601);
+  v_available := private.available_fund_balance();
+  if p_amount > greatest(v_available, 0) then raise exception 'Loan amount exceeds available sinking fund balance' using errcode = '22023'; end if;
+  v_interest := round(p_amount * 0.05 * p_months, 2);
+  v_total := round(p_amount + v_interest, 2);
+  v_monthly := round(v_total / p_months, 2);
+  insert into public.loans (borrower_id, amount, interest, total, monthly, months, status)
+  values (p_borrower_id, p_amount, v_interest, v_total, v_monthly, p_months, 'Ongoing')
+  returning * into v_loan;
+  insert into public.loans_audit_log
+    (member_id, borrower_name, amount, interest, total, monthly, action, remarks, months, created_date)
+  values (
+    p_borrower_id, v_borrower_name, v_loan.amount, v_loan.interest, v_loan.total, v_loan.monthly,
+    'New Loan Created',
+    format('New loan created for %s %s', p_months, case when p_months = 1 then 'month' else 'months' end),
+    v_loan.months, current_date
+  );
+  return v_loan;
+end;
+$$;
+
+grant execute on function public.create_loan(bigint,numeric,integer) to authenticated;
