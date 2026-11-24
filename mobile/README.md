@@ -58,3 +58,21 @@ The mobile client now includes role-aware navigation and the core DLMSF workflow
 ### Mobile workflow boundary
 
 The app intentionally keeps sensitive operations behind the existing backend, including loan request review, payment confirmation, member account creation/deletion, and financial calculations. The mobile client is a native presentation/client layer over the existing DLMSF API and Supabase Auth session.
+
+
+## Fiscal Year and Membership Tiers
+
+The admin mobile workflow now supports FY-based membership classification and yearly controls:
+
+- Create and prepare draft Fiscal Years with custom start/end dates.
+- Configure maximum total heads, maximum heads per member, and whether head restrictions are enforced.
+- Configure Bronze, Silver, and Gold independently for each FY.
+- Enable/disable tiers and loan eligibility.
+- Choose contribution-only, multiplier/maximum, or unlimited loan-limit modes.
+- Configure contribution multipliers and maximum loan amounts.
+- Assign each member a tier and FY-specific head allocation.
+- Server-side validation prevents assignments from exceeding FY or tier head limits.
+- Loan requests use the active FY tier rules and paid contributions when calculating eligibility.
+- Export a selected FY as an XLSX workbook containing yearly summaries, members, tier settings, contributions, payments, loans, loan payments, requests, submissions, and audit records.
+
+The FY configuration is additive to the existing member and transaction tables, so historical transaction records are not rewritten when a member's tier changes in a later FY.
