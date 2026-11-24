@@ -1906,10 +1906,20 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
           {draftTiers.map((tier, index) => <DraftTierSettingsCard key={tier.tierCode} tier={tier} onChange={(next) => setDraftTiers((current) => current.map((item, i) => i === index ? next : item))} />)}
           <SectionHeader title="Review configuration" />
           <InfoCard>
-            <Text style={styles.cardTitle}>{code.trim() || "Fiscal year code not entered"}</Text>
-            <Text style={styles.mutedSmall}>{startDate || "Start date"} → {endDate || "End date"}</Text>
-            <Text style={styles.mutedSmall}>Retention: {retentionMonths || "3"} months after closure</Text>
-            {draftTiers.map((tier) => <Text key={tier.tierCode} style={styles.mutedSmall}>{tier.displayName}: {tier.enabled ? "Enabled" : "Disabled"} · {tier.loanEligible ? "Loan eligible" : "Not loan eligible"} · {tier.loanLimitMode === "member_contribution" ? "Member contribution" : "Total contributions"}</Text>)}
+            <View style={styles.reviewConfiguration}>
+              <Text style={styles.cardTitle}>{code.trim() || "Fiscal year code not entered"}</Text>
+              <Text style={styles.mutedSmall}>{startDate || "Start date"} → {endDate || "End date"}</Text>
+              <Text style={styles.mutedSmall}>Retention: {retentionMonths || "3"} months after closure</Text>
+              <View style={styles.reviewTierList}>
+                {draftTiers.map((tier) => (
+                  <View key={tier.tierCode} style={styles.reviewTierRow}>
+                    <Text style={styles.reviewTierName}>{tier.displayName}</Text>
+                    <Text style={styles.reviewTierDetail}>{tier.enabled ? "Enabled" : "Disabled"} · {tier.loanEligible ? "Loan eligible" : "Not loan eligible"}</Text>
+                    {tier.loanEligible ? <Text style={styles.reviewTierDetail}>{tier.loanLimitMode === "member_contribution" ? "Member contribution" : "Total contributions"}</Text> : null}
+                  </View>
+                ))}
+              </View>
+            </View>
           </InfoCard>
           <PrimaryButton label="Create draft fiscal year" loading={saving} onPress={() => void createYear()} />
         </ModalSheet>
@@ -2269,6 +2279,11 @@ const styles = StyleSheet.create({
   heroLabelValue: { color: WHITE, fontSize: 13, fontWeight: "800" },
   inlineStat: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   infoCard: { backgroundColor: WHITE, borderRadius: 17, borderWidth: 1, borderColor: BORDER, padding: 18, marginBottom: 0, shadowColor: "#0F172A", shadowOpacity: 0.025, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
+  reviewConfiguration: { gap: 10 },
+  reviewTierList: { gap: 10, marginTop: 4 },
+  reviewTierRow: { borderTopWidth: 1, borderTopColor: BORDER, paddingTop: 10, gap: 4 },
+  reviewTierName: { color: DARK, fontSize: 12, fontWeight: "800" },
+  reviewTierDetail: { color: SLATE, fontSize: 11, lineHeight: 17 },
   cardEyebrow: { color: "#94A3B8", fontSize: 9, fontWeight: "900", letterSpacing: 1.4 },
   cardTitle: { color: DARK, fontSize: 14, fontWeight: "800" },
   detailGrid: { flexDirection: "row", flexWrap: "wrap", marginTop: 15, marginHorizontal: -4 },

@@ -4,9 +4,10 @@
 alter table public.tier_settings drop constraint if exists tier_settings_loan_limit_mode_check;
 update public.tier_settings
 set loan_limit_mode = case
-  when tier_code = 'bronze' then 'total_contribution'
+  when lower(tier_code) in ('bronze', 'silver') then 'member_contribution'
+  when lower(tier_code) = 'gold' then 'total_contribution'
   when loan_limit_mode = 'contributions_only' then 'member_contribution'
-  else 'total_contribution'
+  else 'member_contribution'
 end,
 contribution_multiplier = 1,
 max_loan_amount = null;
