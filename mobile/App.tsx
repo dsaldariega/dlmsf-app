@@ -869,7 +869,8 @@ function AdminLoansScreen({ refreshKey, onChanged }: { refreshKey: number; onCha
   if (error && !loans.length) return <ErrorState message={error} onRetry={() => void load()} />;
 
   return (
-    <FlatList
+    <View style={styles.flex}>
+      <FlatList
       data={loans}
       keyExtractor={(item) => String(item.id)}
       contentContainerStyle={styles.listContent}
@@ -917,7 +918,9 @@ function AdminLoansScreen({ refreshKey, onChanged }: { refreshKey: number; onCha
         </InfoCard>
       )}
       ListEmptyComponent={<EmptyState title="No loans" message="Issued loans will appear here." />}
-    >
+      />
+
+
       <Modal transparent visible={modal} animationType="slide" onRequestClose={() => setModal(false)}>
         <ModalSheet title="Create loan" onClose={() => setModal(false)}>
           <FieldLabel text="Member ID" />
@@ -930,8 +933,7 @@ function AdminLoansScreen({ refreshKey, onChanged }: { refreshKey: number; onCha
           <PrimaryButton label="Create loan" loading={saving} onPress={() => void createLoan()} />
         </ModalSheet>
       </Modal>
-    </FlatList>
-  );
+    </View>  );
 }
 
 function AdminAuditScreen({ refreshKey, onChanged }: { refreshKey: number; onChanged: () => void }) {
