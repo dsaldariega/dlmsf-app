@@ -6,7 +6,6 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "scheme": "dlmsf",
-    "newArchEnabled": true,
     "plugins": [
       "expo-secure-store",
       [
