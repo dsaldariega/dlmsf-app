@@ -36,9 +36,9 @@ jobs:
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: backend/package-lock.json
+          cache-dependency-path: backend/package.json
       - name: Install backend dependencies
-        run: npm ci
+        run: npm install
         working-directory: backend
       - name: Compile Node API
         run: npm run build
@@ -56,9 +56,9 @@ jobs:
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: mobile/package-lock.json
+          cache-dependency-path: mobile/package.json
       - name: Install mobile dependencies
-        run: npm ci
+        run: npm install
         working-directory: mobile
       - name: TypeScript check
         run: npm run typecheck
