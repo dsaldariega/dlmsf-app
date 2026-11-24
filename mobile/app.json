@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "DLMSF",
+    "slug": "dlmsf-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "scheme": "dlmsf",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.dlmsf.mobile",
+      "deploymentTarget": "15.1"
+    },
+    "android": {
+      "package": "com.dlmsf.mobile",
+      "versionCode": 1,
+      "minSdkVersion": 29,
+      "adaptiveIcon": {
+        "backgroundColor": "#F4F7F5"
+      }
+    }
+  }
+}
