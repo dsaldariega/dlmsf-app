@@ -254,7 +254,7 @@ function AuthenticatedApp({ user, onSignOut }: { user: AuthenticatedUser; onSign
   }
 
   const memberTabs: { key: Tab; label: string }[] = [
-    { key: "home", label: "Home" },
+    { key: "home", label: "Dashboard" },
     { key: "loans", label: "Loans" },
     { key: "payments", label: "Payments" },
     { key: "account", label: "Account" },
@@ -292,7 +292,7 @@ function AuthenticatedApp({ user, onSignOut }: { user: AuthenticatedUser; onSign
         {tab === "account" && <AccountScreen user={user} onSignOut={onSignOut} />}
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabBarScroll}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabBar} contentContainerStyle={styles.tabBarScroll}>
         {tabs.map((item) => (
           <TouchableOpacity key={item.key} onPress={() => setTab(item.key)} style={styles.tabButton}>
             <Text style={[styles.tabLabel, tab === item.key && styles.tabLabelActive]}>{item.label}</Text>
@@ -1509,7 +1509,7 @@ function getErrorMessage(error: unknown): string {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: BG },
   appShell: { flex: 1, backgroundColor: BG },
-  content: { flex: 1 },
+  content: { flex: 1, minHeight: 0, backgroundColor: BG },
   flex: { flex: 1 },
   authScroll: { flexGrow: 1, justifyContent: "space-between", paddingHorizontal: 24, paddingTop: Platform.OS === "ios" ? 64 : 48, paddingBottom: 24 },
   authContainer: { width: "100%", maxWidth: 440, alignSelf: "center", flex: 1, justifyContent: "center" },
@@ -1535,12 +1535,13 @@ const styles = StyleSheet.create({
   topTitle: { color: DARK, fontSize: 20, fontWeight: "800", marginTop: 3 },
   roleBadge: { backgroundColor: "#DBEAFE", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20 },
   roleBadgeText: { color: "#1D4ED8", fontSize: 9, fontWeight: "900", letterSpacing: 1 },
-  tabBarScroll: { backgroundColor: WHITE, borderTopWidth: 1, borderTopColor: BORDER, paddingBottom: Platform.OS === "ios" ? 20 : 8, paddingTop: 8 },
+  tabBar: { flexGrow: 0, backgroundColor: WHITE, borderTopWidth: 1, borderTopColor: BORDER, elevation: 8, shadowColor: "#0F172A", shadowOpacity: 0.08, shadowRadius: 8, shadowOffset: { width: 0, height: -2 } },
+  tabBarScroll: { paddingHorizontal: 4, paddingBottom: Platform.OS === "ios" ? 20 : 8, paddingTop: 8 },
   tabButton: { minWidth: 78, alignItems: "center", paddingVertical: 8, paddingHorizontal: 6 },
   tabLabel: { color: "#94A3B8", fontSize: 11, fontWeight: "700" },
   tabLabelActive: { color: BLUE },
-  scrollContent: { padding: 20, paddingBottom: 36 },
-  listContent: { padding: 20, paddingBottom: 40 },
+  scrollContent: { padding: 20, paddingBottom: 24 },
+  listContent: { padding: 20, paddingBottom: 24 },
   sectionEyebrow: { color: "#94A3B8", fontSize: 10, fontWeight: "900", letterSpacing: 1.6 },
   pageTitle: { color: DARK, fontSize: 29, lineHeight: 35, fontWeight: "800", letterSpacing: -0.5, marginTop: 5 },
   muted: { color: SLATE, fontSize: 13, lineHeight: 20, marginTop: 5 },
