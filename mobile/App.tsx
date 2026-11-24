@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -1118,7 +1118,7 @@ function SectionHeader({ title }: { title: string }) {
   return <Text style={styles.sectionHeader}>{title}</Text>;
 }
 
-function InfoCard({ children }: { children: React.ReactNode }) {
+function InfoCard({ children }: { children: ReactNode }) {
   return <View style={styles.infoCard}>{children}</View>;
 }
 
@@ -1187,7 +1187,7 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
   );
 }
 
-function ModalSheet({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+function ModalSheet({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   return (
     <View style={styles.modalBackdrop}>
       <KeyboardAvoidingView style={styles.modalKeyboard} behavior={Platform.OS === "ios" ? "padding" : undefined}>
@@ -1251,7 +1251,6 @@ const styles = StyleSheet.create({
   mutedSmall: { color: SLATE, fontSize: 11, marginTop: 4 },
   welcomeRow: { flexDirection: "row", alignItems: "flex-start" },
   statGrid: { flexDirection: "row", flexWrap: "wrap", marginHorizontal: -5, marginTop: 18 },
-  statCard: { width: "50%", padding: 5 },
   statCardInner: { flex: 1 },
   statLabel: { color: SLATE, fontSize: 10, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.6 },
   statValue: { color: DARK, fontSize: 20, fontWeight: "800", marginTop: 7 },
