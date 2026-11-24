@@ -233,6 +233,10 @@ create index if not exists member_fiscal_years_fiscal_year_tier_idx on public.me
 
 drop policy if exists "Admin manages fiscal years" on public.fiscal_years;
 drop policy if exists "Members read own fiscal years" on public.fiscal_years;
+drop policy if exists "Fiscal years admin or own" on public.fiscal_years;
+drop policy if exists "Fiscal years admin write" on public.fiscal_years;
+drop policy if exists "Fiscal years admin update" on public.fiscal_years;
+drop policy if exists "Fiscal years admin delete" on public.fiscal_years;
 create policy "Fiscal years admin or own" on public.fiscal_years for select to authenticated
 using ((select private.is_admin()) or exists (
   select 1 from public.member_fiscal_years mfy
@@ -245,6 +249,10 @@ create policy "Fiscal years admin delete" on public.fiscal_years for delete to a
 
 drop policy if exists "Admin manages tier settings" on public.tier_settings;
 drop policy if exists "Members read assigned tier settings" on public.tier_settings;
+drop policy if exists "Tier settings admin or assigned" on public.tier_settings;
+drop policy if exists "Tier settings admin write" on public.tier_settings;
+drop policy if exists "Tier settings admin update" on public.tier_settings;
+drop policy if exists "Tier settings admin delete" on public.tier_settings;
 create policy "Tier settings admin or assigned" on public.tier_settings for select to authenticated
 using ((select private.is_admin()) or exists (
   select 1 from public.member_fiscal_years mfy
@@ -259,6 +267,10 @@ create policy "Tier settings admin delete" on public.tier_settings for delete to
 
 drop policy if exists "Admin manages member fiscal years" on public.member_fiscal_years;
 drop policy if exists "Members read own fiscal year assignment" on public.member_fiscal_years;
+drop policy if exists "Member FY admin or own" on public.member_fiscal_years;
+drop policy if exists "Member FY admin write" on public.member_fiscal_years;
+drop policy if exists "Member FY admin update" on public.member_fiscal_years;
+drop policy if exists "Member FY admin delete" on public.member_fiscal_years;
 create policy "Member FY admin or own" on public.member_fiscal_years for select to authenticated
 using ((select private.is_admin()) or exists (
   select 1 from public.members m

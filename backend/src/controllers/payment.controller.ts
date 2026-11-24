@@ -70,23 +70,44 @@ export async function getWeeklyContributions(req: Request, res: Response, next: 
     const weekStart = req.query.weekStart;
     if (!validSunday(weekStart)) throw Object.assign(new Error("Choose a valid Sunday collection week."), { status: 400 });
     const client = db(req);
-    const [membersResult, allocationsResult] = await Promise.all([
-      client.from("members").select("id,name,heads").order("name", { ascending: true }),
-      client.from("weekly_contribution_allocations").select("member_id,amount").eq("week_start", weekStart)
+    const { data: fiscalYear, error: fiscalYearError } = await client
+      .from("fiscal_years").select("id,code").eq("status", "active").maybeSingle();
+    if (fiscalYearError) throw fiscalYearError;
+    if (!fiscalYear) throw Object.assign(new Error("No active fiscal year is available for weekly contributions."), { status: 409 });
+    const [membersResult, assignmentsResult, allocationsResult] = await Promise.all([
+      client.from("members").select("id,name").order("name", { ascending: true }),
+      client.from("member_fiscal_years").select("member_id,tier_code,assigned_heads").eq("fiscal_year_id", fiscalYear.id),
+      client.from("weekly_contribution_allocations").select("member_id,amount").eq("week_start", weekStart).eq("fiscal_year_id", fiscalYear.id)
     ]);
     if (membersResult.error) throw membersResult.error;
+    if (assignmentsResult.error) throw assignmentsResult.error;
     if (allocationsResult.error) throw allocationsResult.error;
+
+    const assignmentByMember = new Map<number, { tier_code: string; assigned_heads: number }>();
+    for (const assignment of assignmentsResult.data ?? []) {
+      assignmentByMember.set(Number(assignment.member_id), {
+        tier_code: assignment.tier_code,
+        assigned_heads: Number(assignment.assigned_heads || 0)
+      });
+    }
+    const unassigned = (membersResult.data ?? []).filter((member: any) => !assignmentByMember.has(Number(member.id)));
+    if (unassigned.length) {
+      throw Object.assign(new Error("Some members are not assigned to the active fiscal year. Complete their tier and head assignments before recording weekly contributions."), { status: 409 });
+    }
+
     const paidByMember = new Map<number, number>();
     for (const row of allocationsResult.data ?? []) {
       const id = Number(row.member_id);
       paidByMember.set(id, (paidByMember.get(id) ?? 0) + Number(row.amount || 0));
     }
     const members = (membersResult.data ?? []).map((member: any) => {
-      const due = Number(member.heads || 0) * RATE;
+      const assignment = assignmentByMember.get(Number(member.id))!;
+      const heads = assignment.assigned_heads;
+      const due = heads * RATE;
       const paid = paidByMember.get(Number(member.id)) ?? 0;
-      return { id: Number(member.id), name: member.name, heads: Number(member.heads || 0), due, paid, remaining: Math.max(due - paid, 0) };
+      return { id: Number(member.id), name: member.name, heads, assigned_heads: heads, tier_code: assignment.tier_code, due, paid, remaining: Math.max(due - paid, 0) };
     });
-    res.json({ success: true, data: { weekStart, members } });
+    res.json({ success: true, data: { weekStart, fiscalYear, members } });
   } catch (error) { next(error); }
 }
 
