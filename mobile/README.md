@@ -44,3 +44,17 @@ npm run typecheck
 - The Express API remains responsible for authorization and all privileged business operations.
 
 The current mobile milestone provides sign-in, session restoration, role verification, sign-out, and a reusable API client. Dashboard and feature screens will be added in later milestones.
+
+
+## Current mobile experience
+
+The mobile client now includes role-aware navigation and the core DLMSF workflows:
+
+- **Member:** dashboard, active loan and loan request history, loan payment submissions, confirmed payment history, account/sign-out.
+- **Admin:** dashboard metrics, loan/payment request review, member account management, linked-login creation/deletion, account/sign-out.
+- Pull-to-refresh is available on data-driven screens.
+- Business actions continue through the existing Express API; the mobile app does not use the Supabase service-role key.
+
+### Mobile workflow boundary
+
+The app intentionally keeps sensitive operations behind the existing backend, including loan request review, payment confirmation, member account creation/deletion, and financial calculations. The mobile client is a native presentation/client layer over the existing DLMSF API and Supabase Auth session.
