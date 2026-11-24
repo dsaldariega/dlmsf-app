@@ -1,4 +1,3 @@
-import { randomBytes } from "node:crypto";
 import type { Request, Response, NextFunction } from "express";
 import { createSupabaseAdminClient } from "../config/supabase-admin.js";
 
@@ -77,7 +76,8 @@ export async function createMemberWithLogin(req: Request, res: Response, next: N
       }
     }
     const email = memberEmail(name);
-    const generatedPassword = randomBytes(24).toString("base64url");
+    const generatedPassword = process.env.MEMBER_DEFAULT_PASSWORD?.trim();
+    if (!generatedPassword) throw Object.assign(new Error("Set MEMBER_DEFAULT_PASSWORD in the backend environment before creating member accounts."), { status: 500 });
     temporaryPassword = generatedPassword;
     const { data: authUsers, error: authUsersError } = await admin.auth.admin.listUsers({
       page: 1,
