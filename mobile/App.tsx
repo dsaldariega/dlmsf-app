@@ -16,10 +16,13 @@ import {
   View,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
+import { File, Paths } from "expo-file-system";
+import * as Sharing from "expo-sharing";
 import { supabase } from "./lib/supabase";
 import { getMemberRole, type MemberRole } from "./lib/auth";
 import { apiRequest, ApiError } from "./lib/api";
 import { currency, dateLabel, shortDate, statusTone, wholeCurrency } from "./lib/format";
+import type { FiscalYear, FiscalYearSettings, TierSetting } from "./lib/fiscal";
 
 type AuthenticatedUser = { id: string; email: string; role: MemberRole };
 type Tab = "home" | "loans" | "payments" | "requests" | "audit" | "members" | "account";
@@ -1368,13 +1371,19 @@ function AdminRequestsScreen({ refreshKey, onChanged }: { refreshKey: number; on
 
 function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onChanged: () => void }) {
   const [members, setMembers] = useState<Member[]>([]);
+  const [fiscalYears, setFiscalYears] = useState<FiscalYear[]>([]);
+  const [activeFiscalYear, setActiveFiscalYear] = useState<FiscalYear | null>(null);
+  const [assignments, setAssignments] = useState<Record<number, { tier_code: string; assigned_heads: number }>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
-  const [modal, setModal] = useState<"create" | "edit" | null>(null);
+  const [modal, setModal] = useState<"create" | "edit" | "tier" | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [selected, setSelected] = useState<Member | null>(null);
   const [name, setName] = useState("");
-  const [heads, setHeads] = useState("");
+  const [heads, setHeads] = useState("1");
+  const [tier, setTier] = useState("bronze");
+  const [tierHeads, setTierHeads] = useState("1");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => { void load(); }, [refreshKey]);
@@ -1383,7 +1392,22 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
     if (pull) setRefreshing(true); else setLoading(true);
     setError("");
     try {
-      setMembers(await apiRequest<Member[]>("/api/members"));
+      const [memberData, fyData] = await Promise.all([
+        apiRequest<Member[]>("/api/members"),
+        apiRequest<FiscalYear[]>("/api/fiscal-years"),
+      ]);
+      setMembers(memberData);
+      setFiscalYears(fyData);
+      const current = fyData.find((fy) => fy.status === "active") ?? fyData[0] ?? null;
+      setActiveFiscalYear(current);
+      if (current) {
+        const settings = await apiRequest<FiscalYearSettings>(`/api/fiscal-years/${current.id}/settings`);
+        const map: Record<number, { tier_code: string; assigned_heads: number }> = {};
+        for (const assignment of settings.assignments) map[assignment.member_id] = { tier_code: assignment.tier_code, assigned_heads: Number(assignment.assigned_heads) };
+        setAssignments(map);
+      } else {
+        setAssignments({});
+      }
     } catch (e) {
       setError(getErrorMessage(e));
     } finally {
@@ -1393,17 +1417,19 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
   }
 
   function openCreate() {
-    setSelected(null);
-    setName("");
-    setHeads("1");
-    setModal("create");
+    setSelected(null); setName(""); setHeads("1"); setTier("bronze"); setTierHeads("1"); setModal("create");
   }
-
   function openEdit(member: Member) {
+    setSelected(member); setName(member.name); setHeads(String(member.heads)); setModal("edit");
+    const assignment = assignments[member.id];
+    setTier(assignment?.tier_code ?? "bronze"); setTierHeads(String(assignment?.assigned_heads ?? member.heads ?? 1));
+  }
+  function openTier(member: Member) {
     setSelected(member);
-    setName(member.name);
-    setHeads(String(member.heads));
-    setModal("edit");
+    const assignment = assignments[member.id];
+    setTier(assignment?.tier_code ?? "bronze");
+    setTierHeads(String(assignment?.assigned_heads ?? member.heads ?? 1));
+    setModal("tier");
   }
 
   async function saveMember() {
@@ -1413,56 +1439,58 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
       Alert.alert("Invalid member", "Enter a name and a whole number of heads.");
       return;
     }
-
     setSaving(true);
     try {
+      let memberId = selected?.id;
       if (modal === "create") {
         const result = await apiRequest<{ member: Member; loginEmail: string; temporaryPassword: string }>("/api/members", {
-          method: "POST",
-          body: JSON.stringify({ name: trimmed, heads: headCount }),
+          method: "POST", body: JSON.stringify({ name: trimmed, heads: headCount }),
         });
-        setModal(null);
-        Alert.alert(
-          "Member created",
-          `Login: ${result.loginEmail}\nTemporary password: ${result.temporaryPassword}\n\nShare these credentials securely with the member.`,
-        );
+        memberId = result.member.id;
+        Alert.alert("Member created", `Login: ${result.loginEmail}\nTemporary password: ${result.temporaryPassword}\n\nShare these credentials securely with the member.`);
       } else if (selected) {
-        await apiRequest(`/api/members/${selected.id}`, {
-          method: "PATCH",
-          body: JSON.stringify({ name: trimmed, heads: headCount }),
-        });
-        setModal(null);
+        await apiRequest(`/api/members/${selected.id}`, { method: "PATCH", body: JSON.stringify({ name: trimmed, heads: headCount }) });
         Alert.alert("Member updated", "The member profile has been updated.");
       }
-      onChanged();
+      if (activeFiscalYear && memberId) {
+        await apiRequest(`/api/fiscal-years/${activeFiscalYear.id}/members/${memberId}`, {
+          method: "PUT", body: JSON.stringify({ tierCode: tier, assignedHeads: Number(tierHeads) }),
+        });
+      }
+      setModal(null); onChanged();
     } catch (e) {
       Alert.alert("Unable to save", getErrorMessage(e));
-    } finally {
-      setSaving(false);
+    } finally { setSaving(false); }
+  }
+
+  async function saveTierAssignment() {
+    if (!selected || !activeFiscalYear) return;
+    const assignedHeads = Number(tierHeads);
+    if (!Number.isInteger(assignedHeads) || assignedHeads < 0) {
+      Alert.alert("Invalid heads", "Enter a whole number of zero or greater.");
+      return;
     }
+    setSaving(true);
+    try {
+      await apiRequest(`/api/fiscal-years/${activeFiscalYear.id}/members/${selected.id}`, {
+        method: "PUT", body: JSON.stringify({ tierCode: tier, assignedHeads }),
+      });
+      setModal(null); onChanged();
+    } catch (e) { Alert.alert("Unable to assign tier", getErrorMessage(e)); }
+    finally { setSaving(false); }
   }
 
   function confirmDelete(member: Member) {
-    Alert.alert(
-      "Delete member?",
-      `This will delete ${member.name} and the linked login. This action cannot be undone.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await apiRequest(`/api/members/${member.id}`, { method: "DELETE" });
-              Alert.alert("Deleted", "The member and linked login were deleted.");
-              onChanged();
-            } catch (e) {
-              Alert.alert("Unable to delete", getErrorMessage(e));
-            }
-          },
-        },
-      ],
-    );
+    Alert.alert("Delete member?", `This will delete ${member.name} and the linked login. This action cannot be undone.`, [
+      { text: "Cancel", style: "cancel" },
+      { text: "Delete", style: "destructive", onPress: async () => {
+        try {
+          await apiRequest(`/api/members/${member.id}`, { method: "DELETE" });
+          Alert.alert("Deleted", "The member and linked login were deleted.");
+          onChanged();
+        } catch (e) { Alert.alert("Unable to delete", getErrorMessage(e)); }
+      }},
+    ]);
   }
 
   if (loading && !members.length) return <ScreenLoader />;
@@ -1479,38 +1507,335 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
           <View>
             <Text style={styles.sectionEyebrow}>MEMBERS</Text>
             <Text style={styles.pageTitle}>Member accounts</Text>
-            <Text style={styles.muted}>Manage member profiles and linked logins.</Text>
-            <PrimaryButton label="Add member" onPress={openCreate} />
+            <Text style={styles.muted}>Manage members, FY assignments, and linked logins.</Text>
+            <View style={styles.actionRow}>
+              <ActionButton label="Add member" onPress={openCreate} />
+              <ActionButton label="FY Settings" secondary onPress={() => setSettingsOpen(true)} />
+            </View>
+            {activeFiscalYear ? <InfoCard><Text style={styles.cardEyebrow}>ACTIVE FISCAL YEAR</Text><Text style={styles.cardTitle}>{activeFiscalYear.code}</Text><Text style={styles.mutedSmall}>{activeFiscalYear.start_date} → {activeFiscalYear.end_date}</Text></InfoCard> : <EmptyState title="No fiscal year configured" message="Create and configure the next fiscal year before assigning tiers." />}
           </View>
         }
-        renderItem={({ item }) => (
-          <InfoCard>
-            <View style={styles.rowBetween}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.cardTitle}>{item.name}</Text>
-                <Text style={styles.mutedSmall}>{item.heads} head{item.heads === 1 ? "" : "s"} · Member #{item.id}</Text>
+        renderItem={({ item }) => {
+          const assignment = assignments[item.id];
+          return (
+            <InfoCard>
+              <View style={styles.rowBetween}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cardTitle}>{item.name}</Text>
+                  <Text style={styles.mutedSmall}>{item.heads} current head{item.heads === 1 ? "" : "s"} · Member #{item.id}</Text>
+                  {activeFiscalYear && assignment ? <Text style={styles.tierMeta}>{assignment.tier_code.toUpperCase()} · {assignment.assigned_heads} FY head{assignment.assigned_heads === 1 ? "" : "s"}</Text> : null}
+                </View>
+                <View style={styles.memberActions}>
+                  <TouchableOpacity onPress={() => openTier(item)} style={styles.smallAction}><Text style={styles.smallActionText}>Tier</Text></TouchableOpacity>
+                  <TouchableOpacity onPress={() => openEdit(item)} style={styles.smallAction}><Text style={styles.smallActionText}>Edit</Text></TouchableOpacity>
+                  <TouchableOpacity onPress={() => confirmDelete(item)} style={styles.smallDelete}><Text style={styles.smallDeleteText}>Delete</Text></TouchableOpacity>
+                </View>
               </View>
-              <View style={styles.memberActions}>
-                <TouchableOpacity onPress={() => openEdit(item)} style={styles.smallAction}><Text style={styles.smallActionText}>Edit</Text></TouchableOpacity>
-                <TouchableOpacity onPress={() => confirmDelete(item)} style={styles.smallDelete}><Text style={styles.smallDeleteText}>Delete</Text></TouchableOpacity>
-              </View>
-            </View>
-          </InfoCard>
-        )}
+            </InfoCard>
+          );
+        }}
         ListEmptyComponent={<EmptyState title="No members" message="Member accounts will appear here." />}
       />
 
       <Modal transparent visible={Boolean(modal)} animationType="slide" onRequestClose={() => setModal(null)}>
-        <ModalSheet title={modal === "create" ? "Add member" : "Edit member"} onClose={() => setModal(null)}>
-          <FieldLabel text="Name" />
-          <TextInput onChangeText={setName} placeholder="Member name" placeholderTextColor="#94A3B8" style={styles.input} value={name} />
-          <FieldLabel text="Heads" />
-          <TextInput keyboardType="numeric" onChangeText={setHeads} placeholder="1" placeholderTextColor="#94A3B8" style={styles.input} value={heads} />
-          {modal === "create" ? <Text style={styles.helperText}>A linked Supabase login will be created automatically using the existing backend account workflow.</Text> : null}
-          <PrimaryButton label={modal === "create" ? "Create member" : "Save changes"} loading={saving} onPress={() => void saveMember()} />
+        <ModalSheet title={modal === "create" ? "Add member" : modal === "edit" ? "Edit member" : "Assign membership tier"} onClose={() => setModal(null)}>
+          {modal === "tier" ? (
+            <>
+              <Text style={styles.modalLead}>{activeFiscalYear ? `Assign ${selected?.name ?? "this member"} for ${activeFiscalYear.code}.` : "No fiscal year is available."}</Text>
+              <FieldLabel text="Membership tier" />
+              <TierPicker value={tier} onChange={setTier} />
+              <FieldLabel text="FY heads" />
+              <TextInput keyboardType="numeric" onChangeText={setTierHeads} placeholder="1" placeholderTextColor="#94A3B8" style={styles.input} value={tierHeads} />
+              <Text style={styles.helperText}>The server validates the fiscal-year total head limit and the selected tier's head limit.</Text>
+              <PrimaryButton label="Save tier assignment" loading={saving} onPress={() => void saveTierAssignment()} />
+            </>
+          ) : (
+            <>
+              <FieldLabel text="Name" />
+              <TextInput onChangeText={setName} placeholder="Member name" placeholderTextColor="#94A3B8" style={styles.input} value={name} />
+              <FieldLabel text="Current heads" />
+              <TextInput keyboardType="numeric" onChangeText={setHeads} placeholder="1" placeholderTextColor="#94A3B8" style={styles.input} value={heads} />
+              {activeFiscalYear ? (
+                <>
+                  <FieldLabel text={`Assign for ${activeFiscalYear.code}`} />
+                  <TierPicker value={tier} onChange={setTier} />
+                  <FieldLabel text="FY heads" />
+                  <TextInput keyboardType="numeric" onChangeText={setTierHeads} placeholder="1" placeholderTextColor="#94A3B8" style={styles.input} value={tierHeads} />
+                </>
+              ) : null}
+              {modal === "create" ? <Text style={styles.helperText}>A linked Supabase login is created by the existing backend account workflow.</Text> : null}
+              <PrimaryButton label={modal === "create" ? "Create member" : "Save changes"} loading={saving} onPress={() => void saveMember()} />
+            </>
+          )}
+        </ModalSheet>
+      </Modal>
+
+      <Modal transparent visible={settingsOpen} animationType="slide" onRequestClose={() => setSettingsOpen(false)}>
+        <View style={styles.fullModalBackdrop}>
+          <View style={styles.fullModalSheet}>
+            <AdminFiscalSettingsScreen refreshKey={refreshKey} onClose={() => setSettingsOpen(false)} onChanged={onChanged} />
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+function TierPicker({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  return (
+    <View style={styles.tierPicker}>
+      {["bronze", "silver", "gold"].map((item) => (
+        <TouchableOpacity key={item} onPress={() => onChange(item)} style={[styles.tierOption, value === item && styles.tierOptionActive]}>
+          <Text style={[styles.tierOptionText, value === item && styles.tierOptionTextActive]}>{item[0].toUpperCase() + item.slice(1)}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
+function AdminFiscalSettingsScreen({ refreshKey, onClose, onChanged }: { refreshKey: number; onClose: () => void; onChanged: () => void }) {
+  const [fiscalYears, setFiscalYears] = useState<FiscalYear[]>([]);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [settings, setSettings] = useState<FiscalYearSettings | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+  const [code, setCode] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [maxTotalHeads, setMaxTotalHeads] = useState("");
+  const [maxHeadsPerMember, setMaxHeadsPerMember] = useState("");
+  const [headRestrictionsEnabled, setHeadRestrictionsEnabled] = useState(true);
+
+  useEffect(() => { void loadYears(); }, [refreshKey]);
+
+  async function loadYears() {
+    setLoading(true);
+    try {
+      const years = await apiRequest<FiscalYear[]>("/api/fiscal-years");
+      setFiscalYears(years);
+      const id = selectedId && years.some((fy) => fy.id === selectedId) ? selectedId : (years.find((fy) => fy.status === "active")?.id ?? years[0]?.id ?? null);
+      setSelectedId(id);
+      if (id) await loadSettings(id);
+      else setSettings(null);
+    } catch (e) { Alert.alert("Unable to load settings", getErrorMessage(e)); }
+    finally { setLoading(false); }
+  }
+
+  async function loadSettings(id: number) {
+    const data = await apiRequest<FiscalYearSettings>(`/api/fiscal-years/${id}/settings`);
+    setSettings(data);
+    setCode(data.fiscalYear.code);
+    setStartDate(data.fiscalYear.start_date);
+    setEndDate(data.fiscalYear.end_date);
+    setMaxTotalHeads(data.fiscalYear.max_total_heads == null ? "" : String(data.fiscalYear.max_total_heads));
+    setMaxHeadsPerMember(data.fiscalYear.max_heads_per_member == null ? "" : String(data.fiscalYear.max_heads_per_member));
+    setHeadRestrictionsEnabled(data.fiscalYear.head_restrictions_enabled);
+  }
+
+  async function saveFiscalYear() {
+    if (!selectedId) return;
+    setSaving(true);
+    try {
+      await apiRequest(`/api/fiscal-years/${selectedId}`, { method: "PATCH", body: JSON.stringify({
+        code, startDate, endDate,
+        maxTotalHeads: maxTotalHeads === "" ? null : Number(maxTotalHeads),
+        maxHeadsPerMember: maxHeadsPerMember === "" ? null : Number(maxHeadsPerMember),
+        headRestrictionsEnabled,
+      })});
+      await loadYears(); onChanged();
+      Alert.alert("Saved", "Fiscal year settings updated.");
+    } catch (e) { Alert.alert("Unable to save", getErrorMessage(e)); }
+    finally { setSaving(false); }
+  }
+
+  async function saveTier(tierSetting: TierSetting) {
+    setSaving(true);
+    try {
+      await apiRequest(`/api/fiscal-years/${tierSetting.fiscal_year_id}/tiers/${tierSetting.tier_code}`, {
+        method: "PATCH", body: JSON.stringify({
+          enabled: tierSetting.enabled,
+          maxHeadsPerMember: tierSetting.max_heads_per_member,
+          loanEligible: tierSetting.loan_eligible,
+          loanLimitMode: tierSetting.loan_limit_mode,
+          contributionMultiplier: tierSetting.contribution_multiplier,
+          maxLoanAmount: tierSetting.max_loan_amount,
+        })
+      });
+      if (selectedId) await loadSettings(selectedId);
+      onChanged();
+      Alert.alert("Saved", `${tierSetting.display_name} settings updated.`);
+    } catch (e) { Alert.alert("Unable to save tier", getErrorMessage(e)); }
+    finally { setSaving(false); }
+  }
+
+  async function createYear() {
+    if (!code.trim() || !startDate || !endDate) {
+      Alert.alert("Missing information", "Enter a fiscal year code, start date, and end date.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const result = await apiRequest<{ fiscalYear: FiscalYear }>("/api/fiscal-years", {
+        method: "POST", body: JSON.stringify({
+          code: code.trim(), startDate, endDate,
+          maxTotalHeads: maxTotalHeads === "" ? null : Number(maxTotalHeads),
+          maxHeadsPerMember: maxHeadsPerMember === "" ? null : Number(maxHeadsPerMember),
+          headRestrictionsEnabled,
+        })
+      });
+      setShowCreate(false);
+      await loadYears();
+      setSelectedId(result.fiscalYear.id);
+      await loadSettings(result.fiscalYear.id);
+      onChanged();
+      Alert.alert("Created", "Fiscal year created with Bronze, Silver, and Gold defaults. Configure it before activation.");
+    } catch (e) { Alert.alert("Unable to create", getErrorMessage(e)); }
+    finally { setSaving(false); }
+  }
+
+  async function changeStatus(action: "activate" | "close") {
+    if (!selectedId) return;
+    setSaving(true);
+    try {
+      await apiRequest(`/api/fiscal-years/${selectedId}/${action}`, { method: "POST" });
+      await loadYears(); await loadSettings(selectedId); onChanged();
+      Alert.alert("Updated", action === "activate" ? "Fiscal year activated." : "Fiscal year closed.");
+    } catch (e) { Alert.alert("Unable to update", getErrorMessage(e)); }
+    finally { setSaving(false); }
+  }
+
+  async function exportYear() {
+    if (!selectedId || !settings) return;
+    setExporting(true);
+    try {
+      const session = (await supabase.auth.getSession()).data.session;
+      if (!session) throw new Error("Your session has expired. Please sign in again.");
+      const apiBase = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/api\/?$/, "").replace(/\/$/, "");
+      const response = await fetch(`${apiBase}/api/fiscal-years/${selectedId}/export`, { headers: { Authorization: `Bearer ${session.access_token}` }});
+      if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || "Unable to export fiscal year activities.");
+      }
+      const workbook = await response.text();
+      const file = new File(Paths.cache, `DLMSF-${settings.fiscalYear.code}-Activities.xls`);
+      if (file.exists) file.delete();
+      await file.write(workbook);
+      if (!(await Sharing.isAvailableAsync())) throw new Error("File sharing is not available on this device.");
+      await Sharing.shareAsync(file.uri, { dialogTitle: "Export DLMSF fiscal year", mimeType: "application/vnd.ms-excel" });
+    } catch (e) { Alert.alert("Unable to export", getErrorMessage(e)); }
+    finally { setExporting(false); }
+  }
+
+  if (loading && !settings) return <ScreenLoader />;
+
+  return (
+    <View style={styles.flex}>
+      <View style={styles.modalHeader}>
+        <View style={{ flex: 1 }}><Text style={styles.modalTitle}>Fiscal Year Settings</Text><Text style={styles.mutedSmall}>Configure yearly limits, tiers, and exports.</Text></View>
+        <TouchableOpacity onPress={onClose}><Text style={styles.closeText}>Close</Text></TouchableOpacity>
+      </View>
+      <ScrollView contentContainerStyle={styles.modalContent}>
+        <PrimaryButton label="Create new fiscal year" onPress={() => {
+          setCode(""); setStartDate(""); setEndDate(""); setMaxTotalHeads(""); setMaxHeadsPerMember(""); setHeadRestrictionsEnabled(true); setShowCreate(true);
+        }} />
+        {fiscalYears.length ? (
+          <>
+            <FieldLabel text="Fiscal year" />
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.yearPicker}>
+              {fiscalYears.map((fy) => (
+                <TouchableOpacity key={fy.id} onPress={() => { setSelectedId(fy.id); void loadSettings(fy.id); }} style={[styles.yearChip, selectedId === fy.id && styles.yearChipActive]}>
+                  <Text style={[styles.yearChipText, selectedId === fy.id && styles.yearChipTextActive]}>{fy.code}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            {settings ? (
+              <>
+                <InfoCard>
+                  <Text style={styles.cardEyebrow}>STATUS</Text>
+                  <Text style={styles.cardTitle}>{settings.fiscalYear.status.toUpperCase()}</Text>
+                  <Text style={styles.mutedSmall}>{settings.fiscalYear.start_date} → {settings.fiscalYear.end_date}</Text>
+                  <View style={styles.actionRow}>
+                    {settings.fiscalYear.status === "draft" ? <ActionButton label="Activate" onPress={() => void changeStatus("activate")} disabled={saving} /> : null}
+                    {settings.fiscalYear.status === "active" ? <ActionButton label="Close FY" secondary onPress={() => void changeStatus("close")} disabled={saving} /> : null}
+                    <ActionButton label={exporting ? "Exporting…" : "Export Excel"} secondary onPress={() => void exportYear()} disabled={exporting} />
+                  </View>
+                </InfoCard>
+                <SectionHeader title="Head allocation" />
+                <FieldLabel text="Maximum total heads" />
+                <TextInput keyboardType="numeric" onChangeText={setMaxTotalHeads} placeholder="Leave blank for unlimited" placeholderTextColor="#94A3B8" style={styles.input} value={maxTotalHeads} />
+                <FieldLabel text="Maximum heads per member" />
+                <TextInput keyboardType="numeric" onChangeText={setMaxHeadsPerMember} placeholder="Leave blank for unlimited" placeholderTextColor="#94A3B8" style={styles.input} value={maxHeadsPerMember} />
+                <TouchableOpacity onPress={() => setHeadRestrictionsEnabled((v) => !v)} style={styles.toggleRow}>
+                  <Text style={styles.cardTitle}>Enforce head restrictions</Text><Text style={styles.toggleText}>{headRestrictionsEnabled ? "ON" : "OFF"}</Text>
+                </TouchableOpacity>
+                <PrimaryButton label="Save FY settings" loading={saving} onPress={() => void saveFiscalYear()} />
+                <SectionHeader title="Tier privileges" />
+                {settings.tiers.map((tierSetting) => (
+                  <TierSettingsCard key={tierSetting.id} tier={tierSetting} saving={saving} onSave={saveTier} />
+                ))}
+              </>
+            ) : <EmptyState title="Select a fiscal year" message="Choose a fiscal year to configure its rules." />}
+          </>
+        ) : <EmptyState title="No fiscal years" message="Create the next FY to start configuring tiers and head limits." />}
+      </ScrollView>
+
+      <Modal transparent visible={showCreate} animationType="slide" onRequestClose={() => setShowCreate(false)}>
+        <ModalSheet title="Create fiscal year" onClose={() => setShowCreate(false)}>
+          <FieldLabel text="Code" />
+          <TextInput onChangeText={setCode} placeholder="FY2027" placeholderTextColor="#94A3B8" style={styles.input} value={code} />
+          <FieldLabel text="Start date" />
+          <TextInput onChangeText={setStartDate} placeholder="2027-01-01" placeholderTextColor="#94A3B8" style={styles.input} value={startDate} />
+          <FieldLabel text="End date" />
+          <TextInput onChangeText={setEndDate} placeholder="2027-12-31" placeholderTextColor="#94A3B8" style={styles.input} value={endDate} />
+          <FieldLabel text="Maximum total heads" />
+          <TextInput keyboardType="numeric" onChangeText={setMaxTotalHeads} placeholder="Optional" placeholderTextColor="#94A3B8" style={styles.input} value={maxTotalHeads} />
+          <FieldLabel text="Maximum heads per member" />
+          <TextInput keyboardType="numeric" onChangeText={setMaxHeadsPerMember} placeholder="Optional" placeholderTextColor="#94A3B8" style={styles.input} value={maxHeadsPerMember} />
+          <TouchableOpacity onPress={() => setHeadRestrictionsEnabled((v) => !v)} style={styles.toggleRow}>
+            <Text style={styles.cardTitle}>Enforce head restrictions</Text><Text style={styles.toggleText}>{headRestrictionsEnabled ? "ON" : "OFF"}</Text>
+          </TouchableOpacity>
+          <PrimaryButton label="Create fiscal year" loading={saving} onPress={() => void createYear()} />
         </ModalSheet>
       </Modal>
     </View>
+  );
+}
+
+function TierSettingsCard({ tier, saving, onSave }: { tier: TierSetting; saving: boolean; onSave: (tier: TierSetting) => Promise<void> }) {
+  const [draft, setDraft] = useState(tier);
+  useEffect(() => setDraft(tier), [tier]);
+  const modeLabel = draft.loan_limit_mode === "contributions_only" ? "Paid contributions only" : draft.loan_limit_mode === "tier_maximum" ? "Multiplier / maximum" : "No contribution limit";
+  return (
+    <InfoCard>
+      <View style={styles.rowBetween}><View><Text style={styles.cardEyebrow}>TIER</Text><Text style={styles.cardTitle}>{draft.display_name}</Text></View><TouchableOpacity onPress={() => setDraft({ ...draft, enabled: !draft.enabled })} style={styles.toggleRowCompact}><Text style={styles.toggleText}>{draft.enabled ? "ENABLED" : "DISABLED"}</Text></TouchableOpacity></View>
+      <TouchableOpacity onPress={() => setDraft({ ...draft, loan_eligible: !draft.loan_eligible })} style={styles.toggleRow}><Text style={styles.cardTitle}>Loan eligibility</Text><Text style={styles.toggleText}>{draft.loan_eligible ? "ON" : "OFF"}</Text></TouchableOpacity>
+      <FieldLabel text="Maximum heads per member" />
+      <TextInput keyboardType="numeric" onChangeText={(v) => setDraft({ ...draft, max_heads_per_member: v === "" ? null : Number(v) })} placeholder="Optional" placeholderTextColor="#94A3B8" style={styles.input} value={draft.max_heads_per_member == null ? "" : String(draft.max_heads_per_member)} />
+      <FieldLabel text="Loan limit mode" />
+      <View style={styles.modePicker}>
+        {(["contributions_only","tier_maximum","unlimited"] as const).map((mode) => (
+          <TouchableOpacity key={mode} onPress={() => setDraft({ ...draft, loan_limit_mode: mode })} style={[styles.modeOption, draft.loan_limit_mode === mode && styles.modeOptionActive]}>
+            <Text style={[styles.modeOptionText, draft.loan_limit_mode === mode && styles.modeOptionTextActive]}>{mode === "contributions_only" ? "Paid only" : mode === "tier_maximum" ? "Multiplier" : "Unlimited"}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <Text style={styles.helperText}>{modeLabel}</Text>
+      {draft.loan_limit_mode === "tier_maximum" ? (
+        <>
+          <FieldLabel text="Contribution multiplier" />
+          <TextInput keyboardType="decimal-pad" onChangeText={(v) => setDraft({ ...draft, contribution_multiplier: Number(v) || 0 })} style={styles.input} value={String(draft.contribution_multiplier)} />
+        </>
+      ) : null}
+      {draft.loan_limit_mode !== "contributions_only" ? (
+        <>
+          <FieldLabel text="Maximum loan amount" />
+          <TextInput keyboardType="numeric" onChangeText={(v) => setDraft({ ...draft, max_loan_amount: v === "" ? null : Number(v) })} placeholder="Optional" placeholderTextColor="#94A3B8" style={styles.input} value={draft.max_loan_amount == null ? "" : String(draft.max_loan_amount)} />
+        </>
+      ) : null}
+      <PrimaryButton label="Save tier" loading={saving} onPress={() => void onSave(draft)} />
+    </InfoCard>
   );
 }
 
@@ -1770,6 +2095,27 @@ const styles = StyleSheet.create({
   actionButtonText: { color: WHITE, fontSize: 11, fontWeight: "800", textAlign: "center" },
   actionButtonTextSecondary: { color: "#1D4ED8" },
   helperText: { color: SLATE, fontSize: 11, lineHeight: 17, marginTop: 9 },
+  tierMeta: { color: "#1D4ED8", fontSize: 10, fontWeight: "800", marginTop: 5 },
+  tierPicker: { flexDirection: "row", gap: 7, marginTop: 2 },
+  tierOption: { flex: 1, minHeight: 42, borderRadius: 9, borderWidth: 1, borderColor: "#CBD5E1", alignItems: "center", justifyContent: "center", backgroundColor: WHITE },
+  tierOptionActive: { borderColor: BLUE, backgroundColor: "#EFF6FF" },
+  tierOptionText: { color: SLATE, fontSize: 11, fontWeight: "800" },
+  tierOptionTextActive: { color: "#1D4ED8" },
+  fullModalBackdrop: { flex: 1, backgroundColor: "rgba(15,23,42,0.45)", justifyContent: "flex-end" },
+  fullModalSheet: { height: "94%", backgroundColor: BG, borderTopLeftRadius: 22, borderTopRightRadius: 22, overflow: "hidden" },
+  yearPicker: { gap: 8, paddingVertical: 3 },
+  yearChip: { borderWidth: 1, borderColor: "#CBD5E1", borderRadius: 18, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: WHITE },
+  yearChipActive: { backgroundColor: "#EFF6FF", borderColor: BLUE },
+  yearChipText: { color: SLATE, fontSize: 11, fontWeight: "800" },
+  yearChipTextActive: { color: "#1D4ED8" },
+  toggleRow: { marginTop: 12, minHeight: 44, borderWidth: 1, borderColor: BORDER, borderRadius: 10, backgroundColor: "#F8FAFC", paddingHorizontal: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  toggleRowCompact: { borderWidth: 1, borderColor: BORDER, borderRadius: 18, paddingHorizontal: 9, paddingVertical: 6, backgroundColor: "#F8FAFC" },
+  toggleText: { color: BLUE, fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
+  modePicker: { flexDirection: "row", gap: 6, marginTop: 2 },
+  modeOption: { flex: 1, minHeight: 40, borderRadius: 9, borderWidth: 1, borderColor: "#CBD5E1", alignItems: "center", justifyContent: "center", backgroundColor: WHITE, paddingHorizontal: 5 },
+  modeOptionActive: { backgroundColor: "#EFF6FF", borderColor: BLUE },
+  modeOptionText: { color: SLATE, fontSize: 9, fontWeight: "800", textAlign: "center" },
+  modeOptionTextActive: { color: "#1D4ED8" },
   note: { color: SLATE, fontSize: 11, lineHeight: 17, marginTop: 13, backgroundColor: "#F8FAFC", padding: 10, borderRadius: 8 },
   segment: { flexDirection: "row", backgroundColor: "#E2E8F0", borderRadius: 10, padding: 3, marginTop: 18, marginBottom: 14 },
   segmentButton: { flex: 1, minHeight: 40, alignItems: "center", justifyContent: "center", borderRadius: 8 },
