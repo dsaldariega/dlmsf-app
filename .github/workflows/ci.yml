@@ -58,10 +58,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
-          cache-dependency-path: mobile/package.json
       - name: Install mobile dependencies
-        run: npm install
+        run: npm install --no-audit --no-fund
         working-directory: mobile
       - name: TypeScript check
         run: npm run typecheck
