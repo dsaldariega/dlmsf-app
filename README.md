@@ -1,19 +1,20 @@
 # DLMSF Monitoring App
 
-This repository is a small monorepo containing two separate applications.
+This repository is a monorepo containing the DLMSF web application, mobile application, and shared API.
 
 ## Repository layout
 
 ```text
 .
 ├── frontend/          # Next.js web application
+├── mobile/            # Expo + React Native mobile application
 ├── backend/           # Express + TypeScript API
+├── supabase/          # Database migrations and SQL functions
 ├── .github/           # CI workflows
-├── package.json       # Root scripts for running/building both apps
-└── package-lock.json  # Root orchestration dependencies
+└── package.json       # Root development/build scripts
 ```
 
-Keep frontend source code inside `frontend/` and backend source code inside `backend/`. Do not add duplicate `app/`, `components/`, or `lib/` directories at the repository root.
+Keep application-specific source code inside its respective folder. Do not add duplicate `app/`, `components/`, or `lib/` directories at the repository root.
 
 ## Requirements
 
@@ -26,9 +27,12 @@ Keep frontend source code inside `frontend/` and backend source code inside `bac
 npm install
 npm --prefix frontend install
 npm --prefix backend ci
+npm --prefix mobile install
 ```
 
-## Run both applications
+## Run applications
+
+Run the web frontend and API together:
 
 ```sh
 npm run dev
@@ -37,18 +41,23 @@ npm run dev
 - Frontend: http://localhost:3000
 - Backend health endpoint: http://localhost:4000/api/health
 
-You can also run either app independently:
+Run an individual application:
 
 ```sh
 npm run dev:frontend
 npm run dev:backend
+npm run dev:mobile
 ```
+
+The mobile application uses Expo. To launch it on Android or iOS, use the Expo CLI prompts or run `npm --prefix mobile run android` / `npm --prefix mobile run ios`.
 
 ## Build
 
 ```sh
 npm run build
 ```
+
+The root build currently builds the existing web frontend and backend. Mobile builds are managed separately through Expo and EAS; see [mobile/README.md](mobile/README.md).
 
 ## Environment variables
 
@@ -57,7 +66,6 @@ Copy `frontend/.env.example` to `frontend/.env.local` and fill in the Supabase a
 Copy `backend/.env-example` to `backend/.env` and fill in the Supabase values.
 
 Never commit real environment files, credentials, or Supabase service-role keys.
-
 
 ## Current DLMSF Workflows
 
@@ -75,7 +83,8 @@ Never commit real environment files, credentials, or Supabase service-role keys.
 
 - Weekly sinking fund due is **PHP 50.00 per head**.
 - Administrators can record full or partial weekly contributions per member.
-- The admin Payments page is a single **Admin Payments** view. It combines weekly contribution management (individual recording, member payment status, collection-week selection, and bulk generation) with the loan repayment submissions table.\n- The collection-week control contains the bulk **Generate weekly payment for all members** action.
+- The admin Payments page is a single **Admin Payments** view. It combines weekly contribution management (individual recording, member payment status, collection-week selection, and bulk generation) with the loan repayment submissions table.
+- The collection-week control contains the bulk **Generate weekly payment for all members** action.
 - Bulk generation records each member's remaining weekly due for the selected Sunday and avoids duplicating amounts already recorded.
 - Each generated weekly payment receives the standardized audit remark:
   `Member 12 paid weekly dues of PHP 300.`
@@ -99,4 +108,4 @@ Deploy the frontend and backend as separate Vercel projects:
 - Frontend project root: `frontend`
 - Backend project root: `backend`
 
-See [backend/DEPLOYMENT.md](backend/DEPLOYMENT.md) for the API deployment configuration.
+The mobile application is built and distributed separately using Expo Application Services (EAS). See [backend/DEPLOYMENT.md](backend/DEPLOYMENT.md) and [mobile/README.md](mobile/README.md) for deployment guidance.

@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "DLMSF",
+    "slug": "dlmsf-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "scheme": "dlmsf",
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 29
+          }
+        }
+      ]
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.dlmsf.mobile",
+      "deploymentTarget": "16.4"
+    },
+    "android": {
+      "package": "com.dlmsf.mobile",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#F4F7F5"
+      }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "de57df5e-b7a9-4067-a3af-77b331ef8444"
+      }
+    },
+    "owner": "dsaldariega"
+  }
+}
