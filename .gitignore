@@ -1,3 +1,7 @@
+## Expo
+**/.expo/
+**/.expo/**
+mobile/.expo/
 
 # Dependencies
 **/node_modules/
