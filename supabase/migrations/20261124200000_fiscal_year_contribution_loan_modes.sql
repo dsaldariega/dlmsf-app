@@ -154,7 +154,7 @@ begin
   v_member_limit := v_paid;
 
   if p_amount > greatest(v_member_limit, 0) then
-    raise exception 'Requested amount exceeds the % tier loan limit of % based on paid contributions and tier settings', v_tier.display_name, v_member_limit using errcode = '22023';
+    raise exception 'Requested amount exceeds the % tier loan limit of % based on the selected contribution basis', v_tier.display_name, v_member_limit using errcode = '22023';
   end if;
 
   v_available := private.available_fund_balance();
