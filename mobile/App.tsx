@@ -1977,7 +1977,7 @@ type DraftTier = {
 };
 function createDefaultDraftTiers(): DraftTier[] {
   return [
-    { tierCode: "bronze", displayName: "Bronze", enabled: true, maxHeadsPerMember: "", loanEligible: true, loanLimitMode: "member_contribution" },
+    { tierCode: "bronze", displayName: "Bronze", enabled: true, maxHeadsPerMember: "", loanEligible: true, loanLimitMode: "total_contribution" },
     { tierCode: "silver", displayName: "Silver", enabled: true, maxHeadsPerMember: "", loanEligible: true, loanLimitMode: "total_contribution" },
     { tierCode: "gold", displayName: "Gold", enabled: true, maxHeadsPerMember: "", loanEligible: true, loanLimitMode: "total_contribution" },
   ];
