@@ -285,8 +285,8 @@ function AuthenticatedApp({ user, onSignOut }: { user: AuthenticatedUser; onSign
       <View style={styles.content}>
         {tab === "home" && <HomeScreen user={user} refreshKey={refreshKey} onNavigate={setTab} />}
         {tab === "loans" && (user.role === "admin" ? <AdminLoansScreen refreshKey={refreshKey} onChanged={refreshAll} /> : <MemberLoansScreen refreshKey={refreshKey} onChanged={refreshAll} />)}
-        {tab === "payments" && <MemberPaymentsScreen refreshKey={refreshKey} onChanged={refreshAll} />}
-        {tab === "requests" && <AdminRequestsScreen refreshKey={refreshKey} onChanged={refreshAll} />}
+        {tab === "payments" && (user.role === "admin" ? <AdminPaymentsScreen refreshKey={refreshKey} onChanged={refreshAll} /> : <MemberPaymentsScreen refreshKey={refreshKey} onChanged={refreshAll} />)}
+        
         {tab === "audit" && <AdminAuditScreen refreshKey={refreshKey} onChanged={refreshAll} />}
         {tab === "members" && <AdminMembersScreen refreshKey={refreshKey} onChanged={refreshAll} />}
         {tab === "account" && <AccountScreen user={user} onSignOut={onSignOut} />}
@@ -934,6 +934,159 @@ function AdminLoansScreen({ refreshKey, onChanged }: { refreshKey: number; onCha
         </ModalSheet>
       </Modal>
     </View>  );
+}
+
+function AdminPaymentsScreen({ refreshKey, onChanged }: { refreshKey: number; onChanged: () => void }) {
+  const [weekStart, setWeekStart] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - date.getDay());
+    return date.toISOString().slice(0, 10);
+  });
+  const [weekly, setWeekly] = useState<any[]>([]);
+  const [submissions, setSubmissions] = useState<PaymentSubmission[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => { void load(); }, [refreshKey, weekStart]);
+
+  async function load(pull = false) {
+    if (pull) setRefreshing(true); else setLoading(true);
+    setError("");
+    try {
+      const [weeklyData, submissionData] = await Promise.all([
+        apiRequest<any>(`/api/payments/weekly?weekStart=${weekStart}`),
+        apiRequest<PaymentSubmission[]>("/api/payments/submissions"),
+      ]);
+      setWeekly(weeklyData.members ?? []);
+      setSubmissions(submissionData.filter((item) => item.payment_type === "Loan"));
+    } catch (e) {
+      setError(getErrorMessage(e));
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }
+
+  async function generateAll() {
+    Alert.alert("Generate weekly payments?", `Generate the remaining weekly dues for all members for week starting ${weekStart}?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Generate",
+        onPress: async () => {
+          setGenerating(true);
+          try {
+            await apiRequest("/api/payments/weekly/generate-all", {
+              method: "POST",
+              body: JSON.stringify({ weekStart, paidOn: new Date().toISOString().slice(0, 10) }),
+            });
+            Alert.alert("Generated", "Weekly payment records were generated for the selected week.");
+            onChanged();
+          } catch (e) {
+            Alert.alert("Unable to generate", getErrorMessage(e));
+          } finally {
+            setGenerating(false);
+          }
+        },
+      },
+    ]);
+  }
+
+  async function reviewPayment(item: PaymentSubmission, decision: "Confirmed" | "Rejected") {
+    try {
+      await apiRequest(`/api/payments/submissions/${item.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ decision }),
+      });
+      Alert.alert("Updated", decision === "Confirmed" ? "Payment confirmed." : "Payment rejected.");
+      onChanged();
+    } catch (e) {
+      Alert.alert("Unable to update", getErrorMessage(e));
+    }
+  }
+
+  const expected = weekly.reduce((sum, item) => sum + Number(item.due || 0), 0);
+  const recorded = weekly.reduce((sum, item) => sum + Number(item.paid || 0), 0);
+  const pending = submissions.filter((item) => String(item.status).toLowerCase() === "pending");
+
+  if (loading && !weekly.length && !submissions.length) return <ScreenLoader />;
+  if (error && !weekly.length && !submissions.length) return <ErrorState message={error} onRetry={() => void load()} />;
+
+  return (
+    <ScrollView
+      contentContainerStyle={styles.scrollContent}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} tintColor={BLUE} />}
+    >
+      <Text style={styles.sectionEyebrow}>PAYMENTS</Text>
+      <Text style={styles.pageTitle}>Payments</Text>
+      <Text style={styles.muted}>Manage weekly contributions and loan repayment submissions.</Text>
+
+      <InfoCard>
+        <Text style={styles.cardTitle}>Collection week</Text>
+        <Text style={styles.mutedSmall}>Select the Sunday used for weekly contribution records.</Text>
+        <TextInput
+          keyboardType="numbers-and-punctuation"
+          value={weekStart}
+          onChangeText={setWeekStart}
+          placeholder="YYYY-MM-DD"
+          placeholderTextColor="#94A3B8"
+          style={styles.input}
+        />
+        <PrimaryButton label="Generate weekly payment for all members" loading={generating} onPress={() => void generateAll()} />
+      </InfoCard>
+
+      <View style={styles.statGrid}>
+        <StatCard label="Expected" value={wholeCurrency(expected)} />
+        <StatCard label="Recorded" value={wholeCurrency(recorded)} />
+        <StatCard label="Members" value={String(weekly.length)} />
+        <StatCard label="Pending loan payments" value={String(pending.length)} />
+      </View>
+
+      <SectionHeader title="Loan repayment submissions" />
+      {submissions.map((item) => (
+        <InfoCard key={item.id}>
+          <View style={styles.rowBetween}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.cardTitle}>{wholeCurrency(item.amount)}</Text>
+              <Text style={styles.mutedSmall}>{item.member?.name ?? "Member"} · {dateLabel(item.submitted_at)}</Text>
+            </View>
+            <StatusPill status={item.status} />
+          </View>
+          <View style={styles.detailGrid}>
+            <Detail label="Paid on" value={dateLabel(item.paid_on)} />
+            <Detail label="Loan" value={item.loan_id ? `#${item.loan_id}` : "—"} />
+          </View>
+          {String(item.status).toLowerCase() === "pending" ? (
+            <View style={styles.actionRow}>
+              <ActionButton label="Confirm" onPress={() => void reviewPayment(item, "Confirmed")} />
+              <ActionButton label="Reject" secondary onPress={() => void reviewPayment(item, "Rejected")} />
+            </View>
+          ) : null}
+        </InfoCard>
+      ))}
+      {!submissions.length ? <EmptyState title="No loan repayment submissions" message="Member loan payment submissions will appear here." /> : null}
+
+      <SectionHeader title="Weekly member status" />
+      {weekly.slice(0, 50).map((item) => (
+        <InfoCard key={String(item.id)}>
+          <View style={styles.rowBetween}>
+            <View>
+              <Text style={styles.cardTitle}>{item.name}</Text>
+              <Text style={styles.mutedSmall}>{item.heads} head{Number(item.heads) === 1 ? "" : "s"}</Text>
+            </View>
+            <StatusPill status={Number(item.remaining || 0) <= 0 ? "Paid" : Number(item.paid || 0) > 0 ? "Partial" : "Unpaid"} />
+          </View>
+          <View style={styles.detailGrid}>
+            <Detail label="Due" value={wholeCurrency(item.due)} />
+            <Detail label="Recorded" value={wholeCurrency(item.paid)} />
+            <Detail label="Balance" value={wholeCurrency(item.remaining)} />
+          </View>
+        </InfoCard>
+      ))}
+      {!weekly.length ? <EmptyState title="No weekly records" message="Weekly contribution records will appear here." /> : null}
+    </ScrollView>
+  );
 }
 
 function AdminAuditScreen({ refreshKey, onChanged }: { refreshKey: number; onChanged: () => void }) {
