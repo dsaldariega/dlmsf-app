@@ -8,7 +8,7 @@ function memberEmail(name: string): string {
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ".")
+    .replace(/[^a-z0-9]+/g, "")
     .replace(/^\.+|\.+$/g, "");
   if (!slug) throw Object.assign(new Error("Member name cannot be converted into a login email."), { status: 400 });
   return `${slug}@test.com`;
