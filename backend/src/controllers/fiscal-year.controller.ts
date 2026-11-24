@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { createUserSupabaseClient } from "../config/supabase-user.js";
+import xlsx from "node-xlsx";
 
 function db(req: Request) {
   if (!req.accessToken) throw Object.assign(new Error("Authentication required"), { status: 401 });
@@ -167,18 +168,6 @@ export async function assignMemberToFiscalYear(req: Request, res: Response, next
   } catch (error) { next(error); }
 }
 
-function xmlEscape(value: unknown) {
-  return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
-function cell(value: unknown) {
-  const raw = value == null ? "" : String(value);
-  const type = typeof value === "number" && Number.isFinite(value) ? "Number" : "String";
-  return "<Cell><Data ss:Type=\"" + type + "\">" + xmlEscape(raw) + "</Data></Cell>";
-}
-function worksheet(name: string, headers: string[], rows: unknown[][]) {
-  return "<Worksheet ss:Name=\"" + xmlEscape(name.slice(0,31)) + "\"><Table><Row>" + headers.map(cell).join("") + "</Row>" + rows.map(row => "<Row>" + row.map(cell).join("") + "</Row>").join("") + "</Table></Worksheet>";
-}
-
 export async function exportFiscalYear(req: Request, res: Response, next: NextFunction) {
   try {
     const fiscalYearId = idParam(req.params.id);
@@ -186,7 +175,9 @@ export async function exportFiscalYear(req: Request, res: Response, next: NextFu
     const { data: fy, error: fyError } = await client.from("fiscal_years").select("*").eq("id", fiscalYearId).maybeSingle();
     if (fyError) throw fyError;
     if (!fy) throw Object.assign(new Error("Fiscal year not found."), { status: 404 });
-    const start = String(fy.start_date), end = String(fy.end_date);
+
+    const start = String(fy.start_date);
+    const end = String(fy.end_date);
     const [members, assignments, tiers, payments, allocations, loans, loanPayments, loanRequests, paymentSubmissions, loanAudit, paymentAudit, requestAudit] = await Promise.all([
       client.from("members").select("id,name,heads").order("id"),
       client.from("member_fiscal_years").select("member_id,tier_code,assigned_heads,assigned_at").eq("fiscal_year_id", fiscalYearId),
@@ -203,40 +194,68 @@ export async function exportFiscalYear(req: Request, res: Response, next: NextFu
     ]);
     for (const result of [members, assignments, tiers, payments, allocations, loans, loanPayments, loanRequests, paymentSubmissions, loanAudit, paymentAudit, requestAudit]) if (result.error) throw result.error;
 
-    const memberMap = new Map<number,string>((members.data ?? []).map((m:any) => [Number(m.id), String(m.name ?? "Member")]));
-    const assignmentMap = new Map<number,any>((assignments.data ?? []).map((a:any) => [Number(a.member_id), a]));
-    const rows = {
-      summary: [["Fiscal Year",fy.code],["Period",start+" to "+end],["Status",fy.status],["Members",members.data?.length??0],["Assigned Heads",(assignments.data??[]).reduce((s:any,a:any)=>s+Number(a.assigned_heads||0),0)],["Weekly Contributions",(allocations.data??[]).reduce((s:any,a:any)=>s+Number(a.amount||0),0)],["Loan Payments",(loanPayments.data??[]).reduce((s:any,a:any)=>s+Number(a.amount||0),0)],["Loan Requests",loanRequests.data?.length??0],["Loan Request Events",requestAudit.data?.length??0]],
-      members:(members.data??[]).map((m:any)=>[m.id,m.name,m.heads,assignmentMap.get(Number(m.id))?.tier_code??"",assignmentMap.get(Number(m.id))?.assigned_heads??"",assignmentMap.get(Number(m.id))?.assigned_at??""]),
-      tiers:(tiers.data??[]).map((t:any)=>[t.tier_code,t.display_name,t.enabled,t.max_heads_per_member,t.loan_eligible,t.loan_limit_mode,t.contribution_multiplier,t.max_loan_amount]),
-      contributions:(allocations.data??[]).map((r:any)=>[r.id,r.payment_submission_id,memberMap.get(Number(r.member_id)),r.member_id,r.week_start,r.amount,r.created_at]),
-      payments:(payments.data??[]).map((r:any)=>[r.id,memberMap.get(Number(r.member_id)),r.member_id,r.amount,r.week_start,r.created_at]),
-      loans:(loans.data??[]).map((r:any)=>[r.id,memberMap.get(Number(r.borrower_id)),r.borrower_id,r.amount,r.interest,r.total,r.monthly,r.status,r.months]),
-      loanPayments:(loanPayments.data??[]).map((r:any)=>[r.id,r.loan_id,memberMap.get(Number(r.member_id)),r.member_id,r.amount,r.paid_at,r.created_at]),
-      requests:(loanRequests.data??[]).map((r:any)=>[r.id,memberMap.get(Number(r.member_id)),r.member_id,r.amount,r.months,r.status,r.requested_at,r.reviewed_at,r.admin_remarks,r.loan_id]),
-      submissions:(paymentSubmissions.data??[]).map((r:any)=>[r.id,memberMap.get(Number(r.member_id)),r.member_id,r.payment_type,r.amount,r.paid_on,r.week_start,r.loan_id,r.reference,r.status,r.submitted_at,r.reviewed_at,r.admin_remarks]),
-      loanAudit:(loanAudit.data??[]).map((r:any)=>[r.id,r.action,r.member_id,r.borrower_name,r.amount,r.interest,r.total,r.monthly,r.months,r.created_date,r.ref_id,r.remarks]),
-      paymentAudit:(paymentAudit.data??[]).map((r:any)=>[r.id,r.action,r.member_id,r.amount,r.week_start,r.created_date,r.ref_id,r.remarks]),
-      requestAudit:(requestAudit.data??[]).map((r:any)=>[r.id,r.loan_request_id,r.member_id,r.amount,r.months,r.action,r.actor_role,r.remarks,r.created_at])
-    };
+    const memberMap = new Map<number, string>((members.data ?? []).map((m: any) => [Number(m.id), String(m.name ?? "Member")]));
+    const assignmentMap = new Map<number, any>((assignments.data ?? []).map((a: any) => [Number(a.member_id), a]));
 
-    const workbook = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><?mso-application progid=\"Excel.Sheet\"?><Workbook xmlns=\"urn:schemas-microsoft-com:office:spreadsheet\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:x=\"urn:schemas-microsoft-com:office:excel\" xmlns:ss=\"urn:schemas-microsoft-com:office:spreadsheet\">" +
-      worksheet("Summary",["Metric","Value"],rows.summary) +
-      worksheet("Members",["Member ID","Name","Current Heads","FY Tier","FY Heads","Assigned At"],rows.members) +
-      worksheet("Tier Settings",["Tier","Display Name","Enabled","Max Heads","Loan Eligible","Loan Limit Mode","Contribution Multiplier","Max Loan Amount"],rows.tiers) +
-      worksheet("Contributions",["ID","Submission ID","Member","Member ID","Week Start","Amount","Created At"],rows.contributions) +
-      worksheet("Payments",["ID","Member","Member ID","Amount","Week Start","Created At"],rows.payments) +
-      worksheet("Loans",["ID","Borrower","Member ID","Principal","Interest","Total","Monthly","Status","Months"],rows.loans) +
-      worksheet("Loan Payments",["ID","Loan ID","Member","Member ID","Amount","Paid At","Created At"],rows.loanPayments) +
-      worksheet("Loan Requests",["ID","Member","Member ID","Amount","Months","Status","Requested At","Reviewed At","Remarks","Loan ID"],rows.requests) +
-      worksheet("Payment Submissions",["ID","Member","Member ID","Type","Amount","Paid On","Week Start","Loan ID","Reference","Status","Submitted At","Reviewed At","Remarks"],rows.submissions) +
-      worksheet("Loan Audit",["ID","Action","Member ID","Borrower","Amount","Interest","Total","Monthly","Months","Created Date","Ref ID","Remarks"],rows.loanAudit) +
-      worksheet("Payment Audit",["ID","Action","Member ID","Amount","Week Start","Created Date","Ref ID","Remarks"],rows.paymentAudit) +
-      worksheet("Loan Request Audit",["ID","Request ID","Member ID","Amount","Months","Action","Actor Role","Remarks","Created At"],rows.requestAudit) +
-      "</Workbook>";
+    const sheets: Array<{ name: string; data: unknown[][] }> = [
+      { name: "Summary", data: [
+        ["Fiscal Year", fy.code], ["Period", start + " to " + end], ["Status", fy.status],
+        ["Members", members.data?.length ?? 0],
+        ["Assigned Heads", (assignments.data ?? []).reduce((s: number, a: any) => s + Number(a.assigned_heads || 0), 0)],
+        ["Weekly Contributions", (allocations.data ?? []).reduce((s: number, a: any) => s + Number(a.amount || 0), 0)],
+        ["Loan Payments", (loanPayments.data ?? []).reduce((s: number, a: any) => s + Number(a.amount || 0), 0)],
+        ["Loan Requests", loanRequests.data?.length ?? 0],
+        ["Loan Request Events", requestAudit.data?.length ?? 0]
+      ]},
+      { name: "Members", data: [
+        ["Member ID","Name","Current Heads","FY Tier","FY Heads","Assigned At"],
+        ...(members.data ?? []).map((m: any) => [m.id,m.name,m.heads,assignmentMap.get(Number(m.id))?.tier_code ?? "",assignmentMap.get(Number(m.id))?.assigned_heads ?? "",assignmentMap.get(Number(m.id))?.assigned_at ?? ""])
+      ]},
+      { name: "Tier Settings", data: [
+        ["Tier","Display Name","Enabled","Max Heads","Loan Eligible","Loan Limit Mode","Contribution Multiplier","Max Loan Amount"],
+        ...(tiers.data ?? []).map((t: any) => [t.tier_code,t.display_name,t.enabled,t.max_heads_per_member,t.loan_eligible,t.loan_limit_mode,t.contribution_multiplier,t.max_loan_amount])
+      ]},
+      { name: "Contributions", data: [
+        ["ID","Submission ID","Member","Member ID","Week Start","Amount","Created At"],
+        ...(allocations.data ?? []).map((r: any) => [r.id,r.payment_submission_id,memberMap.get(Number(r.member_id)),r.member_id,r.week_start,r.amount,r.created_at])
+      ]},
+      { name: "Payments", data: [
+        ["ID","Member","Member ID","Amount","Week Start","Created At"],
+        ...(payments.data ?? []).map((r: any) => [r.id,memberMap.get(Number(r.member_id)),r.member_id,r.amount,r.week_start,r.created_at])
+      ]},
+      { name: "Loans", data: [
+        ["ID","Borrower","Member ID","Principal","Interest","Total","Monthly","Status","Months"],
+        ...(loans.data ?? []).map((r: any) => [r.id,memberMap.get(Number(r.borrower_id)),r.borrower_id,r.amount,r.interest,r.total,r.monthly,r.status,r.months])
+      ]},
+      { name: "Loan Payments", data: [
+        ["ID","Loan ID","Member","Member ID","Amount","Paid At","Created At"],
+        ...(loanPayments.data ?? []).map((r: any) => [r.id,r.loan_id,memberMap.get(Number(r.member_id)),r.member_id,r.amount,r.paid_at,r.created_at])
+      ]},
+      { name: "Loan Requests", data: [
+        ["ID","Member","Member ID","Amount","Months","Status","Requested At","Reviewed At","Remarks","Loan ID"],
+        ...(loanRequests.data ?? []).map((r: any) => [r.id,memberMap.get(Number(r.member_id)),r.member_id,r.amount,r.months,r.status,r.requested_at,r.reviewed_at,r.admin_remarks,r.loan_id])
+      ]},
+      { name: "Payment Submissions", data: [
+        ["ID","Member","Member ID","Type","Amount","Paid On","Week Start","Loan ID","Reference","Status","Submitted At","Reviewed At","Remarks"],
+        ...(paymentSubmissions.data ?? []).map((r: any) => [r.id,memberMap.get(Number(r.member_id)),r.member_id,r.payment_type,r.amount,r.paid_on,r.week_start,r.loan_id,r.reference,r.status,r.submitted_at,r.reviewed_at,r.admin_remarks])
+      ]},
+      { name: "Loan Audit", data: [
+        ["ID","Action","Member ID","Borrower","Amount","Interest","Total","Monthly","Months","Created Date","Ref ID","Remarks"],
+        ...(loanAudit.data ?? []).map((r: any) => [r.id,r.action,r.member_id,r.borrower_name,r.amount,r.interest,r.total,r.monthly,r.months,r.created_date,r.ref_id,r.remarks])
+      ]},
+      { name: "Payment Audit", data: [
+        ["ID","Action","Member ID","Amount","Week Start","Created Date","Ref ID","Remarks"],
+        ...(paymentAudit.data ?? []).map((r: any) => [r.id,r.action,r.member_id,r.amount,r.week_start,r.created_date,r.ref_id,r.remarks])
+      ]},
+      { name: "Loan Request Audit", data: [
+        ["ID","Request ID","Member ID","Amount","Months","Action","Actor Role","Remarks","Created At"],
+        ...(requestAudit.data ?? []).map((r: any) => [r.id,r.loan_request_id,r.member_id,r.amount,r.months,r.action,r.actor_role,r.remarks,r.created_at])
+      ]}
+    ];
 
-    res.setHeader("Content-Type","application/vnd.ms-excel; charset=utf-8");
-    res.setHeader("Content-Disposition","attachment; filename=\"DLMSF-" + String(fy.code).replace(/[^A-Za-z0-9_-]/g,"_") + "-Activities.xls\"");
+    const workbook = xlsx.build(sheets.map((sheet) => ({ name: sheet.name, data: sheet.data })));
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", "attachment; filename=\"DLMSF-" + String(fy.code).replace(/[^A-Za-z0-9_-]/g, "_") + "-Activities.xlsx\"");
     res.send(workbook);
   } catch (error) { next(error); }
 }
