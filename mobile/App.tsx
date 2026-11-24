@@ -1605,7 +1605,7 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
 
       <Modal transparent visible={Boolean(modal)} animationType="none" onRequestClose={() => setModal(null)}>
         <ModalSheet title={modal === "create" ? "Add member" : "Edit member"} onClose={() => setModal(null)}>
-: (
+          {modal ? (
             <>
               <FieldLabel text="Name" />
               <TextInput onChangeText={setName} placeholder="Member name" placeholderTextColor="#94A3B8" style={styles.input} value={name} />
@@ -1620,7 +1620,7 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
               {modal === "create" ? <Text style={styles.helperText}>A linked Supabase login is created by the existing backend account workflow.</Text> : null}
               <PrimaryButton label={modal === "create" ? "Create member" : "Save changes"} loading={saving} onPress={() => void saveMember()} />
             </>
-          )}
+          ) : null}
         </ModalSheet>
       </Modal>
 
@@ -1675,7 +1675,11 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
 
   async function loadSettings(id: number) {
     const data = await apiRequest<FiscalYearSettings>(`/api/fiscal-years/${id}/settings`);
-    setSettings(data);
+    const orderedTiers = [...data.tiers].sort((left, right) => {
+      const order: Record<string, number> = { bronze: 0, silver: 1, gold: 2 };
+      return (order[left.tier_code.toLowerCase()] ?? 99) - (order[right.tier_code.toLowerCase()] ?? 99);
+    });
+    setSettings({ ...data, tiers: orderedTiers });
     setCode(data.fiscalYear.code);
     setStartDate(data.fiscalYear.start_date);
     setEndDate(data.fiscalYear.end_date);
@@ -2271,6 +2275,10 @@ const styles = StyleSheet.create({
   tabLabelActive: { color: BLUE },
   scrollContent: { paddingHorizontal: theme.spacing.page, paddingTop: 22, paddingBottom: 40, gap: theme.spacing.lg },
   listContent: { paddingHorizontal: theme.spacing.page, paddingTop: 22, paddingBottom: 40, gap: theme.spacing.lg },
+  memberListContent: { paddingHorizontal: theme.spacing.page, paddingTop: 22, paddingBottom: 40 },
+  memberCardSeparator: { height: theme.spacing.lg },
+  memberCardBody: { gap: theme.spacing.md },
+  memberIdentity: { gap: theme.spacing.xs },
   sectionEyebrow: { color: "#94A3B8", fontSize: 10, fontWeight: "900", letterSpacing: 1.6 },
   pageTitle: { color: DARK, fontSize: 29, lineHeight: 36, fontWeight: "800", letterSpacing: -0.65, marginTop: 6 },
   muted: { color: SLATE, fontSize: 13, lineHeight: 20, marginTop: 5 },
@@ -2378,7 +2386,9 @@ const styles = StyleSheet.create({
   reviewActions: { marginTop: 14, flexDirection: "row" },
   rejectButton: { borderWidth: 1, borderColor: "#CBD5E1", borderRadius: 9, minHeight: 40, paddingHorizontal: 16, alignItems: "center", justifyContent: "center" },
   rejectText: { color: "#1D4ED8", fontSize: 11, fontWeight: "800" },
-  memberActions: { flexDirection: "row", gap: theme.spacing.sm, alignItems: "center" },
+  memberActions: { flexDirection: "row", gap: theme.spacing.sm, alignItems: "center", paddingTop: theme.spacing.xs, borderTopWidth: 1, borderTopColor: BORDER },
+  memberActionButton: { flex: 1, minHeight: 42, backgroundColor: "#EFF6FF", borderRadius: 9, alignItems: "center", justifyContent: "center", paddingHorizontal: 9, paddingVertical: 8 },
+  memberActionButtonDelete: { flex: 1, minHeight: 42, backgroundColor: "#FEF2F2", borderRadius: 9, alignItems: "center", justifyContent: "center", paddingHorizontal: 9, paddingVertical: 8 },
   smallAction: { backgroundColor: "#EFF6FF", borderRadius: 8, paddingHorizontal: 9, paddingVertical: 7 },
   smallActionText: { color: "#1D4ED8", fontSize: 10, fontWeight: "800" },
   smallDelete: { backgroundColor: "#FEF2F2", borderRadius: 8, paddingHorizontal: 9, paddingVertical: 7 },

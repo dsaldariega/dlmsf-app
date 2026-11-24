@@ -25,6 +25,10 @@ function numericValue(value: unknown, label: string, min = 0) {
   if (!Number.isFinite(n) || n < min) throw Object.assign(new Error(label + " must be a valid number of at least " + min + "."), { status: 400 });
   return n;
 }
+function sortTiers<T extends { tier_code?: string }>(tiers: T[]) {
+  const order: Record<string, number> = { bronze: 0, silver: 1, gold: 2 };
+  return [...tiers].sort((left, right) => (order[String(left.tier_code ?? "").toLowerCase()] ?? 99) - (order[String(right.tier_code ?? "").toLowerCase()] ?? 99));
+}
 
 export async function getActiveFiscalYear(req: Request, res: Response, next: NextFunction) {
   try {
@@ -103,9 +107,9 @@ export async function createFiscalYear(req: Request, res: Response, next: NextFu
       await client.from("fiscal_years").delete().eq("id", fy.id);
       throw tierError;
     }
-    const { data: settings, error: settingsError } = await client.from("tier_settings").select("*").eq("fiscal_year_id", fy.id).order("tier_code");
+    const { data: settings, error: settingsError } = await client.from("tier_settings").select("*").eq("fiscal_year_id", fy.id);
     if (settingsError) throw settingsError;
-    res.status(201).json({ success: true, data: { fiscalYear: fy, tiers: settings }, message: "Active fiscal year created with configured Bronze, Silver, and Gold settings." });
+    res.status(201).json({ success: true, data: { fiscalYear: fy, tiers: sortTiers(settings ?? []) }, message: "Active fiscal year created with configured Bronze, Silver, and Gold settings." });
   } catch (error) { next(error); }
 }
 
@@ -171,12 +175,12 @@ export async function listFiscalYearSettings(req: Request, res: Response, next: 
     const client = db(req);
     const [fyResult, tiersResult, assignmentsResult] = await Promise.all([
       client.from("fiscal_years").select("*").eq("id", id).maybeSingle(),
-      client.from("tier_settings").select("*").eq("fiscal_year_id", id).order("tier_code"),
+      client.from("tier_settings").select("*").eq("fiscal_year_id", id),
       client.from("member_fiscal_years").select("*, member:members!member_fiscal_years_member_id_fkey(id,name,heads)").eq("fiscal_year_id", id).order("member_id")
     ]);
     for (const result of [fyResult, tiersResult, assignmentsResult]) if (result.error) throw result.error;
     if (!fyResult.data) throw Object.assign(new Error("Fiscal year not found."), { status: 404 });
-    res.json({ success: true, data: { fiscalYear: fyResult.data, tiers: tiersResult.data ?? [], assignments: assignmentsResult.data ?? [] } });
+    res.json({ success: true, data: { fiscalYear: fyResult.data, tiers: sortTiers(tiersResult.data ?? []), assignments: assignmentsResult.data ?? [] } });
   } catch (error) { next(error); }
 }
 
