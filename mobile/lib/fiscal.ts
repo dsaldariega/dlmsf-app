@@ -7,6 +7,10 @@ export type FiscalYear = {
   max_total_heads: number | null;
   max_heads_per_member: number | null;
   head_restrictions_enabled: boolean;
+  retention_months: number;
+  closed_at?: string | null;
+  exported_at?: string | null;
+  purged_at?: string | null;
   created_at: string;
   activated_at?: string | null;
 };

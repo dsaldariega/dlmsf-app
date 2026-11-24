@@ -3,7 +3,7 @@ import { authenticate } from "../middleware/auth.middleware.js";
 import { authorize } from "../middleware/role.middleware.js";
 import {
   listFiscalYears, createFiscalYear, updateFiscalYear, activateFiscalYear, closeFiscalYear,
-  listFiscalYearSettings, updateTierSetting, assignMemberToFiscalYear, exportFiscalYear
+  listFiscalYearSettings, updateTierSetting, assignMemberToFiscalYear, exportFiscalYear, purgeFiscalYear
 } from "../controllers/fiscal-year.controller.js";
 
 const router = Router();
@@ -18,4 +18,5 @@ router.get("/:id/settings", listFiscalYearSettings);
 router.patch("/:id/tiers/:tierCode", updateTierSetting);
 router.put("/:id/members/:memberId", assignMemberToFiscalYear);
 router.get("/:id/export", exportFiscalYear);
+router.post("/:id/purge", purgeFiscalYear);
 export default router;

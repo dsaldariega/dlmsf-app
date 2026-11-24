@@ -76,3 +76,14 @@ The admin mobile workflow now supports FY-based membership classification and ye
 - Export a selected FY as an XLSX workbook containing yearly summaries, members, tier settings, contributions, payments, loans, loan payments, requests, submissions, and audit records.
 
 The FY configuration is additive to the existing member and transaction tables, so historical transaction records are not rewritten when a member's tier changes in a later FY.
+
+
+### Fiscal year setup, retention, and archive cleanup
+
+- Admin creates an FY from Settings → Fiscal Year Management.
+- Bronze, Silver, and Gold are configured before the draft FY is created. Each tier supports enablement, per-member head cap, loan eligibility, loan-limit mode, contribution multiplier, and optional maximum loan amount.
+- FY-wide total-head and per-member limits are configured in the same wizard, followed by a review summary.
+- Retention defaults to 3 months after closure and is configurable from 3 to 60 months while the FY remains a draft.
+- Member tier/head evaluations are fresh each FY; previous assignments are not carried forward automatically.
+- Activation locks FY and tier settings as a historical snapshot.
+- Exports are recorded by the API. After the retention period, an administrator can type the exact confirmation phrase to request cleanup. FY/tier/member assignment metadata and loan contracts/repayment history are retained; any ongoing loan blocks cleanup.

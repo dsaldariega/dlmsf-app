@@ -41,26 +41,50 @@ export async function createFiscalYear(req: Request, res: Response, next: NextFu
     const endDate = dateValue(req.body?.endDate, "End date");
     const maxTotalHeads = req.body?.maxTotalHeads === null || req.body?.maxTotalHeads === undefined || req.body?.maxTotalHeads === "" ? null : integerValue(req.body.maxTotalHeads, "Maximum total heads");
     const maxHeadsPerMember = req.body?.maxHeadsPerMember === null || req.body?.maxHeadsPerMember === undefined || req.body?.maxHeadsPerMember === "" ? null : integerValue(req.body.maxHeadsPerMember, "Maximum heads per member");
+    const retentionMonths = req.body?.retentionMonths === undefined ? 3 : integerValue(req.body.retentionMonths, "Retention months", 3);
+    if (retentionMonths > 60) throw Object.assign(new Error("Retention months cannot exceed 60."), { status: 400 });
+    const tierInput = Array.isArray(req.body?.tiers) ? req.body.tiers : null;
     if (!code || code.length > 40) throw Object.assign(new Error("Fiscal year code is required and must be 40 characters or fewer."), { status: 400 });
     if (startDate > endDate) throw Object.assign(new Error("Start date must be before or equal to end date."), { status: 400 });
 
     const client = db(req);
     const { data: fy, error } = await client.from("fiscal_years").insert({
       code, start_date: startDate, end_date: endDate, max_total_heads: maxTotalHeads,
-      max_heads_per_member: maxHeadsPerMember, head_restrictions_enabled: req.body?.headRestrictionsEnabled !== false
+      max_heads_per_member: maxHeadsPerMember, head_restrictions_enabled: req.body?.headRestrictionsEnabled !== false,
+      retention_months: retentionMonths
     }).select("*").single();
     if (error) throw error;
 
-    const tiers = [
-      { fiscal_year_id: fy.id, tier_code: "bronze", display_name: "Bronze", enabled: true, max_heads_per_member: maxHeadsPerMember, loan_eligible: true, loan_limit_mode: "contributions_only", contribution_multiplier: 1, max_loan_amount: null },
-      { fiscal_year_id: fy.id, tier_code: "silver", display_name: "Silver", enabled: true, max_heads_per_member: maxHeadsPerMember, loan_eligible: true, loan_limit_mode: "tier_maximum", contribution_multiplier: 1.25, max_loan_amount: null },
-      { fiscal_year_id: fy.id, tier_code: "gold", display_name: "Gold", enabled: true, max_heads_per_member: maxHeadsPerMember, loan_eligible: true, loan_limit_mode: "tier_maximum", contribution_multiplier: 2, max_loan_amount: null }
+    const defaults = [
+      { tierCode: "bronze", displayName: "Bronze", enabled: true, loanEligible: true, loanLimitMode: "contributions_only", contributionMultiplier: 1, maxLoanAmount: null },
+      { tierCode: "silver", displayName: "Silver", enabled: true, loanEligible: true, loanLimitMode: "tier_maximum", contributionMultiplier: 1.25, maxLoanAmount: null },
+      { tierCode: "gold", displayName: "Gold", enabled: true, loanEligible: true, loanLimitMode: "tier_maximum", contributionMultiplier: 2, maxLoanAmount: null }
     ];
+    const configured = tierInput ?? defaults;
+    const codes = ["bronze", "silver", "gold"];
+    if (configured.length !== 3 || codes.some((code) => !configured.some((tier: any) => tier?.tierCode === code))) {
+      await client.from("fiscal_years").delete().eq("id", fy.id);
+      throw Object.assign(new Error("Bronze, Silver, and Gold must each be configured exactly once."), { status: 400 });
+    }
+    const tiers = configured.map((tier: any) => {
+      if (!codes.includes(tier.tierCode) || !["contributions_only", "tier_maximum", "unlimited"].includes(tier.loanLimitMode)) throw Object.assign(new Error("Invalid tier configuration."), { status: 400 });
+      return {
+        fiscal_year_id: fy.id, tier_code: tier.tierCode, display_name: tier.displayName,
+        enabled: Boolean(tier.enabled),
+        max_heads_per_member: tier.maxHeadsPerMember === null || tier.maxHeadsPerMember === "" || tier.maxHeadsPerMember === undefined ? maxHeadsPerMember : integerValue(tier.maxHeadsPerMember, "Tier maximum heads"),
+        loan_eligible: Boolean(tier.loanEligible), loan_limit_mode: tier.loanLimitMode,
+        contribution_multiplier: numericValue(tier.contributionMultiplier ?? 1, "Contribution multiplier"),
+        max_loan_amount: tier.maxLoanAmount === null || tier.maxLoanAmount === "" || tier.maxLoanAmount === undefined ? null : numericValue(tier.maxLoanAmount, "Maximum loan amount")
+      };
+    });
     const { error: tierError } = await client.from("tier_settings").insert(tiers);
-    if (tierError) throw tierError;
+    if (tierError) {
+      await client.from("fiscal_years").delete().eq("id", fy.id);
+      throw tierError;
+    }
     const { data: settings, error: settingsError } = await client.from("tier_settings").select("*").eq("fiscal_year_id", fy.id).order("tier_code");
     if (settingsError) throw settingsError;
-    res.status(201).json({ success: true, data: { fiscalYear: fy, tiers: settings }, message: "Fiscal year created with default Bronze, Silver, and Gold settings." });
+    res.status(201).json({ success: true, data: { fiscalYear: fy, tiers: settings }, message: "Draft fiscal year created with configured Bronze, Silver, and Gold settings." });
   } catch (error) { next(error); }
 }
 
@@ -82,6 +106,11 @@ export async function updateFiscalYear(req: Request, res: Response, next: NextFu
     if (req.body?.maxTotalHeads !== undefined) updates.max_total_heads = req.body.maxTotalHeads === null || req.body.maxTotalHeads === "" ? null : integerValue(req.body.maxTotalHeads, "Maximum total heads");
     if (req.body?.maxHeadsPerMember !== undefined) updates.max_heads_per_member = req.body.maxHeadsPerMember === null || req.body.maxHeadsPerMember === "" ? null : integerValue(req.body.maxHeadsPerMember, "Maximum heads per member");
     if (req.body?.headRestrictionsEnabled !== undefined) updates.head_restrictions_enabled = Boolean(req.body.headRestrictionsEnabled);
+    if (req.body?.retentionMonths !== undefined) {
+      const months = integerValue(req.body.retentionMonths, "Retention months", 3);
+      if (months > 60) throw Object.assign(new Error("Retention months cannot exceed 60."), { status: 400 });
+      updates.retention_months = months;
+    }
     if (!Object.keys(updates).length) throw Object.assign(new Error("No fiscal year changes were provided."), { status: 400 });
     const { data, error } = await db(req).from("fiscal_years").update(updates).eq("id", id).select("*").maybeSingle();
     if (error) throw error;
@@ -109,7 +138,7 @@ export async function activateFiscalYear(req: Request, res: Response, next: Next
 export async function closeFiscalYear(req: Request, res: Response, next: NextFunction) {
   try {
     const id = idParam(req.params.id);
-    const { data, error } = await db(req).from("fiscal_years").update({ status: "closed" }).eq("id", id).select("*").maybeSingle();
+    const { data, error } = await db(req).from("fiscal_years").update({ status: "closed", closed_at: new Date().toISOString() }).eq("id", id).select("*").maybeSingle();
     if (error) throw error;
     if (!data) throw Object.assign(new Error("Fiscal year not found."), { status: 404 });
     res.json({ success: true, data, message: "Fiscal year closed." });
@@ -264,8 +293,25 @@ export async function exportFiscalYear(req: Request, res: Response, next: NextFu
     ];
 
     const workbook = xlsx.build(sheets.map((sheet) => ({ name: sheet.name, data: sheet.data })));
+    const { error: exportMarkError } = await client.from("fiscal_years").update({ exported_at: new Date().toISOString() }).eq("id", fiscalYearId);
+    if (exportMarkError) throw exportMarkError;
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     res.setHeader("Content-Disposition", "attachment; filename=\"DLMSF-" + String(fy.code).replace(/[^A-Za-z0-9_-]/g, "_") + "-Activities.xlsx\"");
     res.send(workbook);
+  } catch (error) { next(error); }
+}
+
+
+export async function purgeFiscalYear(req: Request, res: Response, next: NextFunction) {
+  try {
+    const fiscalYearId = idParam(req.params.id);
+    const confirmation = typeof req.body?.confirmation === "string" ? req.body.confirmation.trim() : "";
+    if (!confirmation) throw Object.assign(new Error("Type the required purge confirmation phrase."), { status: 400 });
+    const { data, error } = await db(req).rpc("purge_fiscal_year_transactions", {
+      p_fiscal_year_id: fiscalYearId,
+      p_confirmation: confirmation,
+    });
+    if (error) throw error;
+    res.json({ success: true, data, message: "Fiscal-year transaction cleanup completed." });
   } catch (error) { next(error); }
 }

@@ -1607,6 +1607,10 @@ function AdminFiscalSettingsScreen({ refreshKey, onClose, onChanged }: { refresh
   const [maxTotalHeads, setMaxTotalHeads] = useState("");
   const [maxHeadsPerMember, setMaxHeadsPerMember] = useState("");
   const [headRestrictionsEnabled, setHeadRestrictionsEnabled] = useState(true);
+  const [retentionMonths, setRetentionMonths] = useState("3");
+  const [purgeConfirmation, setPurgeConfirmation] = useState("");
+  const [showPurge, setShowPurge] = useState(false);
+  const [draftTiers, setDraftTiers] = useState<DraftTier[]>(createDefaultDraftTiers());
 
   useEffect(() => { void loadYears(); }, [refreshKey]);
 
@@ -1632,6 +1636,7 @@ function AdminFiscalSettingsScreen({ refreshKey, onClose, onChanged }: { refresh
     setMaxTotalHeads(data.fiscalYear.max_total_heads == null ? "" : String(data.fiscalYear.max_total_heads));
     setMaxHeadsPerMember(data.fiscalYear.max_heads_per_member == null ? "" : String(data.fiscalYear.max_heads_per_member));
     setHeadRestrictionsEnabled(data.fiscalYear.head_restrictions_enabled);
+    setRetentionMonths(String(data.fiscalYear.retention_months ?? 3));
   }
 
   async function saveFiscalYear() {
@@ -1643,6 +1648,7 @@ function AdminFiscalSettingsScreen({ refreshKey, onClose, onChanged }: { refresh
         maxTotalHeads: maxTotalHeads === "" ? null : Number(maxTotalHeads),
         maxHeadsPerMember: maxHeadsPerMember === "" ? null : Number(maxHeadsPerMember),
         headRestrictionsEnabled,
+        retentionMonths: Number(retentionMonths),
       })});
       await loadYears(); onChanged();
       Alert.alert("Saved", "Fiscal year settings updated.");
@@ -1683,6 +1689,14 @@ function AdminFiscalSettingsScreen({ refreshKey, onClose, onChanged }: { refresh
           maxTotalHeads: maxTotalHeads === "" ? null : Number(maxTotalHeads),
           maxHeadsPerMember: maxHeadsPerMember === "" ? null : Number(maxHeadsPerMember),
           headRestrictionsEnabled,
+          retentionMonths: Number(retentionMonths),
+          tiers: draftTiers.map((tier) => ({
+            tierCode: tier.tierCode, displayName: tier.displayName, enabled: tier.enabled,
+            maxHeadsPerMember: tier.maxHeadsPerMember === "" ? (maxHeadsPerMember === "" ? null : Number(maxHeadsPerMember)) : Number(tier.maxHeadsPerMember),
+            loanEligible: tier.loanEligible, loanLimitMode: tier.loanLimitMode,
+            contributionMultiplier: Number(tier.contributionMultiplier || 1),
+            maxLoanAmount: tier.maxLoanAmount === "" ? null : Number(tier.maxLoanAmount),
+          })),
         })
       });
       setShowCreate(false);
@@ -1718,14 +1732,27 @@ function AdminFiscalSettingsScreen({ refreshKey, onClose, onChanged }: { refresh
         const message = await response.text();
         throw new Error(message || "Unable to export fiscal year activities.");
       }
-      const workbook = await response.text();
+      const workbook = new Uint8Array(await response.arrayBuffer());
       const file = new File(Paths.cache, `DLMSF-${settings.fiscalYear.code}-Activities.xlsx`);
       if (file.exists) file.delete();
       await file.write(workbook);
       if (!(await Sharing.isAvailableAsync())) throw new Error("File sharing is not available on this device.");
       await Sharing.shareAsync(file.uri, { dialogTitle: "Export DLMSF fiscal year", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      if (selectedId) await loadSettings(selectedId);
     } catch (e) { Alert.alert("Unable to export", getErrorMessage(e)); }
     finally { setExporting(false); }
+  }
+
+  async function purgeYear() {
+    if (!selectedId) return;
+    setSaving(true);
+    try {
+      await apiRequest(`/api/fiscal-years/${selectedId}/purge`, { method: "POST", body: JSON.stringify({ confirmation: purgeConfirmation.trim() }) });
+      setShowPurge(false); setPurgeConfirmation("");
+      await loadYears(); onChanged();
+      Alert.alert("Purge completed", "Eligible activity was purged. FY configuration and member assignments remain.");
+    } catch (e) { Alert.alert("Unable to purge", getErrorMessage(e)); }
+    finally { setSaving(false); }
   }
 
   if (loading && !settings) return <ScreenLoader />;
@@ -1738,7 +1765,7 @@ function AdminFiscalSettingsScreen({ refreshKey, onClose, onChanged }: { refresh
       </View>
       <ScrollView contentContainerStyle={styles.modalContent}>
         <PrimaryButton label="Create new fiscal year" onPress={() => {
-          setCode(""); setStartDate(""); setEndDate(""); setMaxTotalHeads(""); setMaxHeadsPerMember(""); setHeadRestrictionsEnabled(true); setShowCreate(true);
+          setCode(""); setStartDate(""); setEndDate(""); setMaxTotalHeads(""); setMaxHeadsPerMember(""); setHeadRestrictionsEnabled(true); setRetentionMonths("3"); setDraftTiers(createDefaultDraftTiers()); setShowCreate(true);
         }} />
         {fiscalYears.length ? (
           <>
@@ -1760,6 +1787,7 @@ function AdminFiscalSettingsScreen({ refreshKey, onClose, onChanged }: { refresh
                     {settings.fiscalYear.status === "draft" ? <ActionButton label="Activate" onPress={() => void changeStatus("activate")} disabled={saving} /> : null}
                     {settings.fiscalYear.status === "active" ? <ActionButton label="Close FY" secondary onPress={() => void changeStatus("close")} disabled={saving} /> : null}
                     <ActionButton label={exporting ? "Exporting…" : "Export Excel"} secondary onPress={() => void exportYear()} disabled={exporting} />
+                    {settings.fiscalYear.status === "closed" && !settings.fiscalYear.purged_at ? <ActionButton label="Review purge" secondary onPress={() => { setPurgeConfirmation(""); setShowPurge(true); }} disabled={!settings.fiscalYear.exported_at} /> : null}
                   </View>
                 </InfoCard>
                 <SectionHeader title="Head allocation" />
@@ -1770,6 +1798,9 @@ function AdminFiscalSettingsScreen({ refreshKey, onClose, onChanged }: { refresh
                 <TouchableOpacity onPress={() => setHeadRestrictionsEnabled((v) => !v)} style={styles.toggleRow}>
                   <Text style={styles.cardTitle}>Enforce head restrictions</Text><Text style={styles.toggleText}>{headRestrictionsEnabled ? "ON" : "OFF"}</Text>
                 </TouchableOpacity>
+                <FieldLabel text="Historical retention after closing (months)" />
+                <TextInput keyboardType="numeric" onChangeText={setRetentionMonths} style={styles.input} value={retentionMonths} editable={settings.fiscalYear.status === "draft"} />
+                <Text style={styles.helperText}>Minimum 3 months. Retention is fixed when the FY is activated.</Text>
                 <PrimaryButton label="Save FY settings" loading={saving} onPress={() => void saveFiscalYear()} />
                 <SectionHeader title="Tier privileges" />
                 {settings.tiers.map((tierSetting) => (
@@ -1796,11 +1827,60 @@ function AdminFiscalSettingsScreen({ refreshKey, onClose, onChanged }: { refresh
           <TouchableOpacity onPress={() => setHeadRestrictionsEnabled((v) => !v)} style={styles.toggleRow}>
             <Text style={styles.cardTitle}>Enforce head restrictions</Text><Text style={styles.toggleText}>{headRestrictionsEnabled ? "ON" : "OFF"}</Text>
           </TouchableOpacity>
-          <PrimaryButton label="Create fiscal year" loading={saving} onPress={() => void createYear()} />
+          <FieldLabel text="Historical retention after closing (months)" />
+          <TextInput keyboardType="numeric" onChangeText={setRetentionMonths} style={styles.input} value={retentionMonths} />
+          <Text style={styles.helperText}>Default is 3 months. Minimum retention is 3 months.</Text>
+          <SectionHeader title="Configure Bronze, Silver, and Gold" />
+          <Text style={styles.helperText}>Complete tier rules before creating this draft. Activated settings become read-only.</Text>
+          {draftTiers.map((tier, index) => <DraftTierSettingsCard key={tier.tierCode} tier={tier} onChange={(next) => setDraftTiers((current) => current.map((item, i) => i === index ? next : item))} />)}
+          <SectionHeader title="Review configuration" />
+          <InfoCard>
+            <Text style={styles.cardTitle}>{code.trim() || "Fiscal year code not entered"}</Text>
+            <Text style={styles.mutedSmall}>{startDate || "Start date"} → {endDate || "End date"}</Text>
+            <Text style={styles.mutedSmall}>Retention: {retentionMonths || "3"} months after closure</Text>
+            {draftTiers.map((tier) => <Text key={tier.tierCode} style={styles.mutedSmall}>{tier.displayName}: {tier.enabled ? "Enabled" : "Disabled"} · {tier.loanEligible ? "Loan eligible" : "Not loan eligible"} · {tier.loanLimitMode}</Text>)}
+          </InfoCard>
+          <PrimaryButton label="Create draft fiscal year" loading={saving} onPress={() => void createYear()} />
+        </ModalSheet>
+      </Modal>
+      <Modal transparent visible={showPurge} animationType="slide" onRequestClose={() => setShowPurge(false)}>
+        <ModalSheet title="Purge fiscal-year activity" onClose={() => setShowPurge(false)}>
+          <Text style={styles.modalLead}>This permanently removes eligible transaction and activity rows. FY rules and member assignments remain. Any ongoing loan blocks cleanup; loan contracts and repayment history are retained.</Text>
+          <FieldLabel text={`Type PURGE ${settings?.fiscalYear.code ?? ""} to confirm`} />
+          <TextInput autoCapitalize="characters" onChangeText={setPurgeConfirmation} value={purgeConfirmation} style={styles.input} placeholder={`PURGE ${settings?.fiscalYear.code ?? "FY"}`} placeholderTextColor="#94A3B8" />
+          <PrimaryButton label="Permanently purge eligible activity" loading={saving} disabled={purgeConfirmation.trim() !== `PURGE ${settings?.fiscalYear.code ?? ""}`} onPress={() => void purgeYear()} />
         </ModalSheet>
       </Modal>
     </View>
   );
+}
+
+type DraftTier = {
+  tierCode: "bronze" | "silver" | "gold"; displayName: string; enabled: boolean; maxHeadsPerMember: string;
+  loanEligible: boolean; loanLimitMode: "contributions_only" | "tier_maximum" | "unlimited"; contributionMultiplier: string; maxLoanAmount: string;
+};
+function createDefaultDraftTiers(): DraftTier[] {
+  return [
+    { tierCode: "bronze", displayName: "Bronze", enabled: true, maxHeadsPerMember: "", loanEligible: true, loanLimitMode: "contributions_only", contributionMultiplier: "1", maxLoanAmount: "" },
+    { tierCode: "silver", displayName: "Silver", enabled: true, maxHeadsPerMember: "", loanEligible: true, loanLimitMode: "tier_maximum", contributionMultiplier: "1.25", maxLoanAmount: "" },
+    { tierCode: "gold", displayName: "Gold", enabled: true, maxHeadsPerMember: "", loanEligible: true, loanLimitMode: "tier_maximum", contributionMultiplier: "2", maxLoanAmount: "" },
+  ];
+}
+function DraftTierSettingsCard({ tier, onChange }: { tier: DraftTier; onChange: (tier: DraftTier) => void }) {
+  const patch = (values: Partial<DraftTier>) => onChange({ ...tier, ...values });
+  return <InfoCard>
+    <View style={styles.rowBetween}>
+      <Text style={styles.cardTitle}>{tier.displayName}</Text>
+      <TouchableOpacity onPress={() => patch({ enabled: !tier.enabled })} style={styles.toggleRowCompact}><Text style={styles.toggleText}>{tier.enabled ? "ENABLED" : "DISABLED"}</Text></TouchableOpacity>
+    </View>
+    <TouchableOpacity onPress={() => patch({ loanEligible: !tier.loanEligible })} style={styles.toggleRow}><Text style={styles.cardTitle}>Loan eligibility</Text><Text style={styles.toggleText}>{tier.loanEligible ? "ON" : "OFF"}</Text></TouchableOpacity>
+    <FieldLabel text="Maximum heads per member" />
+    <TextInput keyboardType="numeric" value={tier.maxHeadsPerMember} onChangeText={(v) => patch({ maxHeadsPerMember: v })} placeholder="Use FY-wide limit" placeholderTextColor="#94A3B8" style={styles.input} />
+    <FieldLabel text="Loan limit mode" />
+    <View style={styles.modePicker}>{(["contributions_only","tier_maximum","unlimited"] as const).map((mode) => <TouchableOpacity key={mode} onPress={() => patch({ loanLimitMode: mode })} style={[styles.modeOption, tier.loanLimitMode === mode && styles.modeOptionActive]}><Text style={[styles.modeOptionText, tier.loanLimitMode === mode && styles.modeOptionTextActive]}>{mode === "contributions_only" ? "Paid only" : mode === "tier_maximum" ? "Multiplier" : "Unlimited"}</Text></TouchableOpacity>)}</View>
+    {tier.loanLimitMode === "tier_maximum" ? <><FieldLabel text="Contribution multiplier" /><TextInput keyboardType="decimal-pad" value={tier.contributionMultiplier} onChangeText={(v) => patch({ contributionMultiplier: v })} style={styles.input} /></> : null}
+    {tier.loanLimitMode !== "contributions_only" ? <><FieldLabel text="Maximum loan amount (optional)" /><TextInput keyboardType="numeric" value={tier.maxLoanAmount} onChangeText={(v) => patch({ maxLoanAmount: v })} placeholder="No fixed cap" placeholderTextColor="#94A3B8" style={styles.input} /></> : null}
+  </InfoCard>;
 }
 
 function TierSettingsCard({ tier, saving, onSave }: { tier: TierSetting; saving: boolean; onSave: (tier: TierSetting) => Promise<void> }) {
