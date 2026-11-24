@@ -4,6 +4,7 @@
 alter table public.tier_settings drop constraint if exists tier_settings_loan_limit_mode_check;
 update public.tier_settings
 set loan_limit_mode = case
+  when tier_code = 'bronze' then 'total_contribution'
   when loan_limit_mode = 'contributions_only' then 'member_contribution'
   else 'total_contribution'
 end,
