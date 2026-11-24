@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -94,6 +94,79 @@ const WHITE = theme.colors.white;
 const GREEN = theme.colors.success;
 const RED = theme.colors.danger;
 const AMBER = theme.colors.warning;
+
+type ToastVariant = "success" | "error" | "info";
+type ToastState = { message: string; variant: ToastVariant };
+
+const ToastContext = createContext<((message: string, variant?: ToastVariant) => void) | null>(null);
+
+function ToastProvider({ children }: { children: ReactNode }) {
+  const [toast, setToast] = useState<ToastState | null>(null);
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(-12)).current;
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function showToast(message: string, variant: ToastVariant = "success") {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setToast({ message, variant });
+  }
+
+  useEffect(() => {
+    if (!toast) return;
+
+    Animated.parallel([
+      Animated.timing(opacity, { toValue: 1, duration: 180, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 220, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+    ]).start();
+
+    timerRef.current = setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(opacity, { toValue: 0, duration: 160, easing: Easing.in(Easing.ease), useNativeDriver: true }),
+        Animated.timing(translateY, { toValue: -12, duration: 160, easing: Easing.in(Easing.ease), useNativeDriver: true }),
+      ]).start(({ finished }) => {
+        if (finished) setToast(null);
+      });
+    }, 2400);
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [toast, opacity, translateY]);
+
+  const palette = toast?.variant === "error"
+    ? { backgroundColor: "#FEF2F2", borderColor: "#FECACA", iconBackground: "#FEE2E2", iconColor: RED, icon: "!" }
+    : toast?.variant === "info"
+      ? { backgroundColor: "#EFF6FF", borderColor: "#BFDBFE", iconBackground: "#DBEAFE", iconColor: BLUE, icon: "i" }
+      : { backgroundColor: "#F0FDF4", borderColor: "#BBF7D0", iconBackground: "#DCFCE7", iconColor: GREEN, icon: "✓" };
+
+  return (
+    <ToastContext.Provider value={showToast}>
+      <View style={styles.toastProvider}>
+        {children}
+        {toast ? (
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.toast,
+              { opacity, transform: [{ translateY }], backgroundColor: palette.backgroundColor, borderColor: palette.borderColor },
+            ]}
+          >
+            <View style={[styles.toastIcon, { backgroundColor: palette.iconBackground }]}>
+              <Text style={[styles.toastIconText, { color: palette.iconColor }]}>{palette.icon}</Text>
+            </View>
+            <Text style={styles.toastMessage}>{toast.message}</Text>
+          </Animated.View>
+        ) : null}
+      </View>
+    </ToastContext.Provider>
+  );
+}
+
+function useToast() {
+  const showToast = useContext(ToastContext);
+  if (!showToast) throw new Error("useToast must be used inside ToastProvider.");
+  return showToast;
+}
 
 function AppContent() {
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
@@ -924,6 +997,7 @@ function AdminLoansScreen({ refreshKey, onChanged }: { refreshKey: number; onCha
       data={loans}
       keyExtractor={(item) => String(item.id)}
       contentContainerStyle={styles.listContent}
+      ItemSeparatorComponent={() => <View style={styles.cardSeparator} />}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} tintColor={BLUE} />}
       ListHeaderComponent={
         <View>
@@ -1462,8 +1536,17 @@ function TierBadge({ tier, detail }: { tier: string; detail?: string }) {
   );
 }
 
+function tierCardStyle(tier?: string | null) {
+  const code = String(tier ?? "").toLowerCase();
+  if (code === "gold") return { backgroundColor: "#FFFDF5", borderColor: "#E8C45B" };
+  if (code === "silver") return { backgroundColor: "#FAFBFC", borderColor: "#CBD5E1" };
+  if (code === "bronze") return { backgroundColor: "#FDF8F4", borderColor: "#D7A17D" };
+  return {};
+}
+
 function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onChanged: () => void }) {
-  const [members, setMembers] = useState<Member[]>([]);
+  const showToast = useToast();
+  const [members, setMembers = useState<Member[]>([]);
   const [fiscalYears, setFiscalYears] = useState<FiscalYear[]>([]);
   const [activeFiscalYear, setActiveFiscalYear] = useState<FiscalYear | null>(null);
   const [assignments, setAssignments] = useState<Record<number, { tier_code: string; assigned_heads: number }>>({});
@@ -1535,7 +1618,7 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
         Alert.alert("Member created", `Login: ${result.loginEmail}\nTemporary password: ${result.temporaryPassword}\n\nShare these credentials securely with the member.`);
       } else if (selected) {
         await apiRequest(`/api/members/${selected.id}`, { method: "PATCH", body: JSON.stringify({ name: trimmed, heads: headCount }) });
-        Alert.alert("Member updated", "The member profile has been updated.");
+        showToast("Member updated");
       }
       if (activeFiscalYear && memberId) {
         await apiRequest(`/api/fiscal-years/${activeFiscalYear.id}/members/${memberId}`, {
@@ -1570,6 +1653,7 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
         data={members}
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={styles.memberListContent}
+        ItemSeparatorComponent={() => <View style={styles.cardSeparator} />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} tintColor={BLUE} />}
         ListHeaderComponent={
           <View>
@@ -1584,30 +1668,33 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
         }
         renderItem={({ item }) => {
           const assignment = assignments[item.id];
+          const weeklyContribution = assignment ? Number(assignment.assigned_heads) * 50 : 0;
           return (
-            <View style={styles.memberCardItem}>
-              <InfoCard>
-                <View style={styles.memberCardBody}>
-                  <View style={styles.memberTopRow}>
-                    <View style={styles.memberIdentity}>
-                      <Text style={styles.cardTitle}>{item.name}</Text>
-                    </View>
-                    {activeFiscalYear && assignment ? <TierBadge tier={assignment.tier_code} /> : null}
-                  </View>
-
-                  {activeFiscalYear && assignment ? (
-                    <Text style={styles.tierMeta}>{assignment.assigned_heads} {assignment.assigned_heads === 1 ? "head" : "heads"}</Text>
-                  ) : (
-                    <Text style={styles.tierMeta}>Not assigned to the active FY</Text>
-                  )}
-
-                  <View style={styles.memberActions}>
-                    <TouchableOpacity onPress={() => openEdit(item)} style={styles.memberActionButton}><Text style={styles.smallActionText}>Edit</Text></TouchableOpacity>
-                    <TouchableOpacity onPress={() => confirmDelete(item)} style={styles.memberActionButtonDelete}><Text style={styles.smallDeleteText}>Delete</Text></TouchableOpacity>
-                  </View>
+            <InfoCard style={tierCardStyle(assignment?.tier_code)}>
+              <View style={styles.memberCardBody}>
+                <View style={styles.memberTopRow}>
+                  <Text style={styles.cardTitle}>{item.name}</Text>
+                  {activeFiscalYear && assignment ? <TierBadge tier={assignment.tier_code} /> : null}
                 </View>
-              </InfoCard>
-            </View>
+
+                {activeFiscalYear && assignment ? (
+                  <View style={styles.memberContributionRow}>
+                    <Text style={styles.tierMeta}>{assignment.assigned_heads} {assignment.assigned_heads === 1 ? "head" : "heads"}</Text>
+                    <View style={styles.weeklyContribution}>
+                      <Text style={styles.weeklyContributionLabel}>Expected weekly</Text>
+                      <Text style={styles.weeklyContributionValue}>{wholeCurrency(weeklyContribution)}</Text>
+                    </View>
+                  </View>
+                ) : (
+                  <Text style={styles.tierMeta}>Not assigned to the active FY</Text>
+                )}
+
+                <View style={styles.memberActions}>
+                  <TouchableOpacity onPress={() => openEdit(item)} style={styles.memberActionButton}><Text style={styles.smallActionText}>Edit</Text></TouchableOpacity>
+                  <TouchableOpacity onPress={() => confirmDelete(item)} style={styles.memberActionButtonDelete}><Text style={styles.smallDeleteText}>Delete</Text></TouchableOpacity>
+                </View>
+              </View>
+            </InfoCard>
           );
         }}
         ListEmptyComponent={<EmptyState title="No members" message="Member accounts will appear here." />}
@@ -1653,7 +1740,8 @@ function TierPicker({ value, onChange }: { value: string; onChange: (value: stri
 }
 
 function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: number; onChanged: () => void }) {
-  const [fiscalYears, setFiscalYears] = useState<FiscalYear[]>([]);
+  const showToast = useToast();
+  const [fiscalYears, setFiscalYears = useState<FiscalYear[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [settings, setSettings] = useState<FiscalYearSettings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -1738,7 +1826,7 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
       setShowEditSettings(false);
       await loadYears();
       onChanged();
-      Alert.alert("Saved", "Fiscal year details and all tier settings have been updated.");
+      showToast("Fiscal year settings updated");
     } catch (e) { Alert.alert("Unable to save settings", getErrorMessage(e)); }
     finally { setSaving(false); }
   }
@@ -1768,7 +1856,7 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
       setSelectedId(result.fiscalYear.id);
       await loadSettings(result.fiscalYear.id);
       onChanged();
-      Alert.alert("Created", "Fiscal year is now active with Bronze, Silver, and Gold defaults.");
+      showToast(`Fiscal Year ${result.fiscalYear.code} has been created`);
     } catch (e) { Alert.alert("Unable to create", getErrorMessage(e)); }
     finally { setSaving(false); }
   }
@@ -2137,8 +2225,8 @@ function SectionHeader({ title }: { title: string }) {
   return <Text style={styles.sectionHeader}>{title}</Text>;
 }
 
-function InfoCard({ children }: { children: ReactNode }) {
-  return <View style={styles.infoCard}>{children}</View>;
+function InfoCard({ children, style }: { children: ReactNode; style?: any }) {
+  return <View style={[styles.infoCard, style]}>{children}</View>;
 }
 
 function Detail({ label, value }: { label: string; value: string }) {
@@ -2252,6 +2340,30 @@ function getErrorMessage(error: unknown): string {
 }
 
 const styles = StyleSheet.create({
+  toastProvider: { flex: 1 },
+  toast: {
+    position: "absolute",
+    top: Platform.OS === "ios" ? 58 : 42,
+    left: theme.spacing.page,
+    right: theme.spacing.page,
+    minHeight: 58,
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 11,
+    shadowColor: "#0F172A",
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+    zIndex: 9999,
+  },
+  toastIcon: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  toastIconText: { fontSize: 15, fontWeight: "900" },
+  toastMessage: { flex: 1, color: DARK, fontSize: 12, lineHeight: 18, fontWeight: "800" },
   screen: { flex: 1, backgroundColor: BG },
   appShell: { flex: 1, backgroundColor: BG },
   content: { flex: 1, minHeight: 0, backgroundColor: BG },
@@ -2286,13 +2398,17 @@ const styles = StyleSheet.create({
   tabLabel: { color: "#94A3B8", fontSize: 12, fontWeight: "800" },
   tabLabelActive: { color: BLUE },
   scrollContent: { paddingHorizontal: theme.spacing.page, paddingTop: 22, paddingBottom: 40, gap: theme.spacing.lg },
-  listContent: { paddingHorizontal: theme.spacing.page, paddingTop: 22, paddingBottom: 40, gap: theme.spacing.lg },
+  listContent: { paddingHorizontal: theme.spacing.page, paddingTop: 22, paddingBottom: 40 },
   memberListContent: { paddingHorizontal: theme.spacing.page, paddingTop: 22, paddingBottom: 40 },
   memberCardSeparator: { height: theme.spacing.lg },
-  memberCardItem: { marginBottom: theme.spacing.lg },
+  cardSeparator: { height: theme.spacing.lg },
   memberCardBody: { gap: theme.spacing.md },
   memberTopRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: theme.spacing.md },
   memberIdentity: { flex: 1, gap: theme.spacing.xs },
+  memberContributionRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: theme.spacing.md },
+  weeklyContribution: { alignItems: "flex-end", gap: 2 },
+  weeklyContributionLabel: { color: "#94A3B8", fontSize: 9, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.5 },
+  weeklyContributionValue: { color: DARK, fontSize: 14, fontWeight: "900" },
   sectionEyebrow: { color: "#94A3B8", fontSize: 10, fontWeight: "900", letterSpacing: 1.6 },
   pageTitle: { color: DARK, fontSize: 29, lineHeight: 36, fontWeight: "800", letterSpacing: -0.65, marginTop: 6 },
   muted: { color: SLATE, fontSize: 13, lineHeight: 20, marginTop: 5 },
@@ -2303,7 +2419,7 @@ const styles = StyleSheet.create({
   statLabel: { color: SLATE, fontSize: 10, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.6 },
   statValue: { color: DARK, fontSize: 20, fontWeight: "800", marginTop: 7 },
   statCard: { backgroundColor: WHITE, borderRadius: 16, borderWidth: 1, borderColor: BORDER, padding: 16, margin: 0, width: "48%", minHeight: 88, justifyContent: "center", shadowColor: "#0F172A", shadowOpacity: 0.025, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
-  sectionHeader: { color: DARK, fontSize: 17, fontWeight: "800", marginTop: theme.spacing.md, marginBottom: theme.spacing.xs },
+  sectionHeader: { color: DARK, fontSize: 17, fontWeight: "800", marginTop: theme.spacing.sm, marginBottom: theme.spacing.xs },
   heroCard: { backgroundColor: BLUE, borderRadius: 18, padding: 21, marginTop: 0 },
   heroValue: { color: WHITE, fontSize: 34, fontWeight: "900", marginTop: 5 },
   heroSub: { color: "#DBEAFE", fontSize: 12, marginTop: 3 },
@@ -2342,7 +2458,7 @@ const styles = StyleSheet.create({
   helperText: { color: SLATE, fontSize: 11, lineHeight: 17, marginTop: 9 },
   tierMeta: { color: SLATE, fontSize: 10, fontWeight: "700", marginTop: 5 },
   memberTierLine: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 0 },
-  tierBadge: { alignSelf: "flex-start", flexDirection: "row", alignItems: "center", borderWidth: 1, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5 },
+  tierBadge: { flexDirection: "row", alignItems: "center", borderWidth: 1, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5 },
   tierBadgeMark: { fontSize: 9, fontWeight: "900", marginRight: 5 },
   tierBadgeText: { fontSize: 9, fontWeight: "900", letterSpacing: 0.9 },
   tierBadgeDetail: { fontSize: 9, fontWeight: "700" },
@@ -2447,7 +2563,9 @@ const styles = StyleSheet.create({
 export default function App() {
   return (
     <ThemeProvider>
-      <AppContent />
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
     </ThemeProvider>
   );
 }
