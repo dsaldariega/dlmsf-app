@@ -78,6 +78,21 @@ export async function createMemberWithLogin(req: Request, res: Response, next: N
     const email = memberEmail(name);
     const generatedPassword = randomBytes(24).toString("base64url");
     temporaryPassword = generatedPassword;
+    const { data: existingAuth, error: existingAuthError } = await admin.auth.admin.getUserByEmail(email);
+    if (existingAuthError && existingAuthError.message !== "User not found") throw existingAuthError;
+    if (existingAuth?.user) {
+      const { data: linkedMember, error: linkedMemberError } = await admin
+        .from("members")
+        .select("id")
+        .eq("auth_id", existingAuth.user.id)
+        .maybeSingle();
+      if (linkedMemberError) throw linkedMemberError;
+      if (linkedMember) {
+        throw Object.assign(new Error("A member with this generated login email already exists."), { status: 409 });
+      }
+      const { error: orphanDeleteError } = await admin.auth.admin.deleteUser(existingAuth.user.id);
+      if (orphanDeleteError) throw orphanDeleteError;
+    }
     const { data: created, error: createError } = await admin.auth.admin.createUser({
       email,
       password: generatedPassword,
@@ -90,7 +105,7 @@ export async function createMemberWithLogin(req: Request, res: Response, next: N
 
     const { data, error } = await admin
       .from("members")
-      .insert({ name, heads, roles: ["member"], auth_id: authId })
+      .insert({ name, heads, roles: ["member"], auth_id: newlyCreatedAuthId })
       .select("*").single();
     if (error) throw error;
     res.status(201).json({ success: true, data: { member: data, loginEmail: email, temporaryPassword }, message: "Member created. Share the one-time temporary password securely." });
