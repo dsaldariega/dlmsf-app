@@ -65,8 +65,22 @@ begin
     v_date := case when new.payment_type = 'Weekly' then new.week_start else new.paid_on end;
   elsif tg_table_name = 'weekly_contribution_allocations' then v_date := new.week_start;
   elsif tg_table_name = 'payments' then v_date := new.week_start;
-  elsif tg_table_name = 'loans_audit_log' then v_date := new.created_date;
-  elsif tg_table_name = 'payments_audit_log' then v_date := coalesce(new.week_start, new.created_date::date);
+  elsif tg_table_name = 'loans_audit_log' then
+    if new.fiscal_year_id is null and new.action = 'New Loan Created' then
+      select fiscal_year_id into v_related_fy from public.loans
+      where borrower_id = new.member_id and amount = new.amount
+      order by created_at desc limit 1;
+      if v_related_fy is not null then new.fiscal_year_id := v_related_fy; end if;
+    end if;
+    v_date := new.created_date;
+  elsif tg_table_name = 'payments_audit_log' then
+    if new.fiscal_year_id is null and new.action = 'Loan Payment Recorded' then
+      select fiscal_year_id into v_related_fy from public.loan_payments
+      where member_id = new.member_id and amount = new.amount
+      order by created_at desc limit 1;
+      if v_related_fy is not null then new.fiscal_year_id := v_related_fy; end if;
+    end if;
+    v_date := coalesce(new.week_start, new.created_date::date);
   elsif tg_table_name = 'loan_request_audit_events' then
     select fiscal_year_id into v_related_fy from public.loan_requests where id = new.loan_request_id;
     if new.fiscal_year_id is null and v_related_fy is not null then new.fiscal_year_id := v_related_fy; end if;
