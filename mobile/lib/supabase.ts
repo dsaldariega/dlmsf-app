@@ -49,7 +49,10 @@ const secureSessionStorage = {
       ? (JSON.parse(previousManifestValue) as { generation: string; count: number })
       : null;
     const generation = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const chunks: string[] = [];\n    for (let index = 0; index < value.length; index += CHUNK_SIZE) {\n      chunks.push(value.slice(index, index + CHUNK_SIZE));\n    }
+    const chunks: string[] = [];
+    for (let index = 0; index < value.length; index += CHUNK_SIZE) {
+      chunks.push(value.slice(index, index + CHUNK_SIZE));
+    }
 
     await Promise.all(
       chunks.map((chunk, index) =>
