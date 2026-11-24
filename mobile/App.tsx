@@ -1551,6 +1551,7 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
   const [fiscalYears, setFiscalYears] = useState<FiscalYear[]>([]);
   const [activeFiscalYear, setActiveFiscalYear] = useState<FiscalYear | null>(null);
   const [assignments, setAssignments] = useState<Record<number, { tier_code: string; assigned_heads: number }>>({});
+  const [tiers, setTiers] = useState<FiscalYearSettings["tiers"]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
@@ -1577,11 +1578,13 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
       setActiveFiscalYear(current);
       if (current) {
         const settings = await apiRequest<FiscalYearSettings>(`/api/fiscal-years/${current.id}/settings`);
+        setTiers(settings.tiers.filter((item) => item.enabled));
         const map: Record<number, { tier_code: string; assigned_heads: number }> = {};
         for (const assignment of settings.assignments) map[assignment.member_id] = { tier_code: assignment.tier_code, assigned_heads: Number(assignment.assigned_heads) };
         setAssignments(map);
       } else {
         setAssignments({});
+        setTiers([]);
       }
     } catch (e) {
       setError(getErrorMessage(e));
@@ -1593,7 +1596,8 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
 
   function openCreate() {
     if (!activeFiscalYear) { Alert.alert("Fiscal year required", "Create and activate a fiscal year before adding members."); return; }
-    setSelected(null); setName(""); setTier("bronze"); setTierHeads("1"); setModal("create");
+    const defaultTier = tiers[0]?.tier_code ?? "bronze";
+    setSelected(null); setName(""); setTier(defaultTier); setTierHeads("1"); setModal("create");
   }
   function openEdit(member: Member) {
     setSelected(member); setName(member.name); setModal("edit");
@@ -1604,8 +1608,19 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
     if (!activeFiscalYear) { Alert.alert("Fiscal year required", "Create and activate a fiscal year before managing members."); return; }
     const trimmed = name.trim();
     const headCount = Number(tierHeads);
+    const selectedTier = tiers.find((item) => item.tier_code.toLowerCase() === tier.toLowerCase());
+    const maxHeads = selectedTier?.max_heads_per_member;
     if (!trimmed || !Number.isInteger(headCount) || headCount < 1) {
       Alert.alert("Invalid member", "Enter a name and a whole number of heads.");
+      return;
+    }
+    if (!selectedTier) {
+      Alert.alert("Invalid tier", "The selected membership tier is not enabled for the active fiscal year.");
+      return;
+    }
+    if (maxHeads != null && headCount > Number(maxHeads)) {
+      const limitLabel = `${maxHeads} ${Number(maxHeads) === 1 ? "head" : "heads"}`;
+      Alert.alert("Head limit exceeded", `${selectedTier.display_name} allows a maximum of ${limitLabel} per member in FY ${activeFiscalYear.code}. Enter ${maxHeads} or fewer heads.`);
       return;
     }
     setSaving(true);
@@ -1613,7 +1628,7 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
       let memberId = selected?.id;
       if (modal === "create") {
         const result = await apiRequest<{ member: Member; loginEmail: string; temporaryPassword: string }>("/api/members", {
-          method: "POST", body: JSON.stringify({ name: trimmed, heads: headCount }),
+          method: "POST", body: JSON.stringify({ name: trimmed, heads: headCount, tierCode: tier }),
         });
         memberId = result.member.id;
         Alert.alert("Member created", `Login: ${result.loginEmail}\nTemporary password: ${result.temporaryPassword}\n\nShare these credentials securely with the member.`);
@@ -1656,8 +1671,9 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
         contentContainerStyle={styles.memberListContent}
         ItemSeparatorComponent={() => <View style={styles.cardSeparator} />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load(true)} tintColor={BLUE} />}
+        ListHeaderComponentStyle={styles.memberListHeaderSpacing}
         ListHeaderComponent={
-          <View>
+          <View style={styles.memberListHeader}>
             <Text style={styles.sectionEyebrow}>MEMBERS</Text>
             <Text style={styles.pageTitle}>Member accounts</Text>
             <Text style={styles.muted}>Manage members, FY assignments, and linked logins.</Text>
@@ -1713,6 +1729,12 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
                   <TierPicker value={tier} onChange={setTier} />
                   <FieldLabel text={`Assigned heads · ${activeFiscalYear.code}`} />
                   <TextInput keyboardType="numeric" onChangeText={setTierHeads} placeholder="1" placeholderTextColor="#94A3B8" style={styles.input} value={tierHeads} />
+                  {(() => {
+                    const selectedTier = tiers.find((item) => item.tier_code.toLowerCase() === tier.toLowerCase());
+                    return selectedTier?.max_heads_per_member != null
+                      ? <Text style={styles.helperText}>{`Maximum for ${selectedTier.display_name}: ${selectedTier.max_heads_per_member} ${Number(selectedTier.max_heads_per_member) === 1 ? "head" : "heads"}.`}</Text>
+                      : <Text style={styles.helperText}>No tier-specific head limit.</Text>;
+                  })()}
                 </>
               ) : null}
               {modal === "create" ? <Text style={styles.helperText}>A linked Supabase login is created by the existing backend account workflow.</Text> : null}
@@ -2401,9 +2423,11 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: theme.spacing.page, paddingTop: 22, paddingBottom: 40, gap: theme.spacing.lg },
   listContent: { paddingHorizontal: theme.spacing.page, paddingTop: 22, paddingBottom: 40 },
   memberListContent: { paddingHorizontal: theme.spacing.page, paddingTop: 22, paddingBottom: 40 },
+  memberListHeaderSpacing: { marginBottom: theme.spacing.lg },
+  memberListHeader: { gap: theme.spacing.lg },
   memberCardSeparator: { height: theme.spacing.lg },
   cardSeparator: { height: theme.spacing.lg },
-  memberCardBody: { gap: theme.spacing.md },
+  memberCardBody: { gap: theme.spacing.lg },
   memberTopRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: theme.spacing.md },
   memberIdentity: { flex: 1, gap: theme.spacing.xs },
   memberContributionRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: theme.spacing.md },
@@ -2449,7 +2473,7 @@ const styles = StyleSheet.create({
   emptyTitle: { color: DARK, fontSize: 13, fontWeight: "800" },
   emptyMessage: { color: SLATE, fontSize: 11, textAlign: "center", marginTop: 5, lineHeight: 17 },
   actionRow: { flexDirection: "row", gap: theme.spacing.sm, marginTop: theme.spacing.sm },
-  memberAddAction: { marginTop: theme.spacing.md, marginBottom: theme.spacing.md },
+  memberAddAction: { marginTop: 0, marginBottom: 0 },
   actionButton: { flex: 1, minHeight: 48, backgroundColor: BLUE, borderRadius: theme.radii.md, alignItems: "center", justifyContent: "center", paddingHorizontal: 14 },
   actionButtonSecondary: { backgroundColor: WHITE, borderWidth: 1, borderColor: "#CBD5E1" },
   actionButtonDanger: { backgroundColor: "#FEF2F2", borderWidth: 1, borderColor: "#FECACA" },
