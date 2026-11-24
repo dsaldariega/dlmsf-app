@@ -314,10 +314,10 @@ function AuthenticatedApp({ user, onSignOut }: { user: AuthenticatedUser; onSign
       <View style={styles.content}>
         {fyLoading ? <ScreenLoader /> : fyError ? <ErrorState message={fyError} onRetry={refreshAll} /> : (
           <>
-            {user.role === "admin" && tab === "settings" && <AdminSettingsHome activeFiscalYear={activeFiscalYear} onNavigate={() => setTab("fiscal")} />}
-            {user.role === "admin" && tab === "fiscal" && <AdminFiscalSettingsScreen refreshKey={refreshKey} onClose={() => setTab("settings")} onChanged={refreshAll} />}
+            {user.role === "admin" && tab === "settings" && <AdminFiscalSettingsScreen refreshKey={refreshKey} onChanged={refreshAll} />}
+            
             {(!activeFiscalYear && tab !== "settings" && tab !== "fiscal" && tab !== "account") ? (
-              <FiscalYearRequiredScreen role={user.role} onOpenSettings={() => setTab("fiscal")} />
+              <FiscalYearRequiredScreen role={user.role} onOpenSettings={() => setTab("settings")} />
             ) : null}
             {activeFiscalYear && tab === "home" && <HomeScreen user={user} refreshKey={refreshKey} onNavigate={setTab} />}
             {activeFiscalYear && tab === "loans" && (user.role === "admin" ? <AdminLoansScreen refreshKey={refreshKey} onChanged={refreshAll} /> : <MemberLoansScreen refreshKey={refreshKey} onChanged={refreshAll} />)}
@@ -1680,7 +1680,7 @@ function TierPicker({ value, onChange }: { value: string; onChange: (value: stri
   );
 }
 
-function AdminFiscalSettingsScreen({ refreshKey, onClose, onChanged }: { refreshKey: number; onClose: () => void; onChanged: () => void }) {
+function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: number; onChanged: () => void }) {
   const [fiscalYears, setFiscalYears] = useState<FiscalYear[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [settings, setSettings] = useState<FiscalYearSettings | null>(null);
@@ -1692,8 +1692,6 @@ function AdminFiscalSettingsScreen({ refreshKey, onClose, onChanged }: { refresh
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [maxTotalHeads, setMaxTotalHeads] = useState("");
-  const [maxHeadsPerMember, setMaxHeadsPerMember] = useState("");
-  const [headRestrictionsEnabled, setHeadRestrictionsEnabled] = useState(true);
   const [retentionMonths, setRetentionMonths] = useState("3");
   const [purgeConfirmation, setPurgeConfirmation] = useState("");
   const [showPurge, setShowPurge] = useState(false);
@@ -1721,8 +1719,6 @@ function AdminFiscalSettingsScreen({ refreshKey, onClose, onChanged }: { refresh
     setStartDate(data.fiscalYear.start_date);
     setEndDate(data.fiscalYear.end_date);
     setMaxTotalHeads(data.fiscalYear.max_total_heads == null ? "" : String(data.fiscalYear.max_total_heads));
-    setMaxHeadsPerMember(data.fiscalYear.max_heads_per_member == null ? "" : String(data.fiscalYear.max_heads_per_member));
-    setHeadRestrictionsEnabled(data.fiscalYear.head_restrictions_enabled);
     setRetentionMonths(String(data.fiscalYear.retention_months ?? 3));
   }
 
@@ -1733,8 +1729,6 @@ function AdminFiscalSettingsScreen({ refreshKey, onClose, onChanged }: { refresh
       await apiRequest(`/api/fiscal-years/${selectedId}`, { method: "PATCH", body: JSON.stringify({
         code, startDate, endDate,
         maxTotalHeads: maxTotalHeads === "" ? null : Number(maxTotalHeads),
-        maxHeadsPerMember: maxHeadsPerMember === "" ? null : Number(maxHeadsPerMember),
-        headRestrictionsEnabled,
         retentionMonths: Number(retentionMonths),
       })});
       await loadYears(); onChanged();
@@ -1774,12 +1768,10 @@ function AdminFiscalSettingsScreen({ refreshKey, onClose, onChanged }: { refresh
         method: "POST", body: JSON.stringify({
           code: code.trim(), startDate, endDate,
           maxTotalHeads: maxTotalHeads === "" ? null : Number(maxTotalHeads),
-          maxHeadsPerMember: maxHeadsPerMember === "" ? null : Number(maxHeadsPerMember),
-          headRestrictionsEnabled,
           retentionMonths: Number(retentionMonths),
           tiers: draftTiers.map((tier) => ({
             tierCode: tier.tierCode, displayName: tier.displayName, enabled: tier.enabled,
-            maxHeadsPerMember: tier.maxHeadsPerMember === "" ? (maxHeadsPerMember === "" ? null : Number(maxHeadsPerMember)) : Number(tier.maxHeadsPerMember),
+            maxHeadsPerMember: tier.maxHeadsPerMember === "" ? null : Number(tier.maxHeadsPerMember),
             loanEligible: tier.loanEligible, loanLimitMode: tier.loanLimitMode,
             contributionMultiplier: Number(tier.contributionMultiplier || 1),
             maxLoanAmount: tier.maxLoanAmount === "" ? null : Number(tier.maxLoanAmount),
@@ -1846,13 +1838,16 @@ function AdminFiscalSettingsScreen({ refreshKey, onClose, onChanged }: { refresh
 
   return (
     <View style={styles.flex}>
-      <View style={styles.modalHeader}>
-        <View style={{ flex: 1 }}><Text style={styles.modalTitle}>Fiscal Year Settings</Text><Text style={styles.mutedSmall}>Configure yearly limits, tiers, and exports.</Text></View>
-        <TouchableOpacity onPress={onClose}><Text style={styles.closeText}>Close</Text></TouchableOpacity>
+      <View style={{ paddingHorizontal: 18, paddingTop: 10, paddingBottom: 8 }}>
+        <Text style={styles.sectionEyebrow}>APP PREFERENCES</Text>
+        <Text style={styles.pageTitle}>Settings</Text>
+        <Text style={styles.muted}>Manage application preferences and fiscal-year configuration.</Text>
+        <SectionHeader title="Fiscal Year Management" />
+        <Text style={styles.helperText}>Create fiscal years, configure tier eligibility, manage head limits, and export historical activity.</Text>
       </View>
       <ScrollView contentContainerStyle={styles.modalContent}>
         <PrimaryButton label={fiscalYears.length ? "Create new fiscal year" : "Create your first fiscal year"} onPress={() => {
-          setCode(""); setStartDate(""); setEndDate(""); setMaxTotalHeads(""); setMaxHeadsPerMember(""); setHeadRestrictionsEnabled(true); setRetentionMonths("3"); setDraftTiers(createDefaultDraftTiers()); setShowCreate(true);
+          setCode(""); setStartDate(""); setEndDate(""); setMaxTotalHeads(""); setRetentionMonths("3"); setDraftTiers(createDefaultDraftTiers()); setShowCreate(true);
         }} />
         {fiscalYears.length ? (
           <>
@@ -1880,12 +1875,7 @@ function AdminFiscalSettingsScreen({ refreshKey, onClose, onChanged }: { refresh
                 <SectionHeader title="Head allocation" />
                 <FieldLabel text="Maximum total heads" />
                 <TextInput keyboardType="numeric" onChangeText={setMaxTotalHeads} placeholder="Leave blank for unlimited" placeholderTextColor="#94A3B8" style={styles.input} value={maxTotalHeads} />
-                <FieldLabel text="Maximum heads per member" />
-                <TextInput keyboardType="numeric" onChangeText={setMaxHeadsPerMember} placeholder="Leave blank for unlimited" placeholderTextColor="#94A3B8" style={styles.input} value={maxHeadsPerMember} />
-                <TouchableOpacity onPress={() => setHeadRestrictionsEnabled((v) => !v)} style={styles.toggleRow}>
-                  <Text style={styles.cardTitle}>Enforce head restrictions</Text><Text style={styles.toggleText}>{headRestrictionsEnabled ? "ON" : "OFF"}</Text>
-                </TouchableOpacity>
-                <FieldLabel text="Historical retention after closing (months)" />
+                                <FieldLabel text="Historical retention after closing (months)" />
                 <TextInput keyboardType="numeric" onChangeText={setRetentionMonths} style={styles.input} value={retentionMonths} editable={settings.fiscalYear.status === "draft"} />
                 <Text style={styles.helperText}>Minimum 3 months. Retention is fixed when the FY is activated.</Text>
                 <PrimaryButton label="Save FY settings" loading={saving} onPress={() => void saveFiscalYear()} />
@@ -1901,20 +1891,15 @@ function AdminFiscalSettingsScreen({ refreshKey, onClose, onChanged }: { refresh
 
       <Modal transparent visible={showCreate} animationType="slide" onRequestClose={() => setShowCreate(false)}>
         <ModalSheet title="Create fiscal year" onClose={() => setShowCreate(false)}>
-          <FieldLabel text="Code" />
-          <TextInput onChangeText={setCode} placeholder="FY2027" placeholderTextColor="#94A3B8" style={styles.input} value={code} />
+          <FieldLabel text="Fiscal year" />
+          <TextInput keyboardType="numeric" onChangeText={setCode} placeholder="2027" placeholderTextColor="#94A3B8" style={styles.input} value={code} />
           <FieldLabel text="Start date" />
-          <TextInput onChangeText={setStartDate} placeholder="2027-01-01" placeholderTextColor="#94A3B8" style={styles.input} value={startDate} />
+          <DatePickerField value={startDate} onChange={setStartDate} placeholder="Select start date" />
           <FieldLabel text="End date" />
-          <TextInput onChangeText={setEndDate} placeholder="2027-12-31" placeholderTextColor="#94A3B8" style={styles.input} value={endDate} />
+          <DatePickerField value={endDate} onChange={setEndDate} placeholder="Select end date" />
           <FieldLabel text="Maximum total heads" />
           <TextInput keyboardType="numeric" onChangeText={setMaxTotalHeads} placeholder="Optional" placeholderTextColor="#94A3B8" style={styles.input} value={maxTotalHeads} />
-          <FieldLabel text="Maximum heads per member" />
-          <TextInput keyboardType="numeric" onChangeText={setMaxHeadsPerMember} placeholder="Optional" placeholderTextColor="#94A3B8" style={styles.input} value={maxHeadsPerMember} />
-          <TouchableOpacity onPress={() => setHeadRestrictionsEnabled((v) => !v)} style={styles.toggleRow}>
-            <Text style={styles.cardTitle}>Enforce head restrictions</Text><Text style={styles.toggleText}>{headRestrictionsEnabled ? "ON" : "OFF"}</Text>
-          </TouchableOpacity>
-          <FieldLabel text="Historical retention after closing (months)" />
+                    <FieldLabel text="Historical retention after closing (months)" />
           <TextInput keyboardType="numeric" onChangeText={setRetentionMonths} style={styles.input} value={retentionMonths} />
           <Text style={styles.helperText}>Default is 3 months. Minimum retention is 3 months.</Text>
           <SectionHeader title="Configure Bronze, Silver, and Gold" />
@@ -1942,6 +1927,53 @@ function AdminFiscalSettingsScreen({ refreshKey, onClose, onChanged }: { refresh
   );
 }
 
+function DatePickerField({ value, onChange, placeholder }: { value: string; onChange: (value: string) => void; placeholder: string }) {
+  const parse = (input: string) => {
+    const parts = input.split("-").map(Number);
+    return parts.length === 3 && parts.every(Number.isFinite) ? new Date(parts[0], parts[1] - 1, parts[2]) : new Date();
+  };
+  const [visible, setVisible] = useState(false);
+  const [month, setMonth] = useState(() => { const d = parse(value); return new Date(d.getFullYear(), d.getMonth(), 1); });
+  const selected = value ? parse(value) : null;
+  const monthLabel = month.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const firstDay = new Date(month.getFullYear(), month.getMonth(), 1).getDay();
+  const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+  const cells = Array.from({ length: 42 }, (_, index) => index - firstDay + 1);
+  const format = (date: Date) => String(date.getFullYear()) + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0");
+  return (
+    <>
+      <TouchableOpacity onPress={() => { const d = parse(value); setMonth(new Date(d.getFullYear(), d.getMonth(), 1)); setVisible(true); }} style={[styles.input, { justifyContent: "center" }]}>
+        <Text style={{ color: value ? DARK : "#94A3B8", fontSize: 14 }}>{value || placeholder}</Text>
+      </TouchableOpacity>
+      <Modal transparent visible={visible} animationType="fade" onRequestClose={() => setVisible(false)}>
+        <View style={styles.dateModalBackdrop}>
+          <View style={styles.dateModalCard}>
+            <View style={styles.rowBetween}>
+              <TouchableOpacity onPress={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}><Text style={styles.dateNavText}>‹</Text></TouchableOpacity>
+              <Text style={styles.cardTitle}>{monthLabel}</Text>
+              <TouchableOpacity onPress={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}><Text style={styles.dateNavText}>›</Text></TouchableOpacity>
+            </View>
+            <View style={styles.calendarGrid}>
+              {["Su","Mo","Tu","We","Th","Fr","Sa"].map((day) => <View key={day} style={styles.calendarCell}><Text style={styles.calendarWeekday}>{day}</Text></View>)}
+              {cells.map((day, index) => {
+                const valid = day >= 1 && day <= daysInMonth;
+                const date = valid ? new Date(month.getFullYear(), month.getMonth(), day) : null;
+                const active = Boolean(date && selected && date.getFullYear() === selected.getFullYear() && date.getMonth() === selected.getMonth() && date.getDate() === selected.getDate());
+                return <View key={index} style={styles.calendarCell}>
+                  <TouchableOpacity disabled={!valid} onPress={() => { if (date) onChange(format(date)); setVisible(false); }} style={[styles.calendarDay, active && styles.calendarDayActive]}>
+                    <Text style={[styles.calendarDayText, !valid && styles.calendarDayMuted, active && styles.calendarDayTextActive]}>{valid ? day : ""}</Text>
+                  </TouchableOpacity>
+                </View>;
+              })}
+            </View>
+            <TouchableOpacity onPress={() => setVisible(false)} style={styles.dateCancel}><Text style={styles.actionButtonTextSecondary}>Cancel</Text></TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </>
+  );
+}
+
 type DraftTier = {
   tierCode: "bronze" | "silver" | "gold"; displayName: string; enabled: boolean; maxHeadsPerMember: string;
   loanEligible: boolean; loanLimitMode: "contributions_only" | "tier_maximum" | "unlimited"; contributionMultiplier: string; maxLoanAmount: string;
@@ -1961,12 +1993,17 @@ function DraftTierSettingsCard({ tier, onChange }: { tier: DraftTier; onChange: 
       <TouchableOpacity onPress={() => patch({ enabled: !tier.enabled })} style={styles.toggleRowCompact}><Text style={styles.toggleText}>{tier.enabled ? "ENABLED" : "DISABLED"}</Text></TouchableOpacity>
     </View>
     <TouchableOpacity onPress={() => patch({ loanEligible: !tier.loanEligible })} style={styles.toggleRow}><Text style={styles.cardTitle}>Loan eligibility</Text><Text style={styles.toggleText}>{tier.loanEligible ? "ON" : "OFF"}</Text></TouchableOpacity>
-    <FieldLabel text="Maximum heads per member" />
-    <TextInput keyboardType="numeric" value={tier.maxHeadsPerMember} onChangeText={(v) => patch({ maxHeadsPerMember: v })} placeholder="Use FY-wide limit" placeholderTextColor="#94A3B8" style={styles.input} />
-    <FieldLabel text="Loan limit mode" />
-    <View style={styles.modePicker}>{(["contributions_only","tier_maximum","unlimited"] as const).map((mode) => <TouchableOpacity key={mode} onPress={() => patch({ loanLimitMode: mode })} style={[styles.modeOption, tier.loanLimitMode === mode && styles.modeOptionActive]}><Text style={[styles.modeOptionText, tier.loanLimitMode === mode && styles.modeOptionTextActive]}>{mode === "contributions_only" ? "Paid only" : mode === "tier_maximum" ? "Multiplier" : "Unlimited"}</Text></TouchableOpacity>)}</View>
-    {tier.loanLimitMode === "tier_maximum" ? <><FieldLabel text="Contribution multiplier" /><TextInput keyboardType="decimal-pad" value={tier.contributionMultiplier} onChangeText={(v) => patch({ contributionMultiplier: v })} style={styles.input} /></> : null}
-    {tier.loanLimitMode !== "contributions_only" ? <><FieldLabel text="Maximum loan amount (optional)" /><TextInput keyboardType="numeric" value={tier.maxLoanAmount} onChangeText={(v) => patch({ maxLoanAmount: v })} placeholder="No fixed cap" placeholderTextColor="#94A3B8" style={styles.input} /></> : null}
+    {tier.loanEligible ? (
+      <>
+        <FieldLabel text="Maximum heads per member" />
+        <TextInput keyboardType="numeric" value={tier.maxHeadsPerMember} onChangeText={(v) => patch({ maxHeadsPerMember: v })} placeholder="No tier-specific limit" placeholderTextColor="#94A3B8" style={styles.input} />
+        <FieldLabel text="Loan limit mode" />
+        <View style={styles.modePicker}>{(tier.tierCode === "bronze" ? ["contributions_only","unlimited"] as const : ["contributions_only","tier_maximum","unlimited"] as const).map((mode) => <TouchableOpacity key={mode} onPress={() => patch({ loanLimitMode: mode })} style={[styles.modeOption, tier.loanLimitMode === mode && styles.modeOptionActive]}><Text style={[styles.modeOptionText, tier.loanLimitMode === mode && styles.modeOptionTextActive]}>{mode === "contributions_only" ? "Paid contributions" : mode === "tier_maximum" ? "Multiplier" : "Unlimited"}</Text></TouchableOpacity>)}</View>
+        {tier.tierCode === "bronze" && tier.loanLimitMode === "contributions_only" ? <Text style={styles.helperText}>Limited by total available paid contributions in the fiscal year, not by an individual member's contributions.</Text> : null}
+        {tier.loanLimitMode === "tier_maximum" ? <><FieldLabel text="Contribution multiplier" /><TextInput keyboardType="decimal-pad" value={tier.contributionMultiplier} onChangeText={(v) => patch({ contributionMultiplier: v })} style={styles.input} /></> : null}
+        {tier.tierCode !== "bronze" && tier.loanLimitMode !== "contributions_only" ? <><FieldLabel text="Maximum loan amount (optional)" /><TextInput keyboardType="numeric" value={tier.maxLoanAmount} onChangeText={(v) => patch({ maxLoanAmount: v })} placeholder="No fixed cap" placeholderTextColor="#94A3B8" style={styles.input} /></> : null}
+      </>
+    ) : null}
   </InfoCard>;
 }
 
@@ -1978,27 +2015,32 @@ function TierSettingsCard({ tier, saving, onSave }: { tier: TierSetting; saving:
     <InfoCard>
       <View style={styles.rowBetween}><View><Text style={styles.cardEyebrow}>TIER</Text><TierBadge tier={draft.tier_code} /></View><TouchableOpacity onPress={() => setDraft({ ...draft, enabled: !draft.enabled })} style={styles.toggleRowCompact}><Text style={styles.toggleText}>{draft.enabled ? "ENABLED" : "DISABLED"}</Text></TouchableOpacity></View>
       <TouchableOpacity onPress={() => setDraft({ ...draft, loan_eligible: !draft.loan_eligible })} style={styles.toggleRow}><Text style={styles.cardTitle}>Loan eligibility</Text><Text style={styles.toggleText}>{draft.loan_eligible ? "ON" : "OFF"}</Text></TouchableOpacity>
-      <FieldLabel text="Maximum heads per member" />
-      <TextInput keyboardType="numeric" onChangeText={(v) => setDraft({ ...draft, max_heads_per_member: v === "" ? null : Number(v) })} placeholder="Optional" placeholderTextColor="#94A3B8" style={styles.input} value={draft.max_heads_per_member == null ? "" : String(draft.max_heads_per_member)} />
-      <FieldLabel text="Loan limit mode" />
-      <View style={styles.modePicker}>
-        {(["contributions_only","tier_maximum","unlimited"] as const).map((mode) => (
-          <TouchableOpacity key={mode} onPress={() => setDraft({ ...draft, loan_limit_mode: mode })} style={[styles.modeOption, draft.loan_limit_mode === mode && styles.modeOptionActive]}>
-            <Text style={[styles.modeOptionText, draft.loan_limit_mode === mode && styles.modeOptionTextActive]}>{mode === "contributions_only" ? "Paid only" : mode === "tier_maximum" ? "Multiplier" : "Unlimited"}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-      <Text style={styles.helperText}>{modeLabel}</Text>
-      {draft.loan_limit_mode === "tier_maximum" ? (
+      {draft.loan_eligible ? (
         <>
-          <FieldLabel text="Contribution multiplier" />
-          <TextInput keyboardType="decimal-pad" onChangeText={(v) => setDraft({ ...draft, contribution_multiplier: Number(v) || 0 })} style={styles.input} value={String(draft.contribution_multiplier)} />
-        </>
-      ) : null}
-      {draft.loan_limit_mode !== "contributions_only" ? (
-        <>
-          <FieldLabel text="Maximum loan amount" />
-          <TextInput keyboardType="numeric" onChangeText={(v) => setDraft({ ...draft, max_loan_amount: v === "" ? null : Number(v) })} placeholder="Optional" placeholderTextColor="#94A3B8" style={styles.input} value={draft.max_loan_amount == null ? "" : String(draft.max_loan_amount)} />
+          <FieldLabel text="Maximum heads per member" />
+          <TextInput keyboardType="numeric" onChangeText={(v) => setDraft({ ...draft, max_heads_per_member: v === "" ? null : Number(v) })} placeholder="No tier-specific limit" placeholderTextColor="#94A3B8" style={styles.input} value={draft.max_heads_per_member == null ? "" : String(draft.max_heads_per_member)} />
+          <FieldLabel text="Loan limit mode" />
+          <View style={styles.modePicker}>
+            {(draft.tier_code === "bronze" ? ["contributions_only","unlimited"] as const : ["contributions_only","tier_maximum","unlimited"] as const).map((mode) => (
+              <TouchableOpacity key={mode} onPress={() => setDraft({ ...draft, loan_limit_mode: mode })} style={[styles.modeOption, draft.loan_limit_mode === mode && styles.modeOptionActive]}>
+                <Text style={[styles.modeOptionText, draft.loan_limit_mode === mode && styles.modeOptionTextActive]}>{mode === "contributions_only" ? "Paid contributions" : mode === "tier_maximum" ? "Multiplier" : "Unlimited"}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          {draft.tier_code === "bronze" && draft.loan_limit_mode === "contributions_only" ? <Text style={styles.helperText}>Limited by total available paid contributions in the fiscal year, not by an individual member's contributions.</Text> : null}
+          <Text style={styles.helperText}>{modeLabel}</Text>
+          {draft.loan_limit_mode === "tier_maximum" ? (
+            <>
+              <FieldLabel text="Contribution multiplier" />
+              <TextInput keyboardType="decimal-pad" onChangeText={(v) => setDraft({ ...draft, contribution_multiplier: Number(v) || 0 })} style={styles.input} value={String(draft.contribution_multiplier)} />
+            </>
+          ) : null}
+          {draft.tier_code !== "bronze" && draft.loan_limit_mode !== "contributions_only" ? (
+            <>
+              <FieldLabel text="Maximum loan amount" />
+              <TextInput keyboardType="numeric" onChangeText={(v) => setDraft({ ...draft, max_loan_amount: v === "" ? null : Number(v) })} placeholder="Optional" placeholderTextColor="#94A3B8" style={styles.input} value={draft.max_loan_amount == null ? "" : String(draft.max_loan_amount)} />
+            </>
+          ) : null}
         </>
       ) : null}
       <PrimaryButton label="Save tier" loading={saving} onPress={() => void onSave(draft)} />
@@ -2329,4 +2371,17 @@ const styles = StyleSheet.create({
   closeText: { color: BLUE, fontSize: 12, fontWeight: "800" },
   modalContent: { padding: 20, paddingBottom: 28 },
   modalLead: { color: SLATE, fontSize: 13, lineHeight: 20, marginTop: 4 },
+  dateModalBackdrop: { flex: 1, backgroundColor: "rgba(15,23,42,0.48)", justifyContent: "center", padding: 22 },
+  dateModalCard: { backgroundColor: WHITE, borderRadius: 18, padding: 18, borderWidth: 1, borderColor: BORDER },
+  dateNavText: { color: BLUE, fontSize: 30, fontWeight: "700", paddingHorizontal: 12 },
+  calendarGrid: { flexDirection: "row", flexWrap: "wrap", marginTop: 14 },
+  calendarCell: { width: "14.2857%", alignItems: "center", justifyContent: "center", paddingVertical: 3 },
+  calendarWeekday: { color: SLATE, fontSize: 10, fontWeight: "800" },
+  calendarDay: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },
+  calendarDayActive: { backgroundColor: BLUE },
+  calendarDayText: { color: DARK, fontSize: 12, fontWeight: "600" },
+  calendarDayTextActive: { color: WHITE, fontWeight: "900" },
+  calendarDayMuted: { color: "transparent" },
+  dateCancel: { alignSelf: "flex-end", paddingHorizontal: 14, paddingVertical: 10, marginTop: 10 },
+
 });
