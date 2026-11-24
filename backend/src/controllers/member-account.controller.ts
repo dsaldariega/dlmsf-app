@@ -76,8 +76,6 @@ export async function createMemberWithLogin(req: Request, res: Response, next: N
       }
     }
     const email = memberEmail(name);
-    const { data: usersPage, error: listError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-    if (listError) throw listError;
     const generatedPassword = randomBytes(24).toString("base64url");
     temporaryPassword = generatedPassword;
     const { data: created, error: createError } = await admin.auth.admin.createUser({
@@ -88,15 +86,14 @@ export async function createMemberWithLogin(req: Request, res: Response, next: N
     });
     if (createError) throw createError;
     if (!created.user) throw new Error("Supabase did not return the created login.");
-    authId = created.user.id;
-    newlyCreatedAuthId = authId;
+    newlyCreatedAuthId = created.user.id;
 
     const { data, error } = await admin
       .from("members")
       .insert({ name, heads, roles: ["member"], auth_id: authId })
       .select("*").single();
     if (error) throw error;
-    res.status(201).json({ success: true, data: { member: data, loginEmail: email, temporaryPassword }, message: "Member and login created. Share the one-time temporary password securely." });
+    res.status(201).json({ success: true, data: { member: data, loginEmail: email, temporaryPassword }, message: "Member created. Share the one-time temporary password securely." });
   } catch (error) {
     if (newlyCreatedAuthId) {
       try {
