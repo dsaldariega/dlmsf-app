@@ -1746,8 +1746,6 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
           maxHeadsPerMember: tierSetting.max_heads_per_member,
           loanEligible: tierSetting.loan_eligible,
           loanLimitMode: tierSetting.loan_limit_mode,
-          contributionMultiplier: tierSetting.contribution_multiplier,
-          maxLoanAmount: tierSetting.max_loan_amount,
         })
       });
       if (selectedId) await loadSettings(selectedId);
@@ -1773,8 +1771,7 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
             tierCode: tier.tierCode, displayName: tier.displayName, enabled: tier.enabled,
             maxHeadsPerMember: tier.maxHeadsPerMember === "" ? null : Number(tier.maxHeadsPerMember),
             loanEligible: tier.loanEligible, loanLimitMode: tier.loanLimitMode,
-            contributionMultiplier: Number(tier.contributionMultiplier || 1),
-            maxLoanAmount: tier.maxLoanAmount === "" ? null : Number(tier.maxLoanAmount),
+            
           })),
         })
       });
@@ -1846,7 +1843,7 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
         <Text style={styles.helperText}>Create fiscal years, configure tier eligibility, manage head limits, and export historical activity.</Text>
       </View>
       <ScrollView contentContainerStyle={styles.modalContent}>
-        <PrimaryButton label={fiscalYears.length ? "Create new fiscal year" : "Create your first fiscal year"} onPress={() => {
+        <PrimaryButton label="Create fiscal year" onPress={() => {
           setCode(""); setStartDate(""); setEndDate(""); setMaxTotalHeads(""); setRetentionMonths("3"); setDraftTiers(createDefaultDraftTiers()); setShowCreate(true);
         }} />
         {fiscalYears.length ? (
@@ -1910,7 +1907,7 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
             <Text style={styles.cardTitle}>{code.trim() || "Fiscal year code not entered"}</Text>
             <Text style={styles.mutedSmall}>{startDate || "Start date"} → {endDate || "End date"}</Text>
             <Text style={styles.mutedSmall}>Retention: {retentionMonths || "3"} months after closure</Text>
-            {draftTiers.map((tier) => <Text key={tier.tierCode} style={styles.mutedSmall}>{tier.displayName}: {tier.enabled ? "Enabled" : "Disabled"} · {tier.loanEligible ? "Loan eligible" : "Not loan eligible"} · {tier.loanLimitMode}</Text>)}
+            {draftTiers.map((tier) => <Text key={tier.tierCode} style={styles.mutedSmall}>{tier.displayName}: {tier.enabled ? "Enabled" : "Disabled"} · {tier.loanEligible ? "Loan eligible" : "Not loan eligible"} · {tier.loanLimitMode === "member_contribution" ? "Member contribution" : "Total contribution"}</Text>)}
           </InfoCard>
           <PrimaryButton label="Create draft fiscal year" loading={saving} onPress={() => void createYear()} />
         </ModalSheet>
@@ -1976,13 +1973,13 @@ function DatePickerField({ value, onChange, placeholder }: { value: string; onCh
 
 type DraftTier = {
   tierCode: "bronze" | "silver" | "gold"; displayName: string; enabled: boolean; maxHeadsPerMember: string;
-  loanEligible: boolean; loanLimitMode: "contributions_only" | "tier_maximum" | "unlimited"; contributionMultiplier: string; maxLoanAmount: string;
+  loanEligible: boolean; loanLimitMode: "member_contribution" | "total_contribution";
 };
 function createDefaultDraftTiers(): DraftTier[] {
   return [
-    { tierCode: "bronze", displayName: "Bronze", enabled: true, maxHeadsPerMember: "", loanEligible: true, loanLimitMode: "contributions_only", contributionMultiplier: "1", maxLoanAmount: "" },
-    { tierCode: "silver", displayName: "Silver", enabled: true, maxHeadsPerMember: "", loanEligible: true, loanLimitMode: "tier_maximum", contributionMultiplier: "1.25", maxLoanAmount: "" },
-    { tierCode: "gold", displayName: "Gold", enabled: true, maxHeadsPerMember: "", loanEligible: true, loanLimitMode: "tier_maximum", contributionMultiplier: "2", maxLoanAmount: "" },
+    { tierCode: "bronze", displayName: "Bronze", enabled: true, maxHeadsPerMember: "", loanEligible: true, loanLimitMode: "member_contribution" },
+    { tierCode: "silver", displayName: "Silver", enabled: true, maxHeadsPerMember: "", loanEligible: true, loanLimitMode: "total_contribution" },
+    { tierCode: "gold", displayName: "Gold", enabled: true, maxHeadsPerMember: "", loanEligible: true, loanLimitMode: "total_contribution" },
   ];
 }
 function DraftTierSettingsCard({ tier, onChange }: { tier: DraftTier; onChange: (tier: DraftTier) => void }) {
@@ -1998,10 +1995,9 @@ function DraftTierSettingsCard({ tier, onChange }: { tier: DraftTier; onChange: 
         <FieldLabel text="Maximum heads per member" />
         <TextInput keyboardType="numeric" value={tier.maxHeadsPerMember} onChangeText={(v) => patch({ maxHeadsPerMember: v })} placeholder="No tier-specific limit" placeholderTextColor="#94A3B8" style={styles.input} />
         <FieldLabel text="Loan limit mode" />
-        <View style={styles.modePicker}>{(tier.tierCode === "bronze" ? ["contributions_only","unlimited"] as const : ["contributions_only","tier_maximum","unlimited"] as const).map((mode) => <TouchableOpacity key={mode} onPress={() => patch({ loanLimitMode: mode })} style={[styles.modeOption, tier.loanLimitMode === mode && styles.modeOptionActive]}><Text style={[styles.modeOptionText, tier.loanLimitMode === mode && styles.modeOptionTextActive]}>{mode === "contributions_only" ? "Paid contributions" : mode === "tier_maximum" ? "Multiplier" : "Unlimited"}</Text></TouchableOpacity>)}</View>
-        {tier.tierCode === "bronze" && tier.loanLimitMode === "contributions_only" ? <Text style={styles.helperText}>Limited by total available paid contributions in the fiscal year, not by an individual member's contributions.</Text> : null}
-        {tier.loanLimitMode === "tier_maximum" ? <><FieldLabel text="Contribution multiplier" /><TextInput keyboardType="decimal-pad" value={tier.contributionMultiplier} onChangeText={(v) => patch({ contributionMultiplier: v })} style={styles.input} /></> : null}
-        {tier.tierCode !== "bronze" && tier.loanLimitMode !== "contributions_only" ? <><FieldLabel text="Maximum loan amount (optional)" /><TextInput keyboardType="numeric" value={tier.maxLoanAmount} onChangeText={(v) => patch({ maxLoanAmount: v })} placeholder="No fixed cap" placeholderTextColor="#94A3B8" style={styles.input} /></> : null}
+        <View style={styles.modePicker}>{(["member_contribution","total_contribution"] as const).map((mode) => <TouchableOpacity key={mode} onPress={() => patch({ loanLimitMode: mode })} style={[styles.modeOption, tier.loanLimitMode === mode && styles.modeOptionActive]}><Text style={[styles.modeOptionText, tier.loanLimitMode === mode && styles.modeOptionTextActive]}>{mode === "member_contribution" ? "Member contribution" : "Total contribution"}</Text></TouchableOpacity>)}</View>
+        {tier.loanLimitMode === "member_contribution" ? <Text style={styles.helperText}>Loan limit is based on this member's paid contributions during the fiscal year.</Text> : <Text style={styles.helperText}>Loan limit is based on all paid contributions collected during the fiscal year.</Text>}
+        
       </>
     ) : null}
   </InfoCard>;
@@ -2010,7 +2006,7 @@ function DraftTierSettingsCard({ tier, onChange }: { tier: DraftTier; onChange: 
 function TierSettingsCard({ tier, saving, onSave }: { tier: TierSetting; saving: boolean; onSave: (tier: TierSetting) => Promise<void> }) {
   const [draft, setDraft] = useState(tier);
   useEffect(() => setDraft(tier), [tier]);
-  const modeLabel = draft.loan_limit_mode === "contributions_only" ? "Paid contributions only" : draft.loan_limit_mode === "tier_maximum" ? "Multiplier / maximum" : "No contribution limit";
+  const modeLabel = draft.loan_limit_mode === "member_contribution" ? "Member contribution" : "Total contribution";
   return (
     <InfoCard>
       <View style={styles.rowBetween}><View><Text style={styles.cardEyebrow}>TIER</Text><TierBadge tier={draft.tier_code} /></View><TouchableOpacity onPress={() => setDraft({ ...draft, enabled: !draft.enabled })} style={styles.toggleRowCompact}><Text style={styles.toggleText}>{draft.enabled ? "ENABLED" : "DISABLED"}</Text></TouchableOpacity></View>
@@ -2021,26 +2017,15 @@ function TierSettingsCard({ tier, saving, onSave }: { tier: TierSetting; saving:
           <TextInput keyboardType="numeric" onChangeText={(v) => setDraft({ ...draft, max_heads_per_member: v === "" ? null : Number(v) })} placeholder="No tier-specific limit" placeholderTextColor="#94A3B8" style={styles.input} value={draft.max_heads_per_member == null ? "" : String(draft.max_heads_per_member)} />
           <FieldLabel text="Loan limit mode" />
           <View style={styles.modePicker}>
-            {(draft.tier_code === "bronze" ? ["contributions_only","unlimited"] as const : ["contributions_only","tier_maximum","unlimited"] as const).map((mode) => (
+            {(["member_contribution","total_contribution"] as const).map((mode) => (
               <TouchableOpacity key={mode} onPress={() => setDraft({ ...draft, loan_limit_mode: mode })} style={[styles.modeOption, draft.loan_limit_mode === mode && styles.modeOptionActive]}>
                 <Text style={[styles.modeOptionText, draft.loan_limit_mode === mode && styles.modeOptionTextActive]}>{mode === "contributions_only" ? "Paid contributions" : mode === "tier_maximum" ? "Multiplier" : "Unlimited"}</Text>
               </TouchableOpacity>
             ))}
           </View>
-          {draft.tier_code === "bronze" && draft.loan_limit_mode === "contributions_only" ? <Text style={styles.helperText}>Limited by total available paid contributions in the fiscal year, not by an individual member's contributions.</Text> : null}
+          {draft.loan_limit_mode === "member_contribution" ? <Text style={styles.helperText}>Loan limit is based on this member's paid contributions during the fiscal year.</Text> : <Text style={styles.helperText}>Loan limit is based on all paid contributions collected during the fiscal year.</Text>}
           <Text style={styles.helperText}>{modeLabel}</Text>
-          {draft.loan_limit_mode === "tier_maximum" ? (
-            <>
-              <FieldLabel text="Contribution multiplier" />
-              <TextInput keyboardType="decimal-pad" onChangeText={(v) => setDraft({ ...draft, contribution_multiplier: Number(v) || 0 })} style={styles.input} value={String(draft.contribution_multiplier)} />
-            </>
-          ) : null}
-          {draft.tier_code !== "bronze" && draft.loan_limit_mode !== "contributions_only" ? (
-            <>
-              <FieldLabel text="Maximum loan amount" />
-              <TextInput keyboardType="numeric" onChangeText={(v) => setDraft({ ...draft, max_loan_amount: v === "" ? null : Number(v) })} placeholder="Optional" placeholderTextColor="#94A3B8" style={styles.input} value={draft.max_loan_amount == null ? "" : String(draft.max_loan_amount)} />
-            </>
-          ) : null}
+          
         </>
       ) : null}
       <PrimaryButton label="Save tier" loading={saving} onPress={() => void onSave(draft)} />
@@ -2328,7 +2313,7 @@ const styles = StyleSheet.create({
   tierOptionTextActive: { color: "#1D4ED8" },
   fullModalBackdrop: { flex: 1, backgroundColor: "rgba(15,23,42,0.45)", justifyContent: "flex-end" },
   fullModalSheet: { height: "94%", backgroundColor: BG, borderTopLeftRadius: 22, borderTopRightRadius: 22, overflow: "hidden" },
-  yearPicker: { gap: 8, paddingVertical: 3 },
+  yearPicker: { gap: 14, paddingVertical: 8, paddingHorizontal: 2 },
   yearChip: { borderWidth: 1, borderColor: "#CBD5E1", borderRadius: 18, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: WHITE },
   yearChipActive: { backgroundColor: "#EFF6FF", borderColor: BLUE },
   yearChipText: { color: SLATE, fontSize: 11, fontWeight: "800" },
