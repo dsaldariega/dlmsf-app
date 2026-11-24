@@ -23,6 +23,7 @@ function parseId(value: string | string[]): number {
 
 export async function createMemberWithLogin(req: Request, res: Response, next: NextFunction) {
   let newlyCreatedAuthId: string | null = null;
+  let newlyCreatedMemberId: number | null = null;
   let temporaryPassword: string | null = null;
   try {
     const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
@@ -108,8 +109,29 @@ export async function createMemberWithLogin(req: Request, res: Response, next: N
       .insert({ name, heads, roles: ["member"], auth_id: newlyCreatedAuthId })
       .select("*").single();
     if (error) throw error;
+    newlyCreatedMemberId = Number(data.id);
+
+    const { error: assignmentError } = await admin
+      .from("member_fiscal_years")
+      .insert({
+        fiscal_year_id: activeFiscalYear.id,
+        member_id: newlyCreatedMemberId,
+        tier_code: tier.tier_code,
+        assigned_heads: heads,
+      });
+    if (assignmentError) throw assignmentError;
+
     res.status(201).json({ success: true, data: { member: data, loginEmail: email, temporaryPassword }, message: "Member created. Share the one-time temporary password securely." });
   } catch (error) {
+    if (newlyCreatedMemberId) {
+      try {
+        const admin = createSupabaseAdminClient();
+        const { error: rollbackMemberError } = await admin.from("members").delete().eq("id", newlyCreatedMemberId);
+        if (rollbackMemberError) console.error("Failed to roll back newly created member:", rollbackMemberError);
+      } catch (rollbackMemberError) {
+        console.error("Failed to roll back newly created member:", rollbackMemberError);
+      }
+    }
     if (newlyCreatedAuthId) {
       try {
         const admin = createSupabaseAdminClient();
