@@ -1806,7 +1806,8 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
   if (loading && !settings) return <ScreenLoader />;
 
   return (
-    <ScrollView style={styles.settingsPage} contentContainerStyle={styles.settingsPageContent}>
+    <>
+      <ScrollView style={styles.settingsPage} contentContainerStyle={styles.settingsPageContent}>
       <View style={styles.settingsHeader}>
         <Text style={styles.sectionEyebrow}>APP PREFERENCES</Text>
         <Text style={styles.pageTitle}>Settings</Text>
@@ -1943,7 +1944,7 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
           <PrimaryButton label="Permanently delete fiscal year" loading={saving} disabled={deleteConfirmation.trim() !== `DELETE FY ${settings?.fiscalYear.code ?? ""}`} onPress={() => void deleteYear()} />
         </ModalSheet>
       </Modal>
-    </View>
+    </>
   );
 }
 
