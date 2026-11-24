@@ -5,7 +5,7 @@ The DLMSF mobile client is built with React Native, Expo, and TypeScript. It liv
 ## Platform targets
 
 - Android 10 (API 29) and newer
-- iOS 15.1 and newer
+- iOS 16.4 and newer
 - Android is the initial development and testing priority
 
 The Android minimum is intentionally set to API 29. Expo SDK 58 supports older Android versions by default, but DLMSF's configured minimum is Android 10 to match the project's device-support requirement.
