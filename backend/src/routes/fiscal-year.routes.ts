@@ -1,0 +1,21 @@
+import { Router } from "express";
+import { authenticate } from "../middleware/auth.middleware.js";
+import { authorize } from "../middleware/role.middleware.js";
+import {
+  listFiscalYears, createFiscalYear, updateFiscalYear, activateFiscalYear, closeFiscalYear,
+  listFiscalYearSettings, updateTierSetting, assignMemberToFiscalYear, exportFiscalYear
+} from "../controllers/fiscal-year.controller.js";
+
+const router = Router();
+router.use(authenticate);
+router.use(authorize("admin"));
+router.get("/", listFiscalYears);
+router.post("/", createFiscalYear);
+router.patch("/:id", updateFiscalYear);
+router.post("/:id/activate", activateFiscalYear);
+router.post("/:id/close", closeFiscalYear);
+router.get("/:id/settings", listFiscalYearSettings);
+router.patch("/:id/tiers/:tierCode", updateTierSetting);
+router.put("/:id/members/:memberId", assignMemberToFiscalYear);
+router.get("/:id/export", exportFiscalYear);
+export default router;
