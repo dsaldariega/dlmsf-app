@@ -2371,4 +2371,17 @@ const styles = StyleSheet.create({
   closeText: { color: BLUE, fontSize: 12, fontWeight: "800" },
   modalContent: { padding: 20, paddingBottom: 28 },
   modalLead: { color: SLATE, fontSize: 13, lineHeight: 20, marginTop: 4 },
+  dateModalBackdrop: { flex: 1, backgroundColor: "rgba(15,23,42,0.48)", justifyContent: "center", padding: 22 },
+  dateModalCard: { backgroundColor: WHITE, borderRadius: 18, padding: 18, borderWidth: 1, borderColor: BORDER },
+  dateNavText: { color: BLUE, fontSize: 30, fontWeight: "700", paddingHorizontal: 12 },
+  calendarGrid: { flexDirection: "row", flexWrap: "wrap", marginTop: 14 },
+  calendarCell: { width: "14.2857%", alignItems: "center", justifyContent: "center", paddingVertical: 3 },
+  calendarWeekday: { color: SLATE, fontSize: 10, fontWeight: "800" },
+  calendarDay: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },
+  calendarDayActive: { backgroundColor: BLUE },
+  calendarDayText: { color: DARK, fontSize: 12, fontWeight: "600" },
+  calendarDayTextActive: { color: WHITE, fontWeight: "900" },
+  calendarDayMuted: { color: "transparent" },
+  dateCancel: { alignSelf: "flex-end", paddingHorizontal: 14, paddingVertical: 10, marginTop: 10 },
+
 });
