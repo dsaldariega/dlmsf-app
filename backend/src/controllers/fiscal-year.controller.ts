@@ -332,3 +332,23 @@ export async function purgeFiscalYear(req: Request, res: Response, next: NextFun
     res.json({ success: true, data, message: "Fiscal-year transaction cleanup completed." });
   } catch (error) { next(error); }
 }
+
+export async function updateFiscalYearSettings(req: Request, res: Response, next: NextFunction) {
+  try {
+    const fiscalYearId = idParam(req.params.id);
+    const { data, error } = await db(req).rpc("update_fiscal_year_settings", { p_fiscal_year_id: fiscalYearId, p_settings: req.body ?? {} });
+    if (error) throw error;
+    res.json({ success: true, data, message: "Fiscal year details and tier settings updated." });
+  } catch (error) { next(error); }
+}
+
+export async function deleteFiscalYear(req: Request, res: Response, next: NextFunction) {
+  try {
+    const fiscalYearId = idParam(req.params.id);
+    const confirmation = typeof req.body?.confirmation === "string" ? req.body.confirmation.trim() : "";
+    if (!confirmation) throw Object.assign(new Error("Type the required delete confirmation phrase."), { status: 400 });
+    const { data, error } = await db(req).rpc("delete_fiscal_year", { p_fiscal_year_id: fiscalYearId, p_confirmation: confirmation });
+    if (error) throw error;
+    res.json({ success: true, data, message: "Fiscal year and associated records permanently deleted." });
+  } catch (error) { next(error); }
+}
