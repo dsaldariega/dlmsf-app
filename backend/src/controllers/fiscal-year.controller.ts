@@ -221,15 +221,15 @@ export async function exportFiscalYear(req: Request, res: Response, next: NextFu
       client.from("members").select("id,name,heads").order("id"),
       client.from("member_fiscal_years").select("member_id,tier_code,assigned_heads,assigned_at").eq("fiscal_year_id", fiscalYearId),
       client.from("tier_settings").select("tier_code,display_name,enabled,max_heads_per_member,loan_eligible,loan_limit_mode,contribution_multiplier,max_loan_amount").eq("fiscal_year_id", fiscalYearId).order("tier_code"),
-      client.from("payments").select("id,member_id,amount,week_start,created_at").gte("week_start", start).lte("week_start", end).order("week_start"),
-      client.from("weekly_contribution_allocations").select("id,payment_submission_id,member_id,week_start,amount,created_at").gte("week_start", start).lte("week_start", end).order("week_start"),
-      client.from("loans").select("id,borrower_id,amount,interest,total,monthly,status,months").order("id"),
-      client.from("loan_payments").select("id,loan_id,member_id,amount,paid_at,created_at").gte("paid_at", start).lte("paid_at", end).order("paid_at"),
-      client.from("loan_requests").select("id,member_id,amount,months,status,requested_at,reviewed_at,admin_remarks,loan_id").gte("requested_at", start + "T00:00:00Z").lte("requested_at", end + "T23:59:59Z").order("requested_at"),
-      client.from("payment_submissions").select("id,member_id,payment_type,amount,paid_on,week_start,loan_id,reference,status,submitted_at,reviewed_at,admin_remarks").gte("submitted_at", start + "T00:00:00Z").lte("submitted_at", end + "T23:59:59Z").order("submitted_at"),
-      client.from("loans_audit_log").select("*").gte("created_date", start).lte("created_date", end).order("created_date"),
-      client.from("payments_audit_log").select("*").gte("created_date", start + "T00:00:00Z").lte("created_date", end + "T23:59:59Z").order("created_date"),
-      client.from("loan_request_audit_events").select("*").gte("created_at", start + "T00:00:00Z").lte("created_at", end + "T23:59:59Z").order("created_at")
+      client.from("payments").select("id,fiscal_year_id,member_id,amount,week_start,created_at").eq("fiscal_year_id", fiscalYearId).order("week_start"),
+      client.from("weekly_contribution_allocations").select("id,fiscal_year_id,payment_submission_id,member_id,week_start,amount,created_at").eq("fiscal_year_id", fiscalYearId).order("week_start"),
+      client.from("loans").select("id,fiscal_year_id,borrower_id,amount,interest,total,monthly,status,months,created_at").eq("fiscal_year_id", fiscalYearId).order("id"),
+      client.from("loan_payments").select("id,fiscal_year_id,loan_id,member_id,amount,paid_at,created_at").eq("fiscal_year_id", fiscalYearId).order("paid_at"),
+      client.from("loan_requests").select("id,fiscal_year_id,member_id,amount,months,status,requested_at,reviewed_at,admin_remarks,loan_id").eq("fiscal_year_id", fiscalYearId).order("requested_at"),
+      client.from("payment_submissions").select("id,fiscal_year_id,member_id,payment_type,amount,paid_on,week_start,loan_id,reference,status,submitted_at,reviewed_at,admin_remarks").eq("fiscal_year_id", fiscalYearId).order("submitted_at"),
+      client.from("loans_audit_log").select("*").eq("fiscal_year_id", fiscalYearId).order("created_date"),
+      client.from("payments_audit_log").select("*").eq("fiscal_year_id", fiscalYearId).order("created_date"),
+      client.from("loan_request_audit_events").select("*").eq("fiscal_year_id", fiscalYearId).order("created_at")
     ]);
     for (const result of [members, assignments, tiers, payments, allocations, loans, loanPayments, loanRequests, paymentSubmissions, loanAudit, paymentAudit, requestAudit]) if (result.error) throw result.error;
 

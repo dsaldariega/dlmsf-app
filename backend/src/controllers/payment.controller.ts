@@ -143,7 +143,7 @@ export async function deleteWeeklyPayment(req: Request, res: Response, next: Nex
 
     const amount = Number(payment.amount || 0);
     const { error: auditError } = await client.from("payments_audit_log").insert({
-      ref_id: payment.id, amount, week_start: payment.week_start, action: "Weekly Payment Deleted",
+      ref_id: payment.id, fiscal_year_id: payment.fiscal_year_id, amount, week_start: payment.week_start, action: "Weekly Payment Deleted",
       remarks: `Weekly sinking fund payment deleted for Sunday, ${payment.week_start}. Deleted payment ID: ${payment.id}. Amount: ${amount}.`,
       created_date: new Date().toISOString()
     });
