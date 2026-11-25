@@ -15,7 +15,8 @@
             "minSdkVersion": 29
           }
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "ios": {
       "supportsTablet": true,
