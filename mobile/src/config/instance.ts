@@ -21,15 +21,41 @@ import type { FirebaseClientConfig } from "./firebase";
 const SELECTED_INSTANCE_STORAGE_KEY = "@dlmsf/selected-instance";
 const INSTANCE_CONFIG_VERSION = 1;
 
+export type GoogleOAuthClientConfig = {
+  androidClientId?: string;
+  iosClientId?: string;
+  webClientId?: string;
+};
+
 export type DLMSFInstanceConfig = {
   configVersion: typeof INSTANCE_CONFIG_VERSION;
   instanceId: string;
   displayName: string;
   firebase: FirebaseClientConfig;
+  googleOAuth?: GoogleOAuthClientConfig;
 };
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
+}
+
+function isGoogleOAuthClientConfig(
+  value: unknown,
+): value is GoogleOAuthClientConfig {
+  if (!value || typeof value !== "object") return false;
+
+  const config = value as Record<string, unknown>;
+  return (
+    (!("androidClientId" in config) ||
+      config.androidClientId === undefined ||
+      typeof config.androidClientId === "string") &&
+    (!("iosClientId" in config) ||
+      config.iosClientId === undefined ||
+      typeof config.iosClientId === "string") &&
+    (!("webClientId" in config) ||
+      config.webClientId === undefined ||
+      typeof config.webClientId === "string")
+  );
 }
 
 function isFirebaseClientConfig(value: unknown): value is FirebaseClientConfig {
@@ -61,7 +87,10 @@ export function isDLMSFInstanceConfig(
     config.configVersion === INSTANCE_CONFIG_VERSION &&
     isNonEmptyString(config.instanceId) &&
     isNonEmptyString(config.displayName) &&
-    isFirebaseClientConfig(config.firebase)
+    isFirebaseClientConfig(config.firebase) &&
+    (!("googleOAuth" in config) ||
+      config.googleOAuth === undefined ||
+      isGoogleOAuthClientConfig(config.googleOAuth))
   );
 }
 
