@@ -2,14 +2,14 @@
  * Local DLMSF instance selection.
  *
  * The same APK can be configured for different Firebase projects. This module
- * stores only the public Firebase client configuration and a display label;
+ * stores only public Firebase/OAuth client configuration and a display label;
  * it does not store credentials, member data, or admin privileges.
  *
  * IMPORTANT:
  * - A locally selected instance is NOT proof that the signed-in user belongs
  *   to that instance.
  * - The first maintaining admin must be established by a trusted provisioning
- *   process (Admin SDK / secured setup service), never by this client.
+ *   process (Admin SDK / secured setup service), never by the mobile client.
  * - After connecting, the app must verify system/config and the authenticated
  *   user's membership before showing protected data.
  */
@@ -21,11 +21,25 @@ import type { FirebaseClientConfig } from "./firebase";
 const SELECTED_INSTANCE_STORAGE_KEY = "@dlmsf/selected-instance";
 const INSTANCE_CONFIG_VERSION = 1;
 
+export type GoogleOAuthClientConfig = {
+  /** Google OAuth 2.0 client ID registered for the Android application. */
+  androidClientId?: string;
+  /** Google OAuth 2.0 client ID registered for the iOS application. */
+  iosClientId?: string;
+  /** Google OAuth 2.0 web client ID, used where the provider flow requires it. */
+  webClientId?: string;
+};
+
 export type DLMSFInstanceConfig = {
   configVersion: typeof INSTANCE_CONFIG_VERSION;
   instanceId: string;
   displayName: string;
   firebase: FirebaseClientConfig;
+  /**
+   * OAuth client IDs belong to the Google Cloud project backing this Firebase
+   * instance. They are public identifiers, not client secrets.
+   */
+  googleOAuth?: GoogleOAuthClientConfig;
 };
 
 function isNonEmptyString(value: unknown): value is string {
@@ -51,6 +65,20 @@ function isFirebaseClientConfig(value: unknown): value is FirebaseClientConfig {
   );
 }
 
+function isGoogleOAuthClientConfig(value: unknown): value is GoogleOAuthClientConfig {
+  if (!value || typeof value !== "object") return false;
+
+  const config = value as Record<string, unknown>;
+  return (
+    Object.keys(config).every((key) =>
+      ["androidClientId", "iosClientId", "webClientId"].includes(key),
+    ) &&
+    Object.values(config).every(
+      (clientId) => clientId === undefined || isNonEmptyString(clientId),
+    )
+  );
+}
+
 export function isDLMSFInstanceConfig(
   value: unknown,
 ): value is DLMSFInstanceConfig {
@@ -61,13 +89,15 @@ export function isDLMSFInstanceConfig(
     config.configVersion === INSTANCE_CONFIG_VERSION &&
     isNonEmptyString(config.instanceId) &&
     isNonEmptyString(config.displayName) &&
-    isFirebaseClientConfig(config.firebase)
+    isFirebaseClientConfig(config.firebase) &&
+    (config.googleOAuth === undefined ||
+      isGoogleOAuthClientConfig(config.googleOAuth))
   );
 }
 
 /**
- * Persist the selected instance's public Firebase configuration.
- * The caller should obtain this config from a trusted setup/invitation flow.
+ * Persist the selected instance's public Firebase and optional OAuth client
+ * configuration. The caller should obtain it from a trusted setup flow.
  */
 export async function saveSelectedInstance(
   config: DLMSFInstanceConfig,
@@ -94,6 +124,15 @@ export async function saveSelectedInstance(
         ? { measurementId: config.firebase.measurementId.trim() }
         : {}),
     },
+    ...(config.googleOAuth
+      ? {
+          googleOAuth: Object.fromEntries(
+            Object.entries(config.googleOAuth)
+              .filter(([, clientId]) => Boolean(clientId))
+              .map(([key, clientId]) => [key, clientId!.trim()]),
+          ) as GoogleOAuthClientConfig,
+        }
+      : {}),
   };
 
   await AsyncStorage.setItem(

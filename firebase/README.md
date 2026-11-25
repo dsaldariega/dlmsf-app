@@ -9,7 +9,7 @@ This guide defines the trusted first-admin setup for one DLMSF instance.
 - Each instance has exactly one maintaining admin.
 - The maintaining admin is identified by the Firebase Authentication UID stored in `system/config`.
 - The APK must never create or modify `system/config`, assign the maintaining-admin UID, or grant itself an admin role.
-- Firebase client configuration is public configuration, not an authorization credential. Firestore Security Rules and trusted server-side authorization protect the records.
+- Firebase and Google OAuth client configuration are public identifiers, not authorization credentials. Firestore Security Rules and trusted server-side authorization protect the records.
 
 ## One-time setup for a new instance
 
@@ -20,9 +20,36 @@ Perform these steps for each Firebase project.
 3. Enable **Authentication → Sign-in method → Google** and configure the required support email.
 4. Create the Cloud Firestore database in production mode.
 5. Deploy the repository's `firebase/firestore.rules` rules to this project.
-6. Add the authorized maintaining admin's Google account to the app's Firebase Authentication users by having that person complete Google sign-in in the DLMSF app. During the initial bootstrap milestone, this sign-in flow may require a developer-assisted test build; do not work around this by allowing client-side admin creation.
-7. In Firebase Console → Authentication → Users, locate that Google account and copy its Firebase **UID**. Verify the email belongs to the intended custodian/admin.
-8. In Firebase Console → Firestore Database → Data, create the `system` collection and its `config` document with the fields below. This console action is trusted project-owner provisioning and is intentionally not available to the mobile client.
+6. Configure Google OAuth client IDs for the app platform(s). For Android, register the package name and the signing certificate SHA-1 fingerprint(s) used by the APK. Keep client IDs with the Firebase instance configuration; never include a Google client secret in the app.
+7. Create the Firestore database and complete the trusted maintaining-admin bootstrap below.
+8. Once the Google sign-in flow is integrated, the authorized maintaining admin signs in. During the initial bootstrap milestone, this may require a developer-assisted test build; do not work around this by allowing client-side admin creation.
+9. In Firebase Console → Authentication → Users, locate that Google account and copy its Firebase **UID**. Verify the email belongs to the intended custodian/admin.
+10. In Firebase Console → Firestore Database → Data, create the `system` collection and its `config` document with the fields below. This console action is trusted project-owner provisioning and is intentionally not available to the mobile client.
+
+## Runtime instance configuration
+
+Each installation stores a DLMSF instance configuration locally. The shape is:
+
+```ts
+{
+  configVersion: 1,
+  instanceId: "dlmsf-custodian-production",
+  displayName: "DLMSF Production",
+  firebase: {
+    apiKey: "FIREBASE_WEB_API_KEY",
+    authDomain: "PROJECT_ID.firebaseapp.com",
+    projectId: "PROJECT_ID",
+    messagingSenderId: "SENDER_ID",
+    appId: "FIREBASE_APP_ID"
+  },
+  googleOAuth: {
+    androidClientId: "ANDROID_OAUTH_CLIENT_ID",
+    webClientId: "WEB_OAUTH_CLIENT_ID"
+  }
+}
+```
+
+The `googleOAuth` object is optional until Google sign-in is enabled in the mobile app. Supply only the client IDs required by the platform. Client IDs are not secrets; never store client secrets or service-account keys in this configuration.
 
 ## Required `system/config` document
 
@@ -59,12 +86,12 @@ Before using the instance with real records:
 - [ ] Firestore Security Rules are deployed.
 - [ ] A signed-in account with a different UID cannot read admin-only data or write `system/config`.
 - [ ] An unauthenticated client cannot read instance metadata or member/financial records.
-- [ ] Financial writes remain blocked from mobile clients; trusted server operations will enforce business rules in a later phase.
+- [ ] Financial writes remain blocked from mobile clients; trusted server operations will enforce business rules in a later migration phase.
 
 ## Important operational notes
 
 - Selecting or storing a Firebase project configuration on a device does not grant access to that project.
-- Never put a service-account JSON file, Firebase Admin SDK private key, provisioning secret, or other server credential in the APK or an `EXPO_PUBLIC_*` variable.
+- Never put a service-account JSON file, Firebase Admin SDK private key, Google OAuth client secret, provisioning secret, or other server credential in the APK or an `EXPO_PUBLIC_*` variable.
 - Do not let a user claim the first-admin role from the app. The first admin must be provisioned by the Firebase project owner through the trusted console process above. A future secured provisioning service may replace this manual step.
 - If the maintaining admin changes, update the UID only through a trusted project-owner/Admin SDK operation after verifying the new custodian. Do not expose this as a normal member-edit action.
 - If the instance is compromised or should no longer be used, set `status` to `suspended` through trusted project-owner access. The app must later enforce this status before opening protected screens.
