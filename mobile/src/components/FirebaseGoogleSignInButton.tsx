@@ -136,6 +136,72 @@ function ConfiguredGoogleSignIn({ config }: { config: DLMSFInstanceConfig }) {
   const [firebaseAuth, setFirebaseAuth] = useState<FirebaseAuthService | null>(null);
   const [signedInUser, setSignedInUser] = useState<FirebaseSignedInUser | null>(null);
   const [error, setError] = useState("");
+  const [restoringSession, setRestoringSession] = useState(true);
+
+  // Firebase Auth persists its session locally. Restore it when this screen
+  // mounts so a valid signed-in test account is not mistaken for a signed-out
+  // account after the app is restarted.
+  useEffect(() => {
+    let active = true;
+
+    async function restoreSession() {
+      try {
+        const instance = await connectToSelectedFirebaseInstance();
+        if (!instance) return;
+
+        const session = await instance.auth.getSession();
+        if (!session) return;
+
+        const identity = await instance.auth.getUser(session.accessToken);
+        if (!identity) return;
+
+        let adminVerified = false;
+        let verificationMessage =
+          "Google authentication is active, but maintaining-admin access is not verified.";
+
+        try {
+          const role = await instance.auth.getMemberRole(identity.id);
+          adminVerified = role === "admin";
+          verificationMessage = adminVerified
+            ? "Maintaining admin verified against the trusted system/config document."
+            : "This account does not have maintaining-admin access.";
+        } catch (verificationError) {
+          verificationMessage =
+            verificationError instanceof Error
+              ? verificationError.message
+              : "Unable to verify maintaining-admin access. Check the Firebase instance configuration and Security Rules.";
+        }
+
+        if (!active) return;
+
+        setFirebaseAuth(instance.auth);
+        setSignedInUser({
+          uid: identity.id,
+          email: identity.email || "Google account",
+          instanceName: instance.config.displayName,
+          projectId: instance.config.firebase.projectId,
+          adminVerified,
+          verificationMessage,
+        });
+      } catch (restoreError) {
+        if (active) {
+          setError(
+            restoreError instanceof Error
+              ? restoreError.message
+              : "Unable to restore the Firebase sign-in session.",
+          );
+        }
+      } finally {
+        if (active) setRestoringSession(false);
+      }
+    }
+
+    void restoreSession();
+
+    return () => {
+      active = false;
+    };
+  }, [config.instanceId]);
 
   async function handleGoogleSignIn() {
     setBusy(true);
@@ -220,6 +286,15 @@ function ConfiguredGoogleSignIn({ config }: { config: DLMSFInstanceConfig }) {
     } finally {
       setBusy(false);
     }
+  }
+
+  if (restoringSession) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator color="#1D4ED8" />
+        <Text style={styles.helper}>Checking saved Firebase session…</Text>
+      </View>
+    );
   }
 
   return (
