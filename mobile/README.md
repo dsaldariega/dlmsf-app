@@ -87,3 +87,21 @@ The FY configuration is additive to the existing member and transaction tables, 
 - Member tier/head evaluations are fresh each FY; previous assignments are not carried forward automatically.
 - Activation locks FY and tier settings as a historical snapshot.
 - Exports are recorded by the API. After the retention period, an administrator can type the exact confirmation phrase to request cleanup. FY/tier/member assignment metadata and loan contracts/repayment history are retained; any ongoing loan blocks cleanup.
+
+## Firebase client foundation
+
+The mobile app includes the Firebase JavaScript SDK, React Native Auth
+persistence through AsyncStorage, and a Firestore client factory. Firebase is
+not yet the active app provider: the existing Supabase auth and API adapters
+remain in use until the later authentication and data migration phases.
+
+`createFirebaseClient(config)` accepts the public Firebase configuration for
+a DLMSF instance and caches its Firebase App by project ID. This is deliberate:
+the same APK can connect to different Firebase projects at runtime, so a
+project-specific `EXPO_PUBLIC_FIREBASE_*` build configuration must not be
+mistaken for the identity of every installation. A trusted setup/invitation
+flow will supply the correct instance configuration in a later phase.
+
+Firebase client configuration is not a secret. Never ship Firebase Admin SDK
+credentials, service-account JSON, or private keys in the mobile app. Access
+must be enforced by Firebase Authentication and Firestore Security Rules.
