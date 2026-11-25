@@ -1,0 +1,161 @@
+rules_version = '2';
+
+/*
+ * DLMSF Firestore security baseline — Phase 6
+ *
+ * PROJECT BOUNDARY
+ * ----------------
+ * One Firebase project represents exactly one DLMSF instance. The developer
+ * test instance and custodian production instance must use separate Firebase
+ * projects. Do not put multiple custodians/instances into one project under
+ * this model.
+ *
+ * DOCUMENT SHAPE (initial contract)
+ * ---------------------------------
+ * system/config
+ *   maintainingAdminUid: string   // Firebase Auth UID; provisioned by trusted
+ *                                 // setup/Admin SDK, never by the mobile app
+ *   instanceId: string
+ *   schemaVersion: number
+ *   status: "active" | "suspended"
+ *
+ * members/{memberId}
+ *   memberId: string
+ *   displayName: string
+ *   email: string                 // invitation/login email
+ *   authUid: string | null        // linked after trusted invitation acceptance
+ *   role: "member"                // admin authority is NOT stored here
+ *   isActive: boolean
+ *
+ * invitations/{invitationId}
+ *   email: string                 // exact Firebase Auth email
+ *   memberId: string
+ *   status: "pending" | "accepted" | "revoked"
+ *
+ * fiscalYears/{fiscalYearId}
+ * contributions/{contributionId}
+ * loans/{loanId}
+ * loanPayments/{loanPaymentId}
+ * loanRequests/{requestId}
+ * paymentSubmissions/{submissionId}
+ * auditLogs/{auditId}
+ *
+ * Financial/audit documents use memberId to associate a record with its owner.
+ * The backend/Cloud Functions will perform writes with the Admin SDK after
+ * verifying the Firebase ID token and business rules. Admin SDK bypasses these
+ * client rules; server endpoints must therefore enforce authorization too.
+ *
+ * This baseline deliberately denies client-side financial writes. Member loan
+ * requests and payment submissions will be exposed through trusted server
+ * operations in a later migration phase, not by loosening these rules.
+ */
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function instanceConfigExists() {
+      return exists(/databases/$(database)/documents/system/config);
+    }
+
+    function isMaintainingAdmin() {
+      return signedIn()
+        && instanceConfigExists()
+        && get(/databases/$(database)/documents/system/config)
+          .data.maintainingAdminUid == request.auth.uid;
+    }
+
+    function isLinkedMember(memberId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/members/$(memberId))
+        && get(/databases/$(database)/documents/members/$(memberId))
+          .data.authUid == request.auth.uid
+        && get(/databases/$(database)/documents/members/$(memberId))
+          .data.isActive == true;
+    }
+
+    function canReadMemberRecord() {
+      return isMaintainingAdmin()
+        || (
+          resource.data.memberId is string
+          && isLinkedMember(resource.data.memberId)
+        );
+    }
+
+    // Instance metadata is readable by authenticated users so the app can
+    // verify that the selected project is an active DLMSF instance.
+    // Only trusted provisioning code may create or change it.
+    match /system/config {
+      allow get: if signedIn();
+      allow list, create, update, delete: if false;
+    }
+
+    // Admin can manage member records. A member can only read their own record.
+    // Member account linking and role changes must be performed by trusted code.
+    match /members/{memberId} {
+      allow get: if isMaintainingAdmin() || isLinkedMember(memberId);
+      allow list: if isMaintainingAdmin();
+      allow create, update, delete: if isMaintainingAdmin();
+    }
+
+    // A member may fetch only an invitation addressed to their signed-in email.
+    // Listing invitations and all invitation mutations remain admin-only.
+    match /invitations/{invitationId} {
+      allow get: if isMaintainingAdmin()
+        || (
+          signedIn()
+          && resource.data.email is string
+          && request.auth.token.email == resource.data.email
+        );
+      allow list: if isMaintainingAdmin();
+      allow create, update, delete: if isMaintainingAdmin();
+    }
+
+    // Fiscal-year settings are currently served through trusted application
+    // services. This avoids exposing cross-member records before the member
+    // data access contract is fully implemented.
+    match /fiscalYears/{fiscalYearId} {
+      allow read: if isMaintainingAdmin();
+      allow write: if false;
+    }
+
+    // Financial and audit records: owner/admin reads only; no direct client
+    // writes. The backend/Cloud Functions will write using the Admin SDK.
+    match /contributions/{recordId} {
+      allow read: if canReadMemberRecord();
+      allow write: if false;
+    }
+
+    match /loans/{loanId} {
+      allow read: if canReadMemberRecord();
+      allow write: if false;
+    }
+
+    match /loanPayments/{paymentId} {
+      allow read: if canReadMemberRecord();
+      allow write: if false;
+    }
+
+    match /loanRequests/{requestId} {
+      allow read: if canReadMemberRecord();
+      allow write: if false;
+    }
+
+    match /paymentSubmissions/{submissionId} {
+      allow read: if canReadMemberRecord();
+      allow write: if false;
+    }
+
+    match /auditLogs/{auditId} {
+      allow read: if isMaintainingAdmin();
+      allow write: if false;
+    }
+
+    // Explicit deny-by-default for every collection not listed above.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
