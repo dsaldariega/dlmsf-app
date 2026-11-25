@@ -8,7 +8,7 @@
 
 import { supabase } from "../lib/supabase";
 import { getMemberRole, type MemberRole } from "../lib/auth";
-import { apiRequest } from "../lib/api";
+import { apiDownload, apiRequest } from "../lib/api";
 
 export type AuthIdentity = {
   id: string;
@@ -36,6 +36,7 @@ export interface AuthService {
 
 export interface DataService {
   request<T>(endpoint: string, options?: RequestInit): Promise<T>;
+  download(endpoint: string): Promise<ArrayBuffer>;
 }
 
 /**
@@ -110,4 +111,5 @@ export const currentAuthService: AuthService = {
  */
 export const currentDataService: DataService = {
   request: apiRequest,
+  download: apiDownload,
 };

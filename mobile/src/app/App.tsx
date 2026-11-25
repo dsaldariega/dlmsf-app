@@ -20,10 +20,10 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
-import { supabase } from "../lib/supabase";
-import { getMemberRole, type MemberRole } from "../lib/auth";
+import { type MemberRole } from "../lib/auth";
+import { currentAuthService, currentDataService } from "../services";
 import { ThemeProvider, theme, useTheme } from "../theme";
-import { apiRequest, ApiError } from "../lib/api";
+import { ApiError } from "../lib/api";
 import { currency, dateLabel, shortDate, statusTone, wholeCurrency } from "../lib/format";
 import type { FiscalYear, FiscalYearSettings } from "../lib/fiscal";
 
@@ -175,25 +175,23 @@ function AppContent() {
 
   useEffect(() => {
     let mounted = true;
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const subscription = currentAuthService.onAuthStateChange((event) => {
       if (event === "SIGNED_OUT" && mounted) setUser(null);
     });
 
     async function restoreSession() {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) throw error;
+        const session = await currentAuthService.getSession();
         if (!session) return;
 
-        const { data: { user: authUser }, error: userError } =
-          await supabase.auth.getUser(session.access_token);
-        if (userError || !authUser) {
-          await supabase.auth.signOut();
+        const authUser = await currentAuthService.getUser(session.accessToken);
+        if (!authUser) {
+          await currentAuthService.signOut();
           return;
         }
 
-        const role = await getMemberRole(authUser.id);
-        if (mounted) setUser({ id: authUser.id, email: authUser.email ?? "", role });
+        const role = await currentAuthService.getMemberRole(authUser.id);
+        if (mounted) setUser({ ...authUser, role });
       } catch (error) {
         if (mounted) setAuthError(error instanceof Error ? error.message : "Unable to restore your session.");
       } finally {
@@ -210,9 +208,12 @@ function AppContent() {
 
   async function signOut() {
     setAuthError("");
-    const { error } = await supabase.auth.signOut();
-    if (error) setAuthError(error.message);
-    else setUser(null);
+    try {
+      await currentAuthService.signOut();
+      setUser(null);
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Unable to sign out.");
+    }
   }
 
   if (initializing) return <LoadingScreen />;
@@ -255,20 +256,20 @@ function SignInScreen({
 
     setSubmitting(true);
     try {
-      const { data: { user: authUser }, error: signInError } =
-        await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
-      if (signInError) throw signInError;
-      if (!authUser) throw new Error("Unable to retrieve your account.");
+      const authUser = await currentAuthService.signInWithPassword({
+        email: normalizedEmail,
+        password,
+      });
 
       let role: MemberRole;
       try {
-        role = await getMemberRole(authUser.id);
+        role = await currentAuthService.getMemberRole(authUser.id);
       } catch (profileError) {
-        await supabase.auth.signOut();
+        await currentAuthService.signOut();
         throw profileError;
       }
 
-      onSignedIn({ id: authUser.id, email: authUser.email ?? normalizedEmail, role });
+      onSignedIn({ ...authUser, role });
       setPassword("");
     } catch (signInError) {
       setError(signInError instanceof Error ? signInError.message : "Sign in failed. Please try again.");
@@ -340,7 +341,7 @@ function AuthenticatedApp({ user, onSignOut }: { user: AuthenticatedUser; onSign
     async function loadActiveFiscalYear() {
       setFyLoading(true);
       try {
-        const fiscalYear = await apiRequest<FiscalYear | null>("/api/fiscal-years/current");
+        const fiscalYear = await currentDataService.request<FiscalYear | null>("/api/fiscal-years/current");
         if (!mounted) return;
         setActiveFiscalYear(fiscalYear);
         setFyError("");
@@ -438,7 +439,7 @@ function HomeScreen({
     if (pull) setRefreshing(true); else setLoading(true);
     setError("");
     try {
-      setDashboard(await apiRequest<Dashboard>("/api/dashboard"));
+      setDashboard(await currentDataService.request<Dashboard>("/api/dashboard"));
     } catch (e) {
       setError(getErrorMessage(e));
     } finally {
@@ -600,8 +601,8 @@ function MemberLoansScreen({ refreshKey, onChanged }: { refreshKey: number; onCh
     setError("");
     try {
       const [loanData, requestData] = await Promise.all([
-        apiRequest<any[]>("/api/loans"),
-        apiRequest<LoanRequest[]>("/api/loans/requests"),
+        currentDataService.request<any[]>("/api/loans"),
+        currentDataService.request<LoanRequest[]>("/api/loans/requests"),
       ]);
       setLoans(loanData);
       setRequests(requestData);
@@ -630,7 +631,7 @@ function MemberLoansScreen({ refreshKey, onChanged }: { refreshKey: number; onCh
 
     setSaving(true);
     try {
-      await apiRequest("/api/loans/requests", {
+      await currentDataService.request("/api/loans/requests", {
         method: "POST",
         body: JSON.stringify({ amount: value, months: term }),
       });
@@ -750,9 +751,9 @@ function MemberPaymentsScreen({ refreshKey, onChanged }: { refreshKey: number; o
     setError("");
     try {
       const [paymentData, submissionData, loanData] = await Promise.all([
-        apiRequest<any>("/api/payments"),
-        apiRequest<PaymentSubmission[]>("/api/payments/submissions"),
-        apiRequest<any[]>("/api/loans"),
+        currentDataService.request<any>("/api/payments"),
+        currentDataService.request<PaymentSubmission[]>("/api/payments/submissions"),
+        currentDataService.request<any[]>("/api/loans"),
       ]);
       setPayments(paymentData.loanPayments ?? []);
       setSubmissions(submissionData);
@@ -778,7 +779,7 @@ function MemberPaymentsScreen({ refreshKey, onChanged }: { refreshKey: number; o
 
     setSaving(true);
     try {
-      await apiRequest("/api/payments/submissions", {
+      await currentDataService.request("/api/payments/submissions", {
         method: "POST",
         body: JSON.stringify({
           paymentType: "Loan",
@@ -882,9 +883,9 @@ function AdminLoansScreen({ refreshKey, onChanged }: { refreshKey: number; onCha
     setError("");
     try {
       const [loanData, memberData, requestData] = await Promise.all([
-        apiRequest<any[]>("/api/loans"),
-        apiRequest<Member[]>("/api/members"),
-        apiRequest<LoanRequest[]>("/api/loans/requests"),
+        currentDataService.request<any[]>("/api/loans"),
+        currentDataService.request<Member[]>("/api/members"),
+        currentDataService.request<LoanRequest[]>("/api/loans/requests"),
       ]);
       setLoans(loanData);
       setMembers(memberData);
@@ -899,7 +900,7 @@ function AdminLoansScreen({ refreshKey, onChanged }: { refreshKey: number; onCha
 
   async function reviewLoanRequest(request: LoanRequest, decision: "Approved" | "Rejected") {
     try {
-      await apiRequest(`/api/loans/requests/${request.id}`, {
+      await currentDataService.request(`/api/loans/requests/${request.id}`, {
         method: "PATCH",
         body: JSON.stringify({ decision }),
       });
@@ -929,7 +930,7 @@ function AdminLoansScreen({ refreshKey, onChanged }: { refreshKey: number; onCha
 
     setSaving(true);
     try {
-      await apiRequest("/api/loans", {
+      await currentDataService.request("/api/loans", {
         method: "POST",
         body: JSON.stringify({ borrowerId: borrower, amount: value, months: term }),
       });
@@ -952,7 +953,7 @@ function AdminLoansScreen({ refreshKey, onChanged }: { refreshKey: number; onCha
         text: "Mark paid",
         onPress: async () => {
           try {
-            await apiRequest(`/api/loans/${loan.id}`, { method: "PATCH", body: JSON.stringify({ status: "Paid" }) });
+            await currentDataService.request(`/api/loans/${loan.id}`, { method: "PATCH", body: JSON.stringify({ status: "Paid" }) });
             Alert.alert("Updated", "The loan has been marked as paid.");
             onChanged();
           } catch (e) {
@@ -971,7 +972,7 @@ function AdminLoansScreen({ refreshKey, onChanged }: { refreshKey: number; onCha
         style: "destructive",
         onPress: async () => {
           try {
-            await apiRequest(`/api/loans/${loan.id}`, { method: "DELETE" });
+            await currentDataService.request(`/api/loans/${loan.id}`, { method: "DELETE" });
             Alert.alert("Deleted", "The loan was deleted and its audit record was created.");
             onChanged();
           } catch (e) {
@@ -1100,8 +1101,8 @@ function AdminPaymentsScreen({ refreshKey, onChanged }: { refreshKey: number; on
     setError("");
     try {
       const [weeklyData, submissionData] = await Promise.all([
-        apiRequest<any>(`/api/payments/weekly?weekStart=${weekStart}`),
-        apiRequest<PaymentSubmission[]>("/api/payments/submissions"),
+        currentDataService.request<any>(`/api/payments/weekly?weekStart=${weekStart}`),
+        currentDataService.request<PaymentSubmission[]>("/api/payments/submissions"),
       ]);
       setWeekly(weeklyData.members ?? []);
       setSubmissions(submissionData.filter((item) => item.payment_type === "Loan"));
@@ -1121,7 +1122,7 @@ function AdminPaymentsScreen({ refreshKey, onChanged }: { refreshKey: number; on
         onPress: async () => {
           setGenerating(true);
           try {
-            await apiRequest("/api/payments/weekly/generate-all", {
+            await currentDataService.request("/api/payments/weekly/generate-all", {
               method: "POST",
               body: JSON.stringify({ weekStart, paidOn: new Date().toISOString().slice(0, 10) }),
             });
@@ -1139,7 +1140,7 @@ function AdminPaymentsScreen({ refreshKey, onChanged }: { refreshKey: number; on
 
   async function reviewPayment(item: PaymentSubmission, decision: "Confirmed" | "Rejected") {
     try {
-      await apiRequest(`/api/payments/submissions/${item.id}`, {
+      await currentDataService.request(`/api/payments/submissions/${item.id}`, {
         method: "PATCH",
         body: JSON.stringify({ decision }),
       });
@@ -1246,7 +1247,7 @@ function AdminAuditScreen({ refreshKey, onChanged }: { refreshKey: number; onCha
     if (pull) setRefreshing(true); else setLoading(true);
     setError("");
     try {
-      setAudit(await apiRequest<{ loans: AuditRecord[]; payments: AuditRecord[] }>("/api/audit"));
+      setAudit(await currentDataService.request<{ loans: AuditRecord[]; payments: AuditRecord[] }>("/api/audit"));
     } catch (e) {
       setError(getErrorMessage(e));
     } finally {
@@ -1267,7 +1268,7 @@ function AdminAuditScreen({ refreshKey, onChanged }: { refreshKey: number; onCha
         style: "destructive",
         onPress: async () => {
           try {
-            await apiRequest(`/api/audit/${type === "loan" ? "loans" : "payments"}/${record.id}`, { method: "DELETE" });
+            await currentDataService.request(`/api/audit/${type === "loan" ? "loans" : "payments"}/${record.id}`, { method: "DELETE" });
             Alert.alert("Deleted", "The audit record was deleted.");
             onChanged();
           } catch (e) {
@@ -1346,8 +1347,8 @@ function AdminRequestsScreen({ refreshKey, onChanged }: { refreshKey: number; on
     setError("");
     try {
       const [loanData, paymentData] = await Promise.all([
-        apiRequest<LoanRequest[]>("/api/loans/requests"),
-        apiRequest<PaymentSubmission[]>("/api/payments/submissions"),
+        currentDataService.request<LoanRequest[]>("/api/loans/requests"),
+        currentDataService.request<PaymentSubmission[]>("/api/payments/submissions"),
       ]);
       setLoans(loanData);
       setPayments(paymentData);
@@ -1364,12 +1365,12 @@ function AdminRequestsScreen({ refreshKey, onChanged }: { refreshKey: number; on
     setSaving(true);
     try {
       if (reviewing.type === "loan") {
-        await apiRequest(`/api/loans/requests/${reviewing.item.id}`, {
+        await currentDataService.request(`/api/loans/requests/${reviewing.item.id}`, {
           method: "PATCH",
           body: JSON.stringify({ decision }),
         });
       } else {
-        await apiRequest(`/api/payments/submissions/${reviewing.item.id}`, {
+        await currentDataService.request(`/api/payments/submissions/${reviewing.item.id}`, {
           method: "PATCH",
           body: JSON.stringify({ decision }),
         });
@@ -1569,15 +1570,15 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
     setError("");
     try {
       const [memberData, fyData] = await Promise.all([
-        apiRequest<Member[]>("/api/members"),
-        apiRequest<FiscalYear[]>("/api/fiscal-years"),
+        currentDataService.request<Member[]>("/api/members"),
+        currentDataService.request<FiscalYear[]>("/api/fiscal-years"),
       ]);
       setMembers(memberData);
       setFiscalYears(fyData);
       const current = fyData.find((fy) => fy.status === "active") ?? fyData[0] ?? null;
       setActiveFiscalYear(current);
       if (current) {
-        const settings = await apiRequest<FiscalYearSettings>(`/api/fiscal-years/${current.id}/settings`);
+        const settings = await currentDataService.request<FiscalYearSettings>(`/api/fiscal-years/${current.id}/settings`);
         setTiers(settings.tiers.filter((item) => item.enabled));
         const map: Record<number, { tier_code: string; assigned_heads: number }> = {};
         for (const assignment of settings.assignments) map[assignment.member_id] = { tier_code: assignment.tier_code, assigned_heads: Number(assignment.assigned_heads) };
@@ -1627,17 +1628,17 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
     try {
       let memberId = selected?.id;
       if (modal === "create") {
-        const result = await apiRequest<{ member: Member; loginEmail: string; temporaryPassword: string }>("/api/members", {
+        const result = await currentDataService.request<{ member: Member; loginEmail: string; temporaryPassword: string }>("/api/members", {
           method: "POST", body: JSON.stringify({ name: trimmed, heads: headCount, tierCode: tier }),
         });
         memberId = result.member.id;
         Alert.alert("Member created", `Login: ${result.loginEmail}\nTemporary password: ${result.temporaryPassword}\n\nShare these credentials securely with the member.`);
       } else if (selected) {
-        await apiRequest(`/api/members/${selected.id}`, { method: "PATCH", body: JSON.stringify({ name: trimmed, heads: headCount }) });
+        await currentDataService.request(`/api/members/${selected.id}`, { method: "PATCH", body: JSON.stringify({ name: trimmed, heads: headCount }) });
         showToast("Member updated");
       }
       if (activeFiscalYear && memberId) {
-        await apiRequest(`/api/fiscal-years/${activeFiscalYear.id}/members/${memberId}`, {
+        await currentDataService.request(`/api/fiscal-years/${activeFiscalYear.id}/members/${memberId}`, {
           method: "PUT", body: JSON.stringify({ tierCode: tier, assignedHeads: Number(tierHeads) }),
         });
       }
@@ -1652,7 +1653,7 @@ function AdminMembersScreen({ refreshKey, onChanged }: { refreshKey: number; onC
       { text: "Cancel", style: "cancel" },
       { text: "Delete", style: "destructive", onPress: async () => {
         try {
-          await apiRequest(`/api/members/${member.id}`, { method: "DELETE" });
+          await currentDataService.request(`/api/members/${member.id}`, { method: "DELETE" });
           Alert.alert("Deleted", "The member and linked login were deleted.");
           onChanged();
         } catch (e) { Alert.alert("Unable to delete", getErrorMessage(e)); }
@@ -1785,7 +1786,7 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
   async function loadYears() {
     setLoading(true);
     try {
-      const years = await apiRequest<FiscalYear[]>("/api/fiscal-years");
+      const years = await currentDataService.request<FiscalYear[]>("/api/fiscal-years");
       setFiscalYears(years);
       const id = selectedId && years.some((fy) => fy.id === selectedId) ? selectedId : (years.find((fy) => fy.status === "active")?.id ?? years[0]?.id ?? null);
       setSelectedId(id);
@@ -1796,7 +1797,7 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
   }
 
   async function loadSettings(id: number) {
-    const data = await apiRequest<FiscalYearSettings>(`/api/fiscal-years/${id}/settings`);
+    const data = await currentDataService.request<FiscalYearSettings>(`/api/fiscal-years/${id}/settings`);
     const orderedTiers = [...data.tiers].sort((left, right) => {
       const order: Record<string, number> = { bronze: 0, silver: 1, gold: 2 };
       return (order[left.tier_code.toLowerCase()] ?? 99) - (order[right.tier_code.toLowerCase()] ?? 99);
@@ -1832,7 +1833,7 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
     }
     setSaving(true);
     try {
-      await apiRequest(`/api/fiscal-years/${selectedId}/settings`, {
+      await currentDataService.request(`/api/fiscal-years/${selectedId}/settings`, {
         method: "PUT",
         body: JSON.stringify({
           code: code.trim(), startDate, endDate,
@@ -1860,7 +1861,7 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
     }
     setSaving(true);
     try {
-      const result = await apiRequest<{ fiscalYear: FiscalYear }>("/api/fiscal-years", {
+      const result = await currentDataService.request<{ fiscalYear: FiscalYear }>("/api/fiscal-years", {
         method: "POST", body: JSON.stringify({
           code: code.trim(), startDate, endDate,
           maxTotalHeads: maxTotalHeads === "" ? null : Number(maxTotalHeads),
@@ -1887,7 +1888,7 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
     if (!selectedId) return;
     setSaving(true);
     try {
-      await apiRequest(`/api/fiscal-years/${selectedId}/${action}`, { method: "POST" });
+      await currentDataService.request(`/api/fiscal-years/${selectedId}/${action}`, { method: "POST" });
       await loadYears(); await loadSettings(selectedId); onChanged();
       Alert.alert("Updated", action === "activate" ? "Fiscal year activated." : "Fiscal year closed.");
     } catch (e) { Alert.alert("Unable to update", getErrorMessage(e)); }
@@ -1898,15 +1899,9 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
     if (!selectedId || !settings) return;
     setExporting(true);
     try {
-      const session = (await supabase.auth.getSession()).data.session;
-      if (!session) throw new Error("Your session has expired. Please sign in again.");
-      const apiBase = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/api\/?$/, "").replace(/\/$/, "");
-      const response = await fetch(`${apiBase}/api/fiscal-years/${selectedId}/export`, { headers: { Authorization: `Bearer ${session.access_token}` }});
-      if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || "Unable to export fiscal year activities.");
-      }
-      const workbook = new Uint8Array(await response.arrayBuffer());
+      const workbook = new Uint8Array(
+        await currentDataService.download(`/api/fiscal-years/${selectedId}/export`),
+      );
       const file = new File(Paths.cache, `DLMSF-${settings.fiscalYear.code}-Activities.xlsx`);
       if (file.exists) file.delete();
       await file.write(workbook);
@@ -1921,7 +1916,7 @@ function AdminFiscalSettingsScreen({ refreshKey, onChanged }: { refreshKey: numb
     if (!selectedId || !settings) return;
     setSaving(true);
     try {
-      await apiRequest(`/api/fiscal-years/${selectedId}`, { method: "DELETE", body: JSON.stringify({ confirmation: deleteConfirmation.trim() }) });
+      await currentDataService.request(`/api/fiscal-years/${selectedId}`, { method: "DELETE", body: JSON.stringify({ confirmation: deleteConfirmation.trim() }) });
       setShowDelete(false); setDeleteConfirmation(""); setSelectedId(null);
       await loadYears(); onChanged();
       Alert.alert("Fiscal year deleted", `${settings.fiscalYear.code} and its associated records were permanently deleted.`);
