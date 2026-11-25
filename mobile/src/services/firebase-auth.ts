@@ -42,6 +42,41 @@ type InstanceConfig = {
   maintainingAdminUid: string;
 };
 
+type FirebaseMemberAccount = {
+  memberId: string;
+  status: "active" | "disabled";
+};
+
+type FirebaseMemberProfile = {
+  memberId: string;
+  authUid: string | null;
+  role: "member";
+  isActive: boolean;
+};
+
+function isFirebaseMemberAccount(value: unknown): value is FirebaseMemberAccount {
+  if (!value || typeof value !== "object") return false;
+
+  const account = value as Record<string, unknown>;
+  return (
+    typeof account.memberId === "string" &&
+    account.memberId.trim().length > 0 &&
+    (account.status === "active" || account.status === "disabled")
+  );
+}
+
+function isFirebaseMemberProfile(value: unknown): value is FirebaseMemberProfile {
+  if (!value || typeof value !== "object") return false;
+
+  const member = value as Record<string, unknown>;
+  return (
+    typeof member.memberId === "string" &&
+    (typeof member.authUid === "string" || member.authUid === null) &&
+    member.role === "member" &&
+    typeof member.isActive === "boolean"
+  );
+}
+
 function isInstanceConfig(value: unknown): value is InstanceConfig {
   if (!value || typeof value !== "object") return false;
 
@@ -149,12 +184,51 @@ export function createFirebaseAuthService(
         return "admin";
       }
 
-      // Member UID linking is deliberately not inferred from Google account
-      // email. A trusted invitation flow will establish that link in a later
-      // phase before member access is enabled.
-      throw new Error(
-        "This Google account is not the maintaining admin. Member access will be available after invitation setup.",
+      // A trusted invitation-acceptance operation creates this UID-keyed
+      // mapping. The client can read only its own mapping; it cannot create or
+      // edit one, and email matching alone never grants member access.
+      const accountSnapshot = await getDoc(
+        doc(firestore, "memberAccounts", user.uid),
       );
+
+      if (!accountSnapshot.exists()) {
+        throw new Error(
+          "This Google account is not linked to a DLMSF member. Ask the maintaining admin for an invitation.",
+        );
+      }
+
+      const accountValue: unknown = accountSnapshot.data();
+      if (!isFirebaseMemberAccount(accountValue)) {
+        throw new Error("The linked DLMSF member account is invalid.");
+      }
+
+      if (accountValue.status !== "active") {
+        throw new Error("This DLMSF member account is disabled. Contact the maintaining admin.");
+      }
+
+      const memberSnapshot = await getDoc(
+        doc(firestore, "members", accountValue.memberId),
+      );
+
+      if (!memberSnapshot.exists()) {
+        throw new Error("The linked DLMSF member record could not be found.");
+      }
+
+      const memberValue: unknown = memberSnapshot.data();
+      if (!isFirebaseMemberProfile(memberValue)) {
+        throw new Error("The linked DLMSF member profile is invalid.");
+      }
+
+      if (
+        memberValue.memberId !== accountValue.memberId ||
+        memberValue.authUid !== user.uid ||
+        memberValue.role !== "member" ||
+        memberValue.isActive !== true
+      ) {
+        throw new Error("This Google account is not authorized for the linked DLMSF member record.");
+      }
+
+      return "member";
     },
   };
 }

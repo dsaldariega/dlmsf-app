@@ -48,6 +48,21 @@ Field requirements:
 
 Use a different stable `instanceId` for the developer's test project and the custodian's production project. Do not copy production financial records into the developer project.
 
+## Member identity mapping contract
+
+Member sign-in is linked by Firebase Authentication UID, never by email matching alone.
+
+A trusted invitation-acceptance operation (not yet exposed by the mobile client) is responsible for creating both:
+
+- `memberAccounts/{authUid}` with `memberId` and `status: "active"`
+- The matching `members/{memberId}` record with `authUid`, `role: "member"`, and `isActive: true`
+
+The mobile app resolves a member role by reading only `memberAccounts/{currentAuthUid}`, then reading the linked member document and checking that both records agree. Firestore rules allow a signed-in user to read only their own UID mapping. Clients cannot create, update, list, or delete these mappings. The admin may read mappings; trusted provisioning is responsible for writes.
+
+Disabling a mapping or setting the member record inactive prevents member authorization. Removing or changing a member link must be performed by trusted code after verifying the intended operation.
+
+This phase establishes identity resolution only. It does not yet implement invitation creation, token delivery, invitation acceptance, or member-facing DLMSF screens.
+
 ## Verification checklist
 
 Before using the instance with real records:
@@ -58,6 +73,8 @@ Before using the instance with real records:
 - [ ] After sign-in, the app displays **MAINTAINING ADMIN VERIFIED** for the intended admin account.
 - [ ] `system/config.instanceId` identifies the correct instance.
 - [ ] Firestore Security Rules are deployed.
+- [ ] A signed-in member can read only `memberAccounts/{their-own-UID}`; another UID's mapping is denied.
+- [ ] A signed-in account cannot create or change any member-account mapping.
 - [ ] A signed-in account with a different UID cannot read admin-only data or write `system/config`.
 - [ ] An unauthenticated client cannot read instance metadata or member/financial records.
 - [ ] Financial writes remain blocked from mobile clients; trusted server operations will enforce business rules in a later phase.
@@ -69,4 +86,4 @@ Before using the instance with real records:
 - Do not let a user claim the first-admin role from the app. The first admin must be provisioned by the Firebase project owner through the trusted console process above. A future secured provisioning service may replace this manual step.
 - If the maintaining admin changes, update the UID only through a trusted project-owner/Admin SDK operation after verifying the new custodian. Do not expose this as a normal member-edit action.
 - If the instance is compromised or should no longer be used, set `status` to `suspended` through trusted project-owner access. The app must later enforce this status before opening protected screens.
-- The mobile app now includes a Firebase instance setup screen and a Google sign-in test that displays the authenticated Firebase UID and checks it against the trusted `system/config` document. The check is read-only; it cannot grant or change admin access. This does not switch the app's data provider: the production DLMSF experience continues to use Supabase until the remaining Firebase authorization, data, and trusted server workflows are implemented and tested.
+- The mobile app now includes a Firebase instance setup screen and a Google sign-in test that displays the authenticated Firebase UID, checks maintaining-admin identity, and resolves member identity through the trusted UID mapping. These checks are read-only; the client cannot grant or change admin/member access. Invitation creation and acceptance still require trusted server-side implementation. This does not switch the app's data provider: the production DLMSF experience continues to use Supabase until the remaining Firebase authorization, data, and trusted server workflows are implemented and tested.

@@ -32,6 +32,10 @@ rules_version = '2';
  *   memberId: string
  *   status: "pending" | "accepted" | "revoked"
  *
+ * memberAccounts/{authUid}
+ *   memberId: string              // trusted UID -> member mapping
+ *   status: "active" | "disabled"
+ *
  * fiscalYears/{fiscalYearId}
  * contributions/{contributionId}
  * loans/{loanId}
@@ -98,6 +102,14 @@ service cloud.firestore {
       allow get: if isMaintainingAdmin() || isLinkedMember(memberId);
       allow list: if isMaintainingAdmin();
       allow create, update, delete: if isMaintainingAdmin();
+    }
+
+    // Trusted invitation acceptance creates memberAccounts/{authUid}. The
+    // signed-in user can read only their own mapping; no client may write it.
+    match /memberAccounts/{authUid} {
+      allow get: if isMaintainingAdmin()
+        || (signedIn() && request.auth.uid == authUid);
+      allow list, create, update, delete: if false;
     }
 
     // A member may fetch only an invitation addressed to their signed-in email.
