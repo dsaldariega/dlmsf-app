@@ -21,6 +21,7 @@ import { StatusBar } from "expo-status-bar";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { type MemberRole } from "../lib/auth";
+import FirebaseInstanceSetupScreen from "../components/FirebaseInstanceSetupScreen";
 import { currentAuthService, currentDataService } from "../services";
 import { ThemeProvider, theme, useTheme } from "../theme";
 import { ApiError } from "../lib/api";
@@ -245,6 +246,7 @@ function SignInScreen({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showFirebaseSetup, setShowFirebaseSetup] = useState(false);
 
   async function handleSignIn() {
     setError("");
@@ -317,7 +319,16 @@ function SignInScreen({
             />
             {error ? <ErrorBox message={error} /> : null}
             <PrimaryButton label="Sign in" loading={submitting} onPress={handleSignIn} />
+            <TouchableOpacity onPress={() => setShowFirebaseSetup(true)} style={{ alignItems: "center", paddingTop: 16 }}>
+              <Text style={{ color: BLUE, fontSize: 12, fontWeight: "700" }}>Configure Firebase instance</Text>
+            </TouchableOpacity>
+            <Text style={{ color: SLATE, fontSize: 10, textAlign: "center", marginTop: 5 }}>Migration setup · does not change the current sign-in provider</Text>
           </View>
+          <FirebaseInstanceSetupScreen
+            visible={showFirebaseSetup}
+            onClose={() => setShowFirebaseSetup(false)}
+            onSaved={() => setError("")}
+          />
         </View>
         <Text style={styles.footer}>DLMSF · Mobile</Text>
       </ScrollView>
