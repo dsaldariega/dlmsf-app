@@ -44,3 +44,6 @@ Thumbs.db
 *.pem
 
 .expo/
+
+# Compiled Firebase Functions output
+**/lib/

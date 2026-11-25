@@ -1,6 +1,6 @@
 # DLMSF Firebase Instance Bootstrap
 
-This guide defines the trusted first-admin setup for one DLMSF instance.
+This guide defines trusted first-admin setup and member account linking for one DLMSF instance.
 
 ## Security model
 
@@ -9,7 +9,8 @@ This guide defines the trusted first-admin setup for one DLMSF instance.
 - Each instance has exactly one maintaining admin.
 - The maintaining admin is identified by the Firebase Authentication UID stored in `system/config`.
 - The APK must never create or modify `system/config`, assign the maintaining-admin UID, or grant itself an admin role.
-- Firebase client configuration is public configuration, not an authorization credential. Firestore Security Rules and trusted server-side authorization protect the records.
+- Firebase client configuration is public configuration, not an authorization credential. Firestore Security Rules and trusted Cloud Functions protect the records.
+- Member identities are linked by Firebase Authentication UID, never by matching an email address in the client.
 
 ## One-time setup for a new instance
 
@@ -20,9 +21,9 @@ Perform these steps for each Firebase project.
 3. Enable **Authentication → Sign-in method → Google** and configure the required support email.
 4. Create the Cloud Firestore database in production mode.
 5. Deploy the repository's `firebase/firestore.rules` rules to this project.
-6. Add the authorized maintaining admin's Google account to the app's Firebase Authentication users by having that person complete Google sign-in in the DLMSF app. During the initial bootstrap milestone, this sign-in flow may require a developer-assisted test build; do not work around this by allowing client-side admin creation.
-7. After Google sign-in succeeds in the DLMSF app, the Firebase authentication test panel displays the signed-in account, selected Firebase project, and Firebase **UID**. The UID is also available in Firebase Console → Authentication → Users. Verify the email and project belong to the intended custodian/admin before using it.
-8. In Firebase Console → Firestore Database → Data, create the `system` collection and its `config` document with the fields below. This console action is trusted project-owner provisioning and is intentionally not available to the mobile client.
+6. Deploy the Cloud Functions in the `functions/` directory. Functions require the Firebase project to be on the Blaze plan and the deploying account to have the required IAM permissions. Do not deploy until billing and the project owner are comfortable with the expected usage.
+7. Have the intended maintaining admin complete Google sign-in in the DLMSF app. The test panel displays the Firebase UID.
+8. In Firebase Console → Firestore Database → Data, create `system/config` with the required fields below. This console action is trusted provisioning and is intentionally unavailable to the mobile client.
 
 ## Required `system/config` document
 
@@ -37,53 +38,40 @@ Document path: `system/config`
 }
 ```
 
-Field requirements:
+Use a different stable `instanceId` for the developer test project and custodian production project. Do not copy production financial records into the developer project.
 
-| Field | Type | Requirement |
-| --- | --- | --- |
-| `maintainingAdminUid` | string | Exact Firebase Authentication UID of the one authorized maintaining admin |
-| `instanceId` | string | Stable unique identifier for this DLMSF instance |
-| `schemaVersion` | number | Start at `1` |
-| `status` | string | `active` or `suspended` |
+## Member invitation workflow
 
-Use a different stable `instanceId` for the developer's test project and the custodian's production project. Do not copy production financial records into the developer project.
+The trusted Cloud Functions expose three callable operations:
 
-## Member identity mapping contract
+- `createMemberInvitation({ memberId })`: maintaining admin only. Reads the member's email from the existing member record, requires an active unlinked member, and creates a pending invitation that expires after seven days. It returns the invitation ID and intended email. It does not send an email yet.
+- `acceptMemberInvitation({ invitationId })`: requires a signed-in Firebase account with a verified email matching the invitation and the existing member record. The function transactionally updates `members/{memberId}.authUid`, creates `memberAccounts/{authUid}`, and marks the invitation accepted.
+- `revokeMemberInvitation({ invitationId })`: maintaining admin only. Revokes a pending invitation.
 
-Member sign-in is linked by Firebase Authentication UID, never by email matching alone.
+The mobile client cannot create invitations, accept them by writing Firestore directly, or write UID mappings. These operations must go through the callable functions. The member must first receive the invitation ID through a trusted channel; automated email delivery is a separate future phase.
 
-A trusted invitation-acceptance operation (not yet exposed by the mobile client) is responsible for creating both:
-
-- `memberAccounts/{authUid}` with `memberId` and `status: "active"`
-- The matching `members/{memberId}` record with `authUid`, `role: "member"`, and `isActive: true`
-
-The mobile app resolves a member role by reading only `memberAccounts/{currentAuthUid}`, then reading the linked member document and checking that both records agree. Firestore rules allow a signed-in user to read only their own UID mapping. Clients cannot create, update, list, or delete these mappings. The admin may read mappings; trusted provisioning is responsible for writes.
-
-Disabling a mapping or setting the member record inactive prevents member authorization. Removing or changing a member link must be performed by trusted code after verifying the intended operation.
-
-This phase establishes identity resolution only. It does not yet implement invitation creation, token delivery, invitation acceptance, or member-facing DLMSF screens.
+The Functions verify the maintaining-admin UID against `system/config` on every admin operation. The invitation acceptance function checks the verified Google email, invitation expiry, member status, and existing account links before writing anything.
 
 ## Verification checklist
 
-Before using the instance with real records:
-
 - [ ] The Firebase project is owned by the intended custodian/organization.
 - [ ] Google sign-in is enabled and the intended admin has signed in.
-- [ ] The UID shown by the app (or Firebase Console → Authentication → Users) exactly matches `system/config.maintainingAdminUid`.
-- [ ] After sign-in, the app displays **MAINTAINING ADMIN VERIFIED** for the intended admin account.
-- [ ] `system/config.instanceId` identifies the correct instance.
-- [ ] Firestore Security Rules are deployed.
-- [ ] A signed-in member can read only `memberAccounts/{their-own-UID}`; another UID's mapping is denied.
-- [ ] A signed-in account cannot create or change any member-account mapping.
-- [ ] A signed-in account with a different UID cannot read admin-only data or write `system/config`.
-- [ ] An unauthenticated client cannot read instance metadata or member/financial records.
-- [ ] Financial writes remain blocked from mobile clients; trusted server operations will enforce business rules in a later phase.
+- [ ] The UID shown by the app exactly matches `system/config.maintainingAdminUid`.
+- [ ] The app displays **MAINTAINING ADMIN VERIFIED** for the intended admin.
+- [ ] `system/config.instanceId` identifies the correct instance and status is `active`.
+- [ ] Firestore Security Rules and Cloud Functions are deployed.
+- [ ] A non-admin cannot create or revoke invitations.
+- [ ] A Google account with an unverified or mismatched email cannot accept an invitation.
+- [ ] An expired, revoked, or already accepted invitation cannot be reused.
+- [ ] A member UID cannot be linked to multiple member records.
+- [ ] A client cannot write `members.authUid`, `memberAccounts`, or invitation status directly.
+- [ ] Financial writes remain blocked from mobile clients.
 
-## Important operational notes
+## Operational notes
 
-- Selecting or storing a Firebase project configuration on a device does not grant access to that project.
-- Never put a service-account JSON file, Firebase Admin SDK private key, provisioning secret, or other server credential in the APK or an `EXPO_PUBLIC_*` variable.
-- Do not let a user claim the first-admin role from the app. The first admin must be provisioned by the Firebase project owner through the trusted console process above. A future secured provisioning service may replace this manual step.
-- If the maintaining admin changes, update the UID only through a trusted project-owner/Admin SDK operation after verifying the new custodian. Do not expose this as a normal member-edit action.
-- If the instance is compromised or should no longer be used, set `status` to `suspended` through trusted project-owner access. The app must later enforce this status before opening protected screens.
-- The mobile app now includes a Firebase instance setup screen and a Google sign-in test that displays the authenticated Firebase UID, checks maintaining-admin identity, and resolves member identity through the trusted UID mapping. These checks are read-only; the client cannot grant or change admin/member access. Invitation creation and acceptance still require trusted server-side implementation. This does not switch the app's data provider: the production DLMSF experience continues to use Supabase until the remaining Firebase authorization, data, and trusted server workflows are implemented and tested.
+- Cloud Functions use the Firebase Admin SDK and therefore bypass Firestore Security Rules. Every callable operation must enforce authorization and validate its inputs.
+- The Functions do not send invitation emails in this phase. The invitation ID must be delivered through a trusted channel until email delivery is implemented.
+- Never put a service-account JSON file, Admin SDK private key, provisioning secret, or other server credential in the APK or an `EXPO_PUBLIC_*` variable.
+- If the maintaining admin changes, update the UID only through trusted project-owner/Admin SDK access after verifying the new custodian.
+- If the instance is compromised or should no longer be used, set `status` to `suspended` through trusted project-owner access.
+- The mobile app still uses Supabase for its production DLMSF experience. Firebase authentication and invitation foundations do not switch the active data provider.
