@@ -26,8 +26,10 @@ type Props = {
 };
 
 type FirebaseSignedInUser = {
+  uid: string;
   email: string;
   instanceName: string;
+  projectId: string;
 };
 
 export default function FirebaseGoogleSignInButton({ refreshKey }: Props) {
@@ -162,8 +164,10 @@ function ConfiguredGoogleSignIn({ config }: { config: DLMSFInstanceConfig }) {
       const identity = await instance.auth.signInWithGoogleIdToken(idToken);
       setFirebaseAuth(instance.auth);
       setSignedInUser({
+        uid: identity.id,
         email: identity.email || "Google account",
         instanceName: instance.config.displayName,
+        projectId: instance.config.firebase.projectId,
       });
     } catch (signInError) {
       setError(
@@ -205,7 +209,17 @@ function ConfiguredGoogleSignIn({ config }: { config: DLMSFInstanceConfig }) {
             Firebase signed in: {signedInUser.email}
           </Text>
           <Text style={styles.helper}>
-            Instance: {signedInUser.instanceName}. This confirms authentication only; it does not grant DLMSF access or switch the app's data provider.
+            Instance: {signedInUser.instanceName} · Project: {signedInUser.projectId}
+          </Text>
+          <View style={styles.uidCard}>
+            <Text style={styles.uidLabel}>FIREBASE AUTH UID</Text>
+            <Text selectable style={styles.uidValue}>{signedInUser.uid}</Text>
+            <Text style={styles.helper}>
+              Copy this UID into system/config.maintainingAdminUid only after verifying that this is the intended maintaining admin's Google account.
+            </Text>
+          </View>
+          <Text style={styles.helper}>
+            Authentication is confirmed, but admin access is not granted by this screen. The app's Supabase login and data provider remain unchanged.
           </Text>
           <TouchableOpacity
             accessibilityRole="button"
@@ -297,6 +311,26 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "800",
     lineHeight: 16,
+  },
+  uidCard: {
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+    borderRadius: 10,
+    backgroundColor: "#EFF6FF",
+    padding: 11,
+    gap: 7,
+  },
+  uidLabel: {
+    color: "#1D4ED8",
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 0.8,
+  },
+  uidValue: {
+    color: "#0F172A",
+    fontSize: 11,
+    lineHeight: 17,
+    fontWeight: "700",
   },
   error: {
     color: "#B91C1C",

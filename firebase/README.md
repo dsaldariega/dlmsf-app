@@ -21,7 +21,7 @@ Perform these steps for each Firebase project.
 4. Create the Cloud Firestore database in production mode.
 5. Deploy the repository's `firebase/firestore.rules` rules to this project.
 6. Add the authorized maintaining admin's Google account to the app's Firebase Authentication users by having that person complete Google sign-in in the DLMSF app. During the initial bootstrap milestone, this sign-in flow may require a developer-assisted test build; do not work around this by allowing client-side admin creation.
-7. In Firebase Console → Authentication → Users, locate that Google account and copy its Firebase **UID**. Verify the email belongs to the intended custodian/admin.
+7. After Google sign-in succeeds in the DLMSF app, the Firebase authentication test panel displays the signed-in account, selected Firebase project, and Firebase **UID**. The UID is also available in Firebase Console → Authentication → Users. Verify the email and project belong to the intended custodian/admin before using it.
 8. In Firebase Console → Firestore Database → Data, create the `system` collection and its `config` document with the fields below. This console action is trusted project-owner provisioning and is intentionally not available to the mobile client.
 
 ## Required `system/config` document
@@ -54,7 +54,7 @@ Before using the instance with real records:
 
 - [ ] The Firebase project is owned by the intended custodian/organization.
 - [ ] Google sign-in is enabled and the intended admin has signed in.
-- [ ] The UID in `system/config.maintainingAdminUid` exactly matches the admin's Authentication UID.
+- [ ] The UID shown by the app (or Firebase Console → Authentication → Users) exactly matches `system/config.maintainingAdminUid`.
 - [ ] `system/config.instanceId` identifies the correct instance.
 - [ ] Firestore Security Rules are deployed.
 - [ ] A signed-in account with a different UID cannot read admin-only data or write `system/config`.
@@ -68,4 +68,4 @@ Before using the instance with real records:
 - Do not let a user claim the first-admin role from the app. The first admin must be provisioned by the Firebase project owner through the trusted console process above. A future secured provisioning service may replace this manual step.
 - If the maintaining admin changes, update the UID only through a trusted project-owner/Admin SDK operation after verifying the new custodian. Do not expose this as a normal member-edit action.
 - If the instance is compromised or should no longer be used, set `status` to `suspended` through trusted project-owner access. The app must later enforce this status before opening protected screens.
-- This is a bootstrap runbook, not an implemented onboarding screen. The current app still uses Supabase; Firebase authentication, runtime instance selection, and enforcement of this document are future migration work.
+- The mobile app now includes a Firebase instance setup screen and a Google sign-in test that displays the authenticated Firebase UID for this trusted bootstrap step. This does not grant admin access or switch the app's data provider: the production DLMSF experience continues to use Supabase until the remaining Firebase authorization, data, and trusted server workflows are implemented and tested.
