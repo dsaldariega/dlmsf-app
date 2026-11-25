@@ -30,6 +30,8 @@ type FirebaseSignedInUser = {
   email: string;
   instanceName: string;
   projectId: string;
+  adminVerified: boolean;
+  verificationMessage: string;
 };
 
 export default function FirebaseGoogleSignInButton({ refreshKey }: Props) {
@@ -162,12 +164,32 @@ function ConfiguredGoogleSignIn({ config }: { config: DLMSFInstanceConfig }) {
       }
 
       const identity = await instance.auth.signInWithGoogleIdToken(idToken);
+
+      let adminVerified = false;
+      let verificationMessage =
+        "Google authentication succeeded, but this account is not authorized as the maintaining admin.";
+
+      try {
+        const role = await instance.auth.getMemberRole(identity.id);
+        adminVerified = role === "admin";
+        verificationMessage = adminVerified
+          ? "Maintaining admin verified against the trusted system/config document."
+          : "Google authentication succeeded, but this account does not have maintaining-admin access.";
+      } catch (verificationError) {
+        verificationMessage =
+          verificationError instanceof Error
+            ? verificationError.message
+            : "Unable to verify maintaining-admin access. Check the Firebase instance configuration and Security Rules.";
+      }
+
       setFirebaseAuth(instance.auth);
       setSignedInUser({
         uid: identity.id,
         email: identity.email || "Google account",
         instanceName: instance.config.displayName,
         projectId: instance.config.firebase.projectId,
+        adminVerified,
+        verificationMessage,
       });
     } catch (signInError) {
       setError(
@@ -218,8 +240,14 @@ function ConfiguredGoogleSignIn({ config }: { config: DLMSFInstanceConfig }) {
               Copy this UID into system/config.maintainingAdminUid only after verifying that this is the intended maintaining admin's Google account.
             </Text>
           </View>
+          <View style={[styles.verificationCard, signedInUser.adminVerified && styles.verificationCardSuccess]}>
+            <Text style={signedInUser.adminVerified ? styles.verificationSuccess : styles.verificationWarning}>
+              {signedInUser.adminVerified ? "MAINTAINING ADMIN VERIFIED" : "ADMIN ACCESS NOT VERIFIED"}
+            </Text>
+            <Text style={styles.helper}>{signedInUser.verificationMessage}</Text>
+          </View>
           <Text style={styles.helper}>
-            Authentication is confirmed, but admin access is not granted by this screen. The app's Supabase login and data provider remain unchanged.
+            This is an authorization test only. It does not switch the app's data provider; the existing DLMSF experience continues to use Supabase.
           </Text>
           <TouchableOpacity
             accessibilityRole="button"
@@ -331,6 +359,30 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 17,
     fontWeight: "700",
+  },
+  verificationCard: {
+    borderWidth: 1,
+    borderColor: "#FCD34D",
+    borderRadius: 10,
+    backgroundColor: "#FFFBEB",
+    padding: 11,
+    gap: 5,
+  },
+  verificationCardSuccess: {
+    borderColor: "#86EFAC",
+    backgroundColor: "#F0FDF4",
+  },
+  verificationSuccess: {
+    color: "#166534",
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 0.8,
+  },
+  verificationWarning: {
+    color: "#92400E",
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 0.8,
   },
   error: {
     color: "#B91C1C",

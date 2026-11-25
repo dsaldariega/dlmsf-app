@@ -55,6 +55,7 @@ Before using the instance with real records:
 - [ ] The Firebase project is owned by the intended custodian/organization.
 - [ ] Google sign-in is enabled and the intended admin has signed in.
 - [ ] The UID shown by the app (or Firebase Console → Authentication → Users) exactly matches `system/config.maintainingAdminUid`.
+- [ ] After sign-in, the app displays **MAINTAINING ADMIN VERIFIED** for the intended admin account.
 - [ ] `system/config.instanceId` identifies the correct instance.
 - [ ] Firestore Security Rules are deployed.
 - [ ] A signed-in account with a different UID cannot read admin-only data or write `system/config`.
@@ -68,4 +69,4 @@ Before using the instance with real records:
 - Do not let a user claim the first-admin role from the app. The first admin must be provisioned by the Firebase project owner through the trusted console process above. A future secured provisioning service may replace this manual step.
 - If the maintaining admin changes, update the UID only through a trusted project-owner/Admin SDK operation after verifying the new custodian. Do not expose this as a normal member-edit action.
 - If the instance is compromised or should no longer be used, set `status` to `suspended` through trusted project-owner access. The app must later enforce this status before opening protected screens.
-- The mobile app now includes a Firebase instance setup screen and a Google sign-in test that displays the authenticated Firebase UID for this trusted bootstrap step. This does not grant admin access or switch the app's data provider: the production DLMSF experience continues to use Supabase until the remaining Firebase authorization, data, and trusted server workflows are implemented and tested.
+- The mobile app now includes a Firebase instance setup screen and a Google sign-in test that displays the authenticated Firebase UID and checks it against the trusted `system/config` document. The check is read-only; it cannot grant or change admin access. This does not switch the app's data provider: the production DLMSF experience continues to use Supabase until the remaining Firebase authorization, data, and trusted server workflows are implemented and tested.
